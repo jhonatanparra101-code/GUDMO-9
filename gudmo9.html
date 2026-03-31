@@ -283,6 +283,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <button class="tab-btn" onclick="showTab('bloque',this)">🔍 Bloque</button>
   <button class="tab-btn" onclick="showTab('municion',this)">🔴 Munición</button>
   <button class="tab-btn" onclick="showTab('pines',this)">📡 PINes</button>
+  <button class="tab-btn" onclick="showTab('planilla',this)">📋 Planilla</button>
   <button class="tab-btn" onclick="showTab('add',this)">⚙️ Config</button>
 </div>
 
@@ -784,6 +785,52 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <div class="ac" onclick="compartirPin()"><div class="ai">📤</div><div class="al">Compartir</div><div class="as">Enviar PIN</div></div>
     </div>
   </div>
+</div>
+
+
+<!-- PLANILLA IA -->
+<div class="section" id="tab-planilla">
+  <div class="sh">📋 Lectura de Planilla con IA</div>
+
+  <div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:9px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--muted2);line-height:1.7">
+    📸 Tome foto de la planilla del día siguiente → la IA la lee → le muestra qué actividad tiene cada DEI → usted confirma los cambios.
+  </div>
+
+  <!-- Upload zone -->
+  <div id="planillaUpload" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px;transition:all .2s"
+    onclick="document.getElementById('planillaInput').click()"
+    ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
+    ondragleave="this.style.borderColor='var(--border)'">
+    <div style="font-size:36px;margin-bottom:8px">📷</div>
+    <div style="font-size:13px;font-weight:600;color:var(--text)">Toque para adjuntar foto de la planilla</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG — desde cámara o galería</div>
+  </div>
+  <input type="file" id="planillaInput" accept="image/*" capture="environment" style="display:none" onchange="procesarPlanilla(event)">
+
+  <!-- Preview -->
+  <div id="planillaPreview" style="display:none;margin-bottom:12px">
+    <img id="planillaImg" style="width:100%;border-radius:8px;border:1px solid var(--border);max-height:200px;object-fit:contain">
+  </div>
+
+  <!-- Loading -->
+  <div id="planillaLoading" style="display:none;text-align:center;padding:20px">
+    <div style="font-size:28px;margin-bottom:8px">🤖</div>
+    <div style="font-size:13px;color:var(--gold2);font-weight:600">Analizando planilla...</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px">La IA está leyendo las actividades</div>
+  </div>
+
+  <!-- Results -->
+  <div id="planillaResultados" style="display:none">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--gold2);margin-bottom:10px">📊 Lo que encontró la IA</div>
+    <div id="planillaCards"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button onclick="aplicarPlanilla()" class="btn btn-primary" style="flex:1">✅ Aplicar cambios</button>
+      <button onclick="resetPlanilla()" class="btn btn-ghost" style="flex:none;padding:8px 14px">🔄 Nueva foto</button>
+    </div>
+  </div>
+
+  <!-- Historial planillas -->
+  <div id="planillaHistorial" style="margin-top:16px"></div>
 </div>
 
 <!-- EDIT MODAL -->
@@ -3812,6 +3859,179 @@ function compartirPin(){
   var txt = document.getElementById('pinTexto').textContent;
   if(navigator.share) navigator.share({title:'PIN GUDMO-9',text:txt});
   else copiarPin();
+}
+
+
+// ════════════════════════════════════════════════
+//  PLANILLA IA
+// ════════════════════════════════════════════════
+var planillaData = ld('g9_planillas', []);
+var planillaResultadoActual = null;
+
+var ACTIVIDADES_MAP = {
+  'semana santa':        {mision:'Control disturbios', estado:'Servicio'},
+  'base':                {mision:'Disponible en base', estado:'Servicio'},
+  'disponible':          {mision:'Disponible en base', estado:'Servicio'},
+  'bloque':              {mision:'Apoyo bloque búsqueda', estado:'Servicio'},
+  'búsqueda':            {mision:'Apoyo bloque búsqueda', estado:'Servicio'},
+  'busqueda':            {mision:'Apoyo bloque búsqueda', estado:'Servicio'},
+  'verde':               {mision:'Servicio verde', estado:'Servicio'},
+  'vigilancia':          {mision:'Servicio verde', estado:'Servicio'},
+  'disturbios':          {mision:'Control disturbios', estado:'Servicio'},
+  'antimotines':         {mision:'Control disturbios', estado:'Servicio'},
+  'comisión':            {mision:'Comisión', estado:'Comision'},
+  'comision':            {mision:'Comisión', estado:'Comision'},
+  'descanso':            {mision:'Descanso', estado:'Permiso'},
+  'permiso':             {mision:'Permiso', estado:'Permiso'},
+  'guardia':             {mision:'Guardia interna', estado:'Guardia'},
+};
+
+function renderPlanilla(){
+  renderPlanillaHistorial();
+}
+
+async function procesarPlanilla(evt){
+  var file = evt.target.files[0];
+  if(!file) return;
+
+  // Show preview
+  var reader = new FileReader();
+  reader.onload = async function(e){
+    var base64 = e.target.result.split(',')[1];
+    var mediaType = file.type || 'image/jpeg';
+
+    document.getElementById('planillaImg').src = e.target.result;
+    document.getElementById('planillaPreview').style.display='block';
+    document.getElementById('planillaLoading').style.display='block';
+    document.getElementById('planillaResultados').style.display='none';
+
+    try {
+      var prompt = 'Analiza esta planilla de servicios de la Policía Nacional. '+
+        'Identifica qué actividad tiene asignada cada DEI (DEI 1, DEI 2, DEI 3) y Plana Mayor para el día que muestra. '+
+        'Responde SOLO en JSON con este formato exacto: '+
+        '{"fecha":"DD/MM/AAAA","DEI 1":"actividad","DEI 2":"actividad","DEI 3":"actividad","Plana Mayor":"actividad","observaciones":"texto opcional"} '+
+        'Si no puedes leer algún DEI escribe "No identificado". '+
+        'Las actividades posibles son: Disponible en base, Apoyo bloque búsqueda, Control disturbios, Servicio verde, Comisión, Descanso/Permiso, Guardia interna, o el texto exacto que veas.';
+
+      var response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [
+              {type:'image', source:{type:'base64', media_type:mediaType, data:base64}},
+              {type:'text', text:prompt}
+            ]
+          }]
+        })
+      });
+
+      var data = await response.json();
+      var texto = data.content && data.content[0] ? data.content[0].text : '';
+
+      // Parse JSON from response
+      var jsonMatch = texto.match(/\{[\s\S]*\}/);
+      if(!jsonMatch) throw new Error('No se pudo parsear la respuesta');
+      var resultado = JSON.parse(jsonMatch[0]);
+
+      planillaResultadoActual = resultado;
+      mostrarResultadoPlanilla(resultado);
+
+    } catch(err) {
+      document.getElementById('planillaLoading').style.display='none';
+      showToast('⚠️ Error leyendo la planilla: '+err.message, '#ef4444');
+    }
+  };
+  reader.readAsDataURL(file);
+  evt.target.value='';
+}
+
+function mostrarResultadoPlanilla(r){
+  document.getElementById('planillaLoading').style.display='none';
+  document.getElementById('planillaResultados').style.display='block';
+
+  var escuadras = ['DEI 1','DEI 2','DEI 3','Plana Mayor'];
+  var cards = escuadras.map(function(esc){
+    var actividad = r[esc]||'No identificado';
+    var esPropia = esc === (curEscuadra==='all'?'DEI 2':curEscuadra);
+    var info = mapearActividad(actividad);
+    return '<div style="background:var(--card);border:1px solid '+(esPropia?'var(--gold)':'var(--border)')+';border-radius:8px;padding:10px 12px;margin-bottom:8px">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<div style="font-family:Bebas Neue,sans-serif;font-size:16px;color:'+(esPropia?'var(--gold2)':'var(--text)')+'">'+esc+(esPropia?' ★':'')+'</div>'
+      +'<div style="flex:1;font-size:12px;color:var(--muted2)">'+actividad+'</div>'
+      +'<div class="status-pill p-'+info.estado+'" style="font-size:9px">'+info.mision+'</div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+
+  if(r.observaciones){
+    cards += '<div style="font-size:10px;color:var(--muted);padding:6px;font-style:italic">📝 '+r.observaciones+'</div>';
+  }
+
+  document.getElementById('planillaCards').innerHTML = cards;
+}
+
+function mapearActividad(texto){
+  if(!texto) return {mision:'Desconocida', estado:'Servicio'};
+  var t = texto.toLowerCase();
+  for(var kw in ACTIVIDADES_MAP){
+    if(t.includes(kw)) return ACTIVIDADES_MAP[kw];
+  }
+  return {mision:texto, estado:'Servicio'};
+}
+
+function aplicarPlanilla(){
+  if(!planillaResultadoActual) return;
+  var r = planillaResultadoActual;
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var actividad = r[esc];
+  if(!actividad||actividad==='No identificado'){
+    showToast('⚠️ No se identificó actividad para '+esc, '#f97316');
+    return;
+  }
+  var info = mapearActividad(actividad);
+  // Save planilla record
+  planillaData.unshift({
+    id: uid(),
+    fecha: r.fecha||localDateStr(),
+    registrado: localDateStr(),
+    resultado: r
+  });
+  if(planillaData.length > 30) planillaData = planillaData.slice(0,30);
+  sv('g9_planillas', planillaData);
+  // Update mision in misiones data if applicable
+  showToast('✅ Planilla del '+r.fecha+' guardada · '+esc+': '+info.mision);
+  renderPlanillaHistorial();
+  resetPlanilla();
+}
+
+function resetPlanilla(){
+  planillaResultadoActual = null;
+  document.getElementById('planillaPreview').style.display='none';
+  document.getElementById('planillaResultados').style.display='none';
+  document.getElementById('planillaLoading').style.display='none';
+  document.getElementById('planillaInput').value='';
+}
+
+function renderPlanillaHistorial(){
+  var container = document.getElementById('planillaHistorial');
+  if(!container||!planillaData.length) return;
+  container.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">📂 Planillas anteriores</div>'
+    + planillaData.slice(0,5).map(function(p){
+      var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+      var act = p.resultado[esc]||'—';
+      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px">'
+        +'<div style="font-size:18px">📋</div>'
+        +'<div style="flex:1">'
+        +'<div style="font-size:11px;font-weight:600">Planilla '+p.fecha+'</div>'
+        +'<div style="font-size:10px;color:var(--muted)">'+esc+': '+act+'</div>'
+        +'</div>'
+        +'<div style="font-size:9px;color:var(--muted)">'+fmtDate(p.registrado)+'</div>'
+        +'</div>';
+    }).join('');
 }
 
 // ════════════════════════════════════════════════
