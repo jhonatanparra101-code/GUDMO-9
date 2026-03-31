@@ -769,6 +769,17 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <textarea id="obsInput" rows="2" placeholder="Ej: Permiso hasta el viernes 28..."></textarea>
     </div>
 
+    <div class="fg">
+      <label>🚫 Restricción Operacional</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="checkbox" id="restriccionCheck" onchange="toggleRestriccion(this)"
+          style="width:18px;height:18px;cursor:pointer;accent-color:var(--red)">
+        <input type="text" id="restriccionObs" placeholder="Motivo (ej: Reto UNDMO - Abril 2026)"
+          style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px">
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:4px">El funcionario aparece En Servicio pero excluido del conteo operacional</div>
+    </div>
+
     <div id="permisoHorasToggle" style="display:none;margin-bottom:10px">
       <button onclick="togglePermisoHoras()" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:8px 14px;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;width:100%">
         ⏱️ Registrar permiso por horas (banco, gimnasio...)
@@ -1245,7 +1256,7 @@ function buildReactionBanner(){
   if(!banner) return;
   var esc=escMembers();
   if(!esc.length){ banner.innerHTML=''; return; }
-  var enServicio=esc.filter(function(m){return m.status==='Servicio';});
+  var enServicio=esc.filter(function(m){return m.status==='Servicio'&&!m.restriccion;});
   var missingCargos=CRITICAL_CARGOS.filter(function(c){return !enServicio.find(function(m){return m.cargo===c;});});
   var escSrv=enServicio.filter(function(m){return m.cargo==='Escudero';}).length;
   var escFaltan=Math.max(0,CRITICAL_MIN_ESCUDEROS-escSrv);
@@ -1338,6 +1349,9 @@ function buildCard(m){
   if(m.phone) badges+='<span>📞 '+m.phone+'</span>';
   if(m.cargo) badges+='<span class="cargo-tag'+(isCrit?' critical':'')+'">'+cargoIcon(m.cargo)+' '+m.cargo+'</span>';
   if(m.obs) badges+='<span>· '+m.obs+'</span>';
+  if(m.restriccion){
+    badges+='<span style="font-size:9px;padding:2px 7px;border-radius:6px;font-weight:700;background:rgba(239,68,68,.15);color:var(--red);white-space:nowrap">🚫 '+(m.restriccionObs||'Restricción operacional')+'</span>';
+  }
   if(m.esEspejo) badges+='<span style="font-size:9px;padding:1px 6px;border-radius:6px;background:rgba(236,72,153,.15);color:var(--pink);font-weight:700">📥 de '+(m.anexoDEI||'')+'</span>';
   if(m.status==='Anexo'&&m.anexoDEI&&!m.esEspejo) badges+='<span style="font-size:9px;padding:1px 6px;border-radius:6px;background:rgba(236,72,153,.15);color:var(--pink);font-weight:700">→ '+m.anexoDEI+'</span>';
   if(m.status==='Permiso'&&m.tipoPermiso){
@@ -1576,6 +1590,10 @@ function openEdit(idOrEl){
   document.getElementById('mSubtitle').textContent=
     [m.cargo,m.idNum].filter(Boolean).join(' · ');
   document.getElementById('obsInput').value=m.obs||'';
+  var rc=document.getElementById('restriccionCheck');
+  var ro=document.getElementById('restriccionObs');
+  if(rc){ rc.checked=!!(m.restriccion); }
+  if(ro){ ro.value=m.restriccionObs||''; ro.disabled=!m.restriccion; ro.style.opacity=m.restriccion?'1':'0.4'; }
   // Set cargo — use try/catch in case element not ready
   try{
     const ci=document.getElementById('cargoInput');
@@ -1703,6 +1721,11 @@ function registrarPermisoHoras(){
   render();
   document.getElementById('permisoHorasGroup').style.display='none';
   showToast(`✅ Permiso registrado — Sale ${salida}${regreso?' · Regresa '+regreso:''}`,'#22c55e');
+}
+
+function toggleRestriccion(cb){
+  var ro=document.getElementById('restriccionObs');
+  if(ro){ ro.disabled=!cb.checked; ro.style.opacity=cb.checked?'1':'0.4'; }
 }
 
 let selAnexoDEIVal='';
@@ -1840,6 +1863,9 @@ function saveEdit(){
   members[idx].status=selStatus;
   members[idx].cargo=(document.getElementById('cargoInput').value||'').trim();
   members[idx].obs=document.getElementById('obsInput').value.trim();
+  var rcEl=document.getElementById('restriccionCheck');
+  members[idx].restriccion = rcEl&&rcEl.checked ? true : false;
+  members[idx].restriccionObs = (document.getElementById('restriccionObs').value||'').trim();
   members[idx].tipoPermiso=selStatus==='Permiso'?selTipoPermisoVal:'';
   const prevAnexoDEI = members[idx].anexoDEI||'';
   const newAnexoDEI = selStatus==='Anexo'?selAnexoDEIVal:'';
@@ -1999,7 +2025,7 @@ function buildParte(){
   sorted().forEach(m=>{ if(groups[m.status]) groups[m.status].push(m); });
 
   const lines=arr=>arr.length
-    ? arr.map((x,i)=>`  ${i+1}. ${x.rank} ${x.name}${x.cargo?' ['+x.cargo+']':''}${x.obs?' ('+x.obs+')':''}`).join('\n')
+    ? arr.map((x,i)=>`  ${i+1}. ${x.rank} ${x.name}${x.cargo?' ['+x.cargo+']':''}${x.restriccion?' 🚫 RESTRINGIDO: '+(x.restriccionObs||''):''}${x.obs?' ('+x.obs+')':''}`).join('\n')
     : '  (ninguno)';
 
   const totSrv=groups.Servicio.length;
