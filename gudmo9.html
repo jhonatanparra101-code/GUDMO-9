@@ -40,6 +40,11 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .ciclo-info{font-family:'JetBrains Mono',monospace;font-size:11px;white-space:nowrap}
 .ciclo-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
 
+
+.pin-tipo-btn{background:var(--card);border:2px solid var(--border);border-radius:9px;padding:10px;text-align:center;cursor:pointer;transition:all .2s}
+.pin-tipo-btn.active{border-color:var(--gold);background:rgba(200,146,42,.1)}
+.pin-tipo-btn:active{transform:scale(.97)}
+
 /* ── ESCUADRA BAR ── */
 .esc-bar{display:flex;background:#07101f;border-bottom:1px solid var(--border);overflow-x:auto;gap:1px}
 .esc-btn{padding:9px 16px;font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1.5px;color:var(--muted);background:var(--panel);border:none;cursor:pointer;white-space:nowrap;transition:all .2s;border-bottom:3px solid transparent}
@@ -277,6 +282,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <button class="tab-btn" onclick="showTab('misiones',this)">🎯 Misiones</button>
   <button class="tab-btn" onclick="showTab('bloque',this)">🔍 Bloque</button>
   <button class="tab-btn" onclick="showTab('municion',this)">🔴 Munición</button>
+  <button class="tab-btn" onclick="showTab('pines',this)">📡 PINes</button>
   <button class="tab-btn" onclick="showTab('add',this)">⚙️ Config</button>
 </div>
 
@@ -685,6 +691,97 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
     <div style="display:flex;gap:8px">
       <button onclick="document.getElementById('permisoMasivoModal').style.display='none'" style="flex:1;padding:11px;border-radius:9px;border:none;background:var(--border);color:var(--muted2);font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
       <button onclick="aplicarPermisoMasivo()" style="flex:1;padding:11px;border-radius:9px;border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer">✅ Aplicar a todos</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- PINes OPERACIONALES -->
+<div class="section" id="tab-pines">
+  <div class="sh">📡 Generador de PINes</div>
+
+  <!-- Tipo de PIN -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+    <div class="pin-tipo-btn" data-tipo="inicio_servicio" onclick="selPinTipo(this)">
+      <div style="font-size:18px">🟢</div><div style="font-size:10px;font-weight:700;margin-top:3px">Inicio Servicio</div>
+    </div>
+    <div class="pin-tipo-btn" data-tipo="fin_servicio" onclick="selPinTipo(this)">
+      <div style="font-size:18px">🔴</div><div style="font-size:10px;font-weight:700;margin-top:3px">Fin Servicio</div>
+    </div>
+    <div class="pin-tipo-btn" data-tipo="inicio_desplazamiento" onclick="selPinTipo(this)">
+      <div style="font-size:18px">🚌</div><div style="font-size:10px;font-weight:700;margin-top:3px">Inicio Desplazamiento</div>
+    </div>
+    <div class="pin-tipo-btn" data-tipo="fin_desplazamiento" onclick="selPinTipo(this)">
+      <div style="font-size:18px">🏁</div><div style="font-size:10px;font-weight:700;margin-top:3px">Fin Desplazamiento</div>
+    </div>
+    <div class="pin-tipo-btn" data-tipo="consignas" onclick="selPinTipo(this)">
+      <div style="font-size:18px">📌</div><div style="font-size:10px;font-weight:700;margin-top:3px">Consignas Descanso</div>
+    </div>
+    <div class="pin-tipo-btn" data-tipo="bienestar" onclick="selPinTipo(this)">
+      <div style="font-size:18px">🏃</div><div style="font-size:10px;font-weight:700;margin-top:3px">Actividad Bienestar</div>
+    </div>
+    <div class="pin-tipo-btn" data-tipo="aseo" onclick="selPinTipo(this)">
+      <div style="font-size:18px">🧹</div><div style="font-size:10px;font-weight:700;margin-top:3px">Aseo y Embellecimiento</div>
+    </div>
+    <div class="pin-tipo-btn" data-tipo="verificacion_mp" onclick="selPinTipo(this)">
+      <div style="font-size:18px">⚖️</div><div style="font-size:10px;font-weight:700;margin-top:3px">Verificación Min. Público</div>
+    </div>
+    <div class="pin-tipo-btn" data-tipo="verificacion_dma" onclick="selPinTipo(this)">
+      <div style="font-size:18px">🛡️</div><div style="font-size:10px;font-weight:700;margin-top:3px">Verificación DMA</div>
+    </div>
+    <div class="pin-tipo-btn" data-tipo="verde" onclick="selPinTipo(this)">
+      <div style="font-size:18px">🟩</div><div style="font-size:10px;font-weight:700;margin-top:3px">Inicio Servicio Verde</div>
+    </div>
+  </div>
+
+  <!-- Campos variables -->
+  <div id="pinCampos" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+    <div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:10px" id="pinTipoLabel">—</div>
+
+    <div class="fg" id="campoParte" style="margin-bottom:8px">
+      <label style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Parte (auto)</label>
+      <input id="pinParte" readonly style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--gold2);font-size:13px;font-weight:700;font-family:monospace">
+    </div>
+
+    <div class="fg" id="campoSuperior" style="margin-bottom:8px">
+      <label style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Superior receptor</label>
+      <input id="pinSuperior" placeholder="mi Teniente / mi Capitán" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px">
+    </div>
+
+    <div class="fg" id="campoUbicacion" style="margin-bottom:8px">
+      <label style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Lugar / Ubicación</label>
+      <input id="pinUbicacion" placeholder="Ej: Estadio Centenario Armenia" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px">
+    </div>
+
+    <div class="fg" id="campoMovilidad" style="display:none;margin-bottom:8px">
+      <label style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Movilidad (buses/camiones)</label>
+      <textarea id="pinMovilidad" rows="2" placeholder="Bus 60-0867 - Pt. Hernández&#10;Camión 60-1083 - Pt. Mejía" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px"></textarea>
+    </div>
+
+    <div class="fg" id="campoUniforme" style="display:none;margin-bottom:8px">
+      <label style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Uniforme / Armamento</label>
+      <input id="pinUniforme" placeholder="Ej: #5 Armamento corto, pistola" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px">
+    </div>
+
+    <div class="fg" id="campoResumen" style="margin-bottom:8px">
+      <label style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Resumen / Observación adicional</label>
+      <textarea id="pinResumen" rows="3" placeholder="Descripción de la actividad..." style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px"></textarea>
+    </div>
+
+    <div style="margin-bottom:8px">
+      <label style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:4px">Hora (auto — editable)</label>
+      <input type="time" id="pinHora" style="background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:13px;font-weight:700">
+    </div>
+
+    <button onclick="generarPin()" class="btn btn-primary" style="width:100%">⚡ Generar PIN</button>
+  </div>
+
+  <!-- PIN generado -->
+  <div id="pinResultado" style="display:none">
+    <div style="background:var(--navy);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;font-family:monospace;font-size:11px;color:var(--text);line-height:1.8;white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow-y:auto" id="pinTexto"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="ac" onclick="copiarPin()"><div class="ai">📋</div><div class="al">Copiar</div><div class="as">Para WhatsApp</div></div>
+      <div class="ac" onclick="compartirPin()"><div class="ai">📤</div><div class="al">Compartir</div><div class="as">Enviar PIN</div></div>
     </div>
   </div>
 </div>
@@ -3492,6 +3589,229 @@ function aplicarPermisoMasivo(){
 
   document.getElementById('permisoMasivoModal').style.display='none';
   render();
+}
+
+
+// ════════════════════════════════════════════════
+//  GENERADOR DE PINes
+// ════════════════════════════════════════════════
+var pinTipoActual = '';
+var pinConfig = ld('g9_pinconfig', {superior:'mi Teniente', uniforme:'#5 Armamento corto, pistola'});
+
+var PIN_TIPOS = {
+  inicio_servicio:      'Inicio de Servicio',
+  fin_servicio:         'Finalización de Servicio',
+  inicio_desplazamiento:'Inicio Desplazamiento',
+  fin_desplazamiento:   'Finalización Desplazamiento',
+  consignas:            'Consignas de Descanso',
+  bienestar:            'Actividad de Bienestar (4D)',
+  aseo:                 'Actividad de Aseo y Embellecimiento',
+  verificacion_mp:      'Verificación Ministerio Público',
+  verificacion_dma:     'Verificación DMA',
+  verde:                'Inicio Servicio Apoyo Verde',
+};
+
+var CAMPOS_POR_TIPO = {
+  inicio_servicio:       {movilidad:false, uniforme:true},
+  fin_servicio:          {movilidad:false, uniforme:false},
+  inicio_desplazamiento: {movilidad:true,  uniforme:false},
+  fin_desplazamiento:    {movilidad:true,  uniforme:false},
+  consignas:             {movilidad:false, uniforme:false},
+  bienestar:             {movilidad:true,  uniforme:false},
+  aseo:                  {movilidad:false, uniforme:false},
+  verificacion_mp:       {movilidad:false, uniforme:false},
+  verificacion_dma:      {movilidad:false, uniforme:false},
+  verde:                 {movilidad:false, uniforme:true},
+};
+
+function renderPines(){
+  // Set default hora to now
+  var now = new Date();
+  var hh = String(now.getHours()).padStart(2,'0');
+  var mm = String(now.getMinutes()).padStart(2,'0');
+  var horaEl = document.getElementById('pinHora');
+  if(horaEl) horaEl.value = hh+':'+mm;
+  // Set parte auto
+  actualizarParte();
+  // Set superior from config
+  var supEl = document.getElementById('pinSuperior');
+  if(supEl && !supEl.value) supEl.value = config.sup||'mi Teniente';
+}
+
+function actualizarParte(){
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var escM = members.filter(function(m){ return m.escuadra===esc&&m.status==='Servicio'; });
+  var cats = countByCategory(escM);
+  var parteStr = cats.OF+'-'+cats.NE+'-'+cats.PT+'-'+cats.PP;
+  var el = document.getElementById('pinParte');
+  if(el) el.value = parteStr;
+}
+
+function selPinTipo(btn){
+  document.querySelectorAll('.pin-tipo-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  pinTipoActual = btn.getAttribute('data-tipo');
+  var label = document.getElementById('pinTipoLabel');
+  if(label) label.textContent = PIN_TIPOS[pinTipoActual]||'';
+  // Show/hide fields
+  var campos = CAMPOS_POR_TIPO[pinTipoActual]||{};
+  var movEl = document.getElementById('campoMovilidad');
+  var unifEl = document.getElementById('campoUniforme');
+  if(movEl) movEl.style.display = campos.movilidad?'block':'none';
+  if(unifEl) unifEl.style.display = campos.uniforme?'block':'none';
+  document.getElementById('pinCampos').style.display='block';
+  document.getElementById('pinResultado').style.display='none';
+  actualizarParte();
+}
+
+function generarPin(){
+  if(!pinTipoActual){ showToast('⚠️ Seleccione el tipo de PIN','#f97316'); return; }
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var fecha = localDateStr();
+  var partes = fecha.split('-');
+  var fechaFmt = partes[2]+'/'+partes[1]+'/'+partes[0];
+  var hora = document.getElementById('pinHora').value||'--:--';
+  var parte = document.getElementById('pinParte').value||'0-0-0-0';
+  var superior = document.getElementById('pinSuperior').value.trim()||'mi Teniente';
+  var ubicacion = document.getElementById('pinUbicacion').value.trim();
+  var movilidad = document.getElementById('pinMovilidad').value.trim();
+  var uniforme = document.getElementById('pinUniforme').value.trim();
+  var resumen = document.getElementById('pinResumen').value.trim();
+
+  // Get commander from config
+  var cmdt = config.cmdt || 'Cdte. Escuadra '+esc;
+  
+  // Saludo según hora
+  var horaNum = parseInt(hora.split(':')[0]);
+  var saludo = horaNum<12?'buenos días':horaNum<18?'buenas tardes':'buenas noches';
+
+  var pin = '';
+
+  if(pinTipoActual==='inicio_servicio'||pinTipoActual==='verde'){
+    pin = 'Dios y patria, '+superior+' '+saludo+', reporto inicio de servicio'+(pinTipoActual==='verde'?' (Apoyo en Verde)':'')+':\n\n'
+      +'FECHA '+fechaFmt+'\n'
+      +'HORA '+hora+'\n'
+      +'PARTE '+parte+'\n'
+      +(uniforme?'UNIFORME '+uniforme+'\n':'')
+      +(ubicacion?'UBICACION '+ubicacion+'\n':'')
+      +'\nRESUMEN\n'
+      +(resumen||'Inicia servicio '+esc+' GUDMO-9, se forma el personal, se les recalca las medidas de seguridad operacional, se verificó estado físico y anímico, y porte de elementos dotados por la institución.')
+      +'\n\n'+cmdt+'\nCdte. Escuadra '+esc+' GUDMO-9';
+
+  } else if(pinTipoActual==='fin_servicio'){
+    pin = 'Dios y Patria '+superior+' '+saludo+', reporto:\n\nFINALIZACIÓN DEL SERVICIO Y RETIRADA DEL PERSONAL DEL '+esc+' GUDMO-9\n\n'
+      +'FECHA '+fechaFmt+'\n'
+      +'HORA '+hora+'\n'
+      +'PARTE '+parte+'\n'
+      +(ubicacion?'LUGAR '+ubicacion+'\n':'')
+      +'\n'+(resumen?resumen+'\n\n':'')
+      +'📌 EL PERSONAL DEBE ESTAR ATENTO A CUALQUIER REQUERIMIENTO O REACCIÓN DURANTE EL DESCANSO.\n'
+      +'📌 Se le recuerda al personal que no está permitido salir de la jurisdicción sin el respectivo permiso autorizado.\n'
+      +'📌 Extremar medidas de seguridad en los desplazamientos.\n'
+      +'📌 Evitar las rutinas en los desplazamientos y cambiar rutas.\n'
+      +'📌 Respetar las normas de tránsito.\n'
+      +'📌 Utilizar elementos de seguridad al conducir motocicleta.\n'
+      +'📌 Realizar los desplazamientos en ropa civil y calzado cerrado.\n'
+      +'📌 Estar atentos al celular para cualquier requerimiento.\n'
+      +'📌 El personal se retira a DESCANSAR, no a realizar otra actividad.\n'
+      +'📌 Cualquier novedad informar oportunamente.\n'
+      +'📌 PROHIBIDO el consumo de bebidas embriagantes dentro de instalaciones policiales.\n'
+      +'📌 Dar aplicabilidad al instructivo 013 DIPON JESEP. Seguridad operacional.\n\n'
+      +cmdt+'\nCdte. Escuadra '+esc+' GUDMO-9';
+
+  } else if(pinTipoActual==='inicio_desplazamiento'){
+    pin = 'Dios y patria '+superior+' '+saludo+', reporto desplazamiento así:\n\n'
+      +'FECHA '+fechaFmt+'\n'
+      +'HORA '+hora+'\n'
+      +'PARTE '+parte+'\n'
+      +(ubicacion?'LUGAR '+ubicacion+'\n':'')
+      +(movilidad?'\nMOVILIDAD\n'+movilidad+'\n':'')
+      +'\nRESUMEN\n'
+      +(resumen||'Inicio desplazamiento '+esc+' GUDMO-9.')
+      +'\n\n'+cmdt+'\nCdte. Escuadra '+esc+' GUDMO-9';
+
+  } else if(pinTipoActual==='fin_desplazamiento'){
+    pin = 'Dios y patria '+superior+' '+saludo+', reporto finalización de desplazamiento:\n\n'
+      +'FECHA '+fechaFmt+'\n'
+      +'HORA '+hora+'\n'
+      +'PARTE '+parte+'\n'
+      +(ubicacion?'LUGAR '+ubicacion+'\n':'')
+      +(movilidad?'\nMOVILIDAD\n'+movilidad+'\n':'')
+      +'\nRESUMEN\n'
+      +(resumen||'Finaliza desplazamiento. Personal en base '+esc+' GUDMO-9.')
+      +'\n\n'+cmdt+'\nCdte. Escuadra '+esc+' GUDMO-9';
+
+  } else if(pinTipoActual==='consignas'){
+    pin = 'Dios y patria '+superior+' '+saludo+':\n\n'
+      +'Se forma el personal del '+esc+' GUDMO-9 y se retiran a descanso impartiendo las siguientes consignas:\n\n'
+      +'FECHA '+fechaFmt+'\n'
+      +'HORA '+hora+'\n'
+      +'PARTE '+parte+'\n\n'
+      +(resumen?resumen+'\n\n':'')
+      +'• Durante el desplazamiento acatar estrictamente las normas de tránsito.\n'
+      +'• Mantener medidas de autoprotección, evitando rutas de riesgo.\n'
+      +'• Verificar condiciones mecánicas del vehículo y portar elementos de seguridad.\n'
+      +'• Permanecer atento y disponible ante requerimientos del mando.\n'
+      +'• Cualquier novedad informar oportunamente al superior inmediato.\n'
+      +'• PROHIBIDO el consumo de licor o sustancias que generen incapacidad.\n'
+      +'• Conservar conducta acorde a los principios y valores institucionales.\n\n'
+      +cmdt+'\nCdte. Escuadra '+esc+' GUDMO-9';
+
+  } else if(pinTipoActual==='bienestar'){
+    pin = 'Dios y patria '+superior+' '+saludo+', reporto:\n\nACTIVIDAD FÍSICA - ESTRATEGIA 4D\n\n'
+      +'FECHA '+fechaFmt+'\n'
+      +'HORA '+hora+'\n'
+      +'PARTE '+parte+'\n'
+      +(movilidad?'MOVILIDAD '+movilidad+'\n':'')
+      +'\nRESUMEN\n'
+      +(resumen||'En cumplimiento a la estrategia 4D en su dimensión física, personal del '+esc+' da inicio a actividad deportiva, con el fin de fortalecer la salud física y mental del personal.')
+      +'\n\n'+cmdt+'\nCdte. Escuadra '+esc+' GUDMO-9';
+
+  } else if(pinTipoActual==='aseo'){
+    pin = 'Dios y patria '+superior+' '+saludo+', reporto:\n\nACTIVIDAD DE ASEO Y EMBELLECIMIENTO DE LA BASE\n\n'
+      +'FECHA '+fechaFmt+'\n'
+      +'HORA '+hora+'\n'
+      +'PARTE '+parte+'\n'
+      +(ubicacion?'LUGAR '+ubicacion+'\n':'')
+      +'\nRESUMEN\n'
+      +(resumen||'Personal del '+esc+' GUDMO-9 realiza actividad de aseo y embellecimiento de las instalaciones de la base GUDMO-9, con el fin de mantener en óptimas condiciones el área de trabajo.')
+      +'\n\n'+cmdt+'\nCdte. Escuadra '+esc+' GUDMO-9';
+
+  } else if(pinTipoActual==='verificacion_mp'){
+    pin = 'Dios y patria '+superior+' '+saludo+', respetuosamente reporto revista de A,M,E,D,M,L por parte de delegados del Ministerio Público al personal del '+esc+' GUDMO-9.\n\n'
+      +'FECHA '+fechaFmt+'\n'
+      +'HORA '+hora+'\n'
+      +'PARTE '+parte+'\n'
+      +(ubicacion?'LUGAR '+ubicacion+'\n':'')
+      +'\n'+(resumen||'Se realiza verificación por parte del Ministerio Público, verificando elementos asignados sin evidenciar novedad alguna.')
+      +'\n\n'+cmdt+'\nCdte. Escuadra '+esc+' GUDMO-9';
+
+  } else if(pinTipoActual==='verificacion_dma'){
+    pin = 'Dios y patria '+superior+' '+saludo+', reporto verificación al personal del DMA:\n\n'
+      +'FECHA '+fechaFmt+'\n'
+      +'HORA '+hora+'\n'
+      +'PARTE '+parte+'\n'
+      +(ubicacion?'UBICACION '+ubicacion+'\n':'')
+      +'\n'+(resumen||'Se realiza revisión a personal del DMA verificando la conformación de acuerdo a la Resolución 1091 del 31-03-2023, Manual para la Atención a la Reunión y Manifestación Pública y control de disturbios de la Policía Nacional.')
+      +'\n\n'+cmdt+'\nCdte. Escuadra '+esc+' GUDMO-9';
+  }
+
+  document.getElementById('pinTexto').textContent = pin;
+  document.getElementById('pinResultado').style.display='block';
+  // Scroll to result
+  document.getElementById('pinResultado').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function copiarPin(){
+  var txt = document.getElementById('pinTexto').textContent;
+  if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(function(){ showToast('📋 PIN copiado — listo para WhatsApp'); }); }
+  else { var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('📋 PIN copiado'); }
+}
+
+function compartirPin(){
+  var txt = document.getElementById('pinTexto').textContent;
+  if(navigator.share) navigator.share({title:'PIN GUDMO-9',text:txt});
+  else copiarPin();
 }
 
 // ════════════════════════════════════════════════
