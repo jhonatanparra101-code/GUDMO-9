@@ -276,7 +276,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <button class="tab-btn active" onclick="showTab('roster',this)">📋 Nómina</button>
   <button class="tab-btn" onclick="showTab('parte',this)">📄 Parte</button>
   <button class="tab-btn" onclick="showTab('historial',this)">📆 Historial</button>
-  <button class="tab-btn" onclick="showTab('turnos',this)">🔄 Turnos</button>
+  <button class="tab-btn" onclick="showTab('turnos',this)">📖 Bitácora</button>
   <button class="tab-btn" onclick="showTab('reportes',this)">📊 Reportes</button>
   <button class="tab-btn" onclick="showTab('aseo',this)">🧹 Aseo</button>
   <button class="tab-btn" onclick="showTab('misiones',this)">🎯 Misiones</button>
@@ -468,7 +468,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 
 <!-- TURNOS -->
 <div class="section" id="tab-turnos">
-  <div class="sh">🔄 Turnos Rotativos</div>
+  <div class="sh">📖 Bitácora y Turnos Rotativos</div>
   <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
     <button class="btn btn-primary" style="flex:none;padding:8px 14px;font-size:11px" onclick="showAddTurno()">+ Nueva Tarea Rotativa</button>
   </div>
@@ -2422,10 +2422,18 @@ function renderTurnos(){
     var diasR = t.tipo==='semanal_laboral'?getDiasRestantes(t):null;
     var enPerm = members.filter(function(m){return m.escuadra===t.escuadra&&m.status==='Permiso';}).length>3;
     var diasMsg='';
+    var fechaEnt = t.tipo==='semanal_laboral'?getFechaEntregaEstimada(t):null;
     if(diasR!==null){
-      if(enPerm) diasMsg='<div style="font-size:10px;color:var(--yellow);margin-top:3px">⏸️ Contador pausado — en permiso</div>';
-      else if(diasR===0) diasMsg='<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:3px">🔔 ¡Toca entregar hoy!</div>';
-      else diasMsg='<div style="font-size:10px;color:var(--muted);margin-top:3px">📅 '+diasR+' día'+(diasR!==1?'s':'')+' laborable'+(diasR!==1?'s':'')+' restante'+(diasR!==1?'s':'')+'</div>';
+      if(enPerm){
+        diasMsg='<div style="font-size:10px;color:var(--yellow);margin-top:3px">⏸️ Contador pausado — en permiso</div>';
+        if(fechaEnt) diasMsg+='<div style="font-size:10px;color:var(--muted);margin-top:2px">📅 Entrega estimada: '+fmtDate(fechaEnt)+'</div>';
+      } else if(diasR===0){
+        diasMsg='<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:3px">🔔 ¡Toca entregar hoy!</div>';
+      } else {
+        diasMsg='<div style="font-size:10px;color:var(--muted);margin-top:3px">📅 '+diasR+' día'+(diasR!==1?'s':'')+' laborable'+(diasR!==1?'s':'')+' restante'+(diasR!==1?'s':'');
+        if(fechaEnt) diasMsg+=' · entrega est. '+fmtDate(fechaEnt);
+        diasMsg+='</div>';
+      }
     }
 
     var proximoBanner='';
@@ -2485,31 +2493,39 @@ function renderTurnos(){
 }
 
 function getDiasLaboralesDesde(fechaStr){
-  // Count days from fechaStr to today that were actual service days
-  // A service day = not in a pausa period of the ciclo laboral
+  // Cuenta días laborables desde fechaStr hasta hoy
+  // Excluye períodos de permiso (cuando el DEI está de descanso)
   if(!fechaStr) return 0;
   var desde = new Date(fechaStr+'T00:00:00');
   var hoy = new Date(); hoy.setHours(0,0,0,0);
   if(desde >= hoy) return 0;
   var dias = 0;
   var cur = new Date(desde);
-  cur.setDate(cur.getDate()+1); // start counting day after receipt
+  cur.setDate(cur.getDate()+1); // el día SIGUIENTE al de recepción
 
+  // Recolectar todos los períodos de pausa del DEI actual
+  var pausas = [];
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  // Pausa 1: ciclo laboral (bloque búsqueda pausas)
+  var bd = bloqueData[esc];
+  if(bd && bd.pausas) bd.pausas.forEach(function(p){ if(p.inicio) pausas.push(p); });
+  // Pausa 2: permiso masivo — detectar del personal
+  // Si más del 50% del DEI está en permiso en una fecha dada, esa fecha no cuenta
   while(cur <= hoy){
     var dStr = cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
-    // Check if this day is in a pausa (permiso period)
-    var enPausa = false;
-    if(cicloConfig.inicioLaboral){
-      // Check all DEI 2 bloque pausas
-      var bd = bloqueData['DEI 2'];
-      if(bd && bd.pausas){
-        bd.pausas.forEach(function(p){
-          if(p.inicio && dStr >= p.inicio && (!p.fin || dStr <= p.fin)) enPausa = true;
-        });
-      }
+    var enPausa = pausas.some(function(p){
+      return dStr >= p.inicio && (!p.fin || dStr < p.fin);
+    });
+    // También verificar si el personal estaba en permiso masivo esa fecha
+    if(!enPausa){
+      var escPersonal = members.filter(function(m){ return m.escuadra===esc; });
+      var enPermiso = escPersonal.filter(function(m){
+        return m.status==='Permiso' && m.fechaSalida && m.fechaFin &&
+               dStr >= m.fechaSalida && dStr < m.fechaFin;
+      }).length;
+      // Si más del 60% están en permiso → día de pausa
+      if(escPersonal.length > 0 && (enPermiso/escPersonal.length) > 0.6) enPausa = true;
     }
-    // Also check if members are globally on permiso (all in Permiso status)
-    // Simple heuristic: if fechaFin of a permiso masivo covers this date, skip
     if(!enPausa) dias++;
     cur.setDate(cur.getDate()+1);
   }
@@ -2518,10 +2534,43 @@ function getDiasLaboralesDesde(fechaStr){
 
 function getDiasRestantes(turno){
   if(!turno.historial.length) return null;
-  var last = turno.historial[turno.historial.length-1];
+  var sorted = [...turno.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var last = sorted[0];
   var diasTurno = turno.diasLaboralesPorTurno || 7;
   var diasTranscurridos = getDiasLaboralesDesde(last.fecha);
   return Math.max(0, diasTurno - diasTranscurridos);
+}
+
+function getFechaEntregaEstimada(turno){
+  // Calcula la fecha estimada de entrega (diasTurno días laborables desde recepción)
+  if(!turno.historial.length) return null;
+  var sorted = [...turno.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var last = sorted[0];
+  var diasTurno = turno.diasLaboralesPorTurno || 7;
+  var esc = turno.escuadra||'DEI 2';
+  var bd = bloqueData[esc];
+  var pausas = (bd&&bd.pausas)||[];
+
+  var diasContados = 0;
+  var cur = new Date(last.fecha+'T00:00:00');
+  cur.setDate(cur.getDate()+1);
+  var limite = new Date(); limite.setMonth(limite.getMonth()+6); // max 6 meses
+
+  while(diasContados < diasTurno && cur <= limite){
+    var dStr = cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+    var enPausa = pausas.some(function(p){ return dStr>=p.inicio&&(!p.fin||dStr<p.fin); });
+    if(!enPausa){
+      var escPersonal = members.filter(function(m){ return m.escuadra===esc; });
+      var enPermiso = escPersonal.filter(function(m){
+        return m.status==='Permiso'&&m.fechaSalida&&m.fechaFin&&dStr>=m.fechaSalida&&dStr<m.fechaFin;
+      }).length;
+      if(escPersonal.length>0&&(enPermiso/escPersonal.length)>0.6) enPausa=true;
+    }
+    if(!enPausa) diasContados++;
+    if(diasContados===diasTurno) return dStr;
+    cur.setDate(cur.getDate()+1);
+  }
+  return null;
 }
 
 function getSiguiente(turno){
