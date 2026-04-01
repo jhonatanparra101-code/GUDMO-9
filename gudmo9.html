@@ -2457,19 +2457,62 @@ function renderTurnos(){
     // Historial de entregas
     var histHtml='';
     if(t.historial.length){
-      var sorted=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
-      histHtml='<div style="margin-top:10px">'
-        +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Historial de entregas</div>'
-        +'<div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">';
-      sorted.forEach(function(h){
-        var hm=members.find(function(x){return x.id===h.memberId;});
-        histHtml+='<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)">'
-          +'<div style="font-size:10px;color:var(--muted);min-width:70px">'+fmtDate(h.fecha)+'</div>'
-          +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+(hm?hm.rank+' '+hm.name:'Desconocido')+'</div>'
-          +(h.obs?'<div style="font-size:9px;color:var(--muted);margin-left:auto">'+h.obs+'</div>':'')
-          +'</div>';
-      });
-      histHtml+='</div></div>';
+      var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+
+      if(t.tipo==='semanal_laboral'){
+        // MATRIZ VIEW — igual que el Excel de guardia
+        // Columnas: persona × turno recibido
+        var miembrosOrden = t.miembros.map(function(mm){
+          return members.find(function(x){return x.id===mm.memberId;});
+        }).filter(Boolean);
+
+        histHtml='<div style="margin-top:10px">'
+          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📊 Registro de entregas</div>'
+          +'<div style="overflow-x:auto">'
+          +'<table style="width:100%;border-collapse:collapse;font-size:10px">'
+          +'<thead><tr>'
+          +'<th style="background:var(--navy);padding:5px 8px;text-align:left;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:100px">FUNCIONARIO</th>';
+
+        // Column per delivery
+        sorted.forEach(function(h,i){
+          histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:55px">T'+(i+1)+'<br><span style="font-size:8px;font-weight:400">'+fmtDate(h.fecha)+'</span></th>';
+        });
+        histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--gold2);font-size:9px;border:1px solid var(--border);min-width:36px">TOT</th>'
+          +'</tr></thead><tbody>';
+
+        miembrosOrden.forEach(function(m){
+          var total=0;
+          var nomCorto=m.name.split(' ').slice(0,2).join(' ');
+          var row='<tr><td style="padding:5px 8px;border:1px solid var(--border);color:var(--text)">'
+            +'<span style="font-size:8px;color:var(--muted);margin-right:3px">'+m.rank+'</span>'+nomCorto+'</td>';
+          sorted.forEach(function(h){
+            var esSuyo=h.memberId===m.id;
+            if(esSuyo) total++;
+            row+='<td style="text-align:center;padding:5px 2px;border:1px solid var(--border);'
+              +'background:'+(esSuyo?'rgba(34,197,94,.15)':'transparent')+';'
+              +'color:'+(esSuyo?'var(--green)':'var(--muted)')+';font-weight:'+(esSuyo?'700':'400')+'">'
+              +(esSuyo?'✓':'-')+'</td>';
+          });
+          row+='<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?'var(--gold2)':'var(--muted)')+';font-weight:700">'+(total||'-')+'</td></tr>';
+          histHtml+=row;
+        });
+
+        histHtml+='</tbody></table></div></div>';
+
+      } else {
+        // Lista simple para otros tipos de turno
+        histHtml='<div style="margin-top:10px">'
+          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Historial</div>'
+          +'<div style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">';
+        sorted.reverse().forEach(function(h){
+          var hm=members.find(function(x){return x.id===h.memberId;});
+          histHtml+='<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)">'
+            +'<div style="font-size:10px;color:var(--muted);min-width:70px">'+fmtDate(h.fecha)+'</div>'
+            +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+(hm?hm.rank+' '+hm.name:'Desconocido')+'</div>'
+            +'</div>';
+        });
+        histHtml+='</div></div>';
+      }
     }
 
     out+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">'
@@ -4172,7 +4215,7 @@ function renderGuardia(){
   var fechaEl = document.getElementById('guardiaFecha');
   if(fechaEl) fechaEl.value = localDateStr();
   var mesEl = document.getElementById('guardiaMesFiltro');
-  if(mesEl && mesEl.value==='todos') mesEl.value = getMesActual();
+  // Keep 'todos' as default to show the full grid
   renderGuardiaTabla();
 }
 
