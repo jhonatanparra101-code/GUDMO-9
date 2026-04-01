@@ -1441,6 +1441,11 @@ function showTab(id,btn){
   if(id==='aseo') renderAseo();
   if(id==='misiones') renderMisiones();
   if(id==='bloque') renderBloque();
+  if(id==='misiones') renderMisiones();
+  if(id==='municion') renderMunicion();
+  if(id==='pines') renderPines();
+  if(id==='planilla') renderPlanilla();
+  if(id==='guardia') renderGuardia();
   if(id==='add'){ loadConfig(); updateStorageInfo(); }
 }
 
@@ -2378,102 +2383,105 @@ function showToast(msg,bg){
 // ════════════════════════════════════════════════
 
 function renderTurnos(){
-  const container = document.getElementById('turnosList');
-  const esc = curEscuadra==='all'?'DEI 2':curEscuadra;
-  const myTurnos = turnos.filter(t=>t.escuadra===esc||t.escuadra==='all');
+  var container = document.getElementById('turnosList');
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var myTurnos = turnos.filter(function(t){ return t.escuadra===esc||t.escuadra==='all'; });
   if(!myTurnos.length){
-    container.innerHTML=`<div class="empty"><div class="ei">🔄</div>
-      <p style="margin-bottom:12px">No hay tareas rotativas todavía.</p>
-      <p style="font-size:11px;color:var(--muted2)">Use <strong>+ Nueva Tarea</strong> para crear turnos de<br>Fondo del DEI, Bitácora física, etc.</p></div>`;
+    container.innerHTML='<div class="empty"><div class="ei">🔄</div><p style="margin-bottom:12px">No hay tareas rotativas todavía.</p></div>';
     return;
   }
-  container.innerHTML = myTurnos.map(t=>{
-    const siguiente = getSiguiente(t);
-    // Build ordered member list with "último cumplió" mark
-    const lastId = t.historial.length?[...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0].memberId:null;
-    const histAll = [...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  var out='';
+  myTurnos.forEach(function(t){
+    var siguiente = getSiguiente(t);
+    var lastH = t.historial.length ? [...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);})[0] : null;
+    var lastM = lastH ? members.find(function(m){return m.id===lastH.memberId;}) : null;
 
-    const memberList = t.miembros.map((mm,i)=>{
-      const m=members.find(x=>x.id===mm.memberId);
-      if(!m) return '';
-      const isNext = siguiente&&siguiente.id===m.id;
-      const isLast = lastId===m.id;
-      const lastEntry = histAll.find(h=>h.memberId===m.id);
-      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:3px;
-        background:${isNext?'rgba(200,146,42,.12)':'rgba(255,255,255,.02)'};
-        border:1px solid ${isNext?'rgba(200,146,42,.35)':'var(--border)'}">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--muted);width:18px;text-align:center">${i+1}</div>
-        <div style="flex:1">
-          <div style="font-size:12px;font-weight:600;color:${isNext?'var(--gold2)':'var(--text)'}">${m.rank} ${m.name}</div>
-          ${lastEntry?`<div style="font-size:9.5px;color:var(--muted)">Último: 📅 ${fmtDate(lastEntry.fecha)}</div>`:'<div style="font-size:9.5px;color:var(--muted)">Sin registros</div>'}
-        </div>
-        ${isNext?'<div style="font-size:9px;font-weight:700;color:var(--gold2);background:rgba(200,146,42,.2);padding:2px 7px;border-radius:8px;white-space:nowrap">PRÓXIMO</div>':''}
-        ${isLast&&!isNext?'<div style="font-size:9px;color:var(--muted);padding:2px 7px">último</div>':''}
-      </div>`;
-    }).join('');
+    // Member list
+    var memberListHtml='';
+    t.miembros.forEach(function(mm,i){
+      var m=members.find(function(x){return x.id===mm.memberId;});
+      if(!m) return;
+      var isNext=siguiente&&siguiente.id===m.id;
+      var isLast=lastH&&lastH.memberId===m.id;
+      var lastEntry=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);}).find(function(h){return h.memberId===m.id;});
+      memberListHtml+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:3px;'
+        +'background:'+(isNext?'rgba(200,146,42,.12)':'rgba(255,255,255,.02)')+';">'
+        +'<div style="font-size:14px;color:var(--muted);width:18px;text-align:center">'+(i+1)+'</div>'
+        +'<div style="flex:1">'
+        +'<div style="font-size:12px;font-weight:600;color:'+(isNext?'var(--gold2)':'var(--text)')+'">'+m.rank+' '+m.name+'</div>'
+        +(lastEntry
+          ?'<div style="font-size:9.5px;color:var(--muted)">Último: 📅 '+fmtDate(lastEntry.fecha)+'</div>'
+          :'<div style="font-size:9.5px;color:var(--muted)">Sin registros</div>')
+        +'</div>'
+        +(isNext?'<div style="font-size:9px;font-weight:700;color:var(--gold2);background:rgba(200,146,42,.2);padding:2px 7px;border-radius:8px">PRÓXIMO</div>':'')
+        +(isLast&&!isNext?'<div style="font-size:9px;color:var(--muted);padding:2px 7px">último</div>':'')
+        +'</div>';
+    });
 
-    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+    // Próximo banner
+    var diasR = t.tipo==='semanal_laboral'?getDiasRestantes(t):null;
+    var enPerm = members.filter(function(m){return m.escuadra===t.escuadra&&m.status==='Permiso';}).length>3;
+    var diasMsg='';
+    if(diasR!==null){
+      if(enPerm) diasMsg='<div style="font-size:10px;color:var(--yellow);margin-top:3px">⏸️ Contador pausado — en permiso</div>';
+      else if(diasR===0) diasMsg='<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:3px">🔔 ¡Toca entregar hoy!</div>';
+      else diasMsg='<div style="font-size:10px;color:var(--muted);margin-top:3px">📅 '+diasR+' día'+(diasR!==1?'s':'')+' laborable'+(diasR!==1?'s':'')+' restante'+(diasR!==1?'s':'')+'</div>';
+    }
 
-      <!-- Header -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div style="font-size:22px">${t.tipo==='semanal'?'📅':'📆'}</div>
-        <div style="flex:1">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px;color:var(--gold2)">${t.nombre}</div>
-          <div style="font-size:10px;color:var(--muted)">${t.escuadra} · ${t.tipo} · ${t.miembros.length} personas en turno</div>
-        </div>
-        <button onclick="deleteTurno('${t.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)">🗑️</button>
-      </div>
+    var proximoBanner='';
+    if(!siguiente){
+      proximoBanner='<div style="font-size:12px;color:var(--muted);margin-bottom:10px">⚠️ Sin miembros configurados</div>';
+    } else {
+      proximoBanner='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="font-size:24px">👤</div>'
+        +'<div style="flex:1">'
+        +(lastM&&lastM.id!==siguiente.id?'<div style="font-size:10px;color:var(--muted)">Tiene ahora: <strong>'+lastM.rank+' '+lastM.name.split(' ')[0]+'</strong></div>':'')
+        +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Próximo</div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--green)">'+siguiente.rank+' '+siguiente.name+'</div>'
+        +diasMsg
+        +'</div>'
+        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='marcarCumplido(this.dataset.tid)'>✅ Entregar</button>"
+        +'</div>'
+        +'</div>';
+    }
 
-      <!-- Próximo turno highlight -->
-      ${(function(){
-        if(!siguiente) return '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">⚠️ Sin miembros configurados</div>';
-        var diasR = t.tipo==='semanal_laboral'?getDiasRestantes(t):null;
-        var lastH = t.historial.length?[...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0]:null;
-        var lastM = lastH?members.find(m=>m.id===lastH.memberId):null;
-        var enPerm = members.filter(m=>m.escuadra===t.escuadra&&m.status==='Permiso').length > 3;
-        var diasMsg = '';
-        if(diasR!==null){
-          if(enPerm) diasMsg='<div style="font-size:10px;color:var(--yellow);margin-top:3px">⏸️ Contador pausado — en permiso</div>';
-          else if(diasR===0) diasMsg='<div style="font-size:10px;color:var(--red);margin-top:3px;font-weight:700">🔔 ¡Toca entregar hoy!</div>';
-          else diasMsg='<div style="font-size:10px;color:var(--muted);margin-top:3px">📅 '+diasR+' día'+(diasR!==1?'s':'')+' laborable'+(diasR!==1?'s':'')+' restante'+(diasR!==1?'s':'')+'</div>';
-        }
-        return '<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px">'
-          +'<div style="display:flex;align-items:center;gap:10px">'
-          +'<div style="font-size:24px">👤</div>'
-          +'<div style="flex:1">'
-          +(lastM&&lastM.id!==siguiente.id?'<div style="font-size:10px;color:var(--muted)">Tiene ahora: <strong>'+lastM.rank+' '+lastM.name.split(' ')[0]+'</strong></div>':'')
-          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Próximo</div>'
-          +'<div style="font-size:14px;font-weight:700;color:var(--green)">'+siguiente.rank+' '+siguiente.name+'</div>'
-          +diasMsg
-          +'</div>'
-          +'<button class="btn btn-primary" style="flex:none;padding:8px 14px;font-size:11px" data-tid="'+t.id+'" onclick="marcarCumplido(this.getAttribute(\"data-tid\"))">✅ Entregar</button>'
-          +'</div>'
+    // Historial de entregas
+    var histHtml='';
+    if(t.historial.length){
+      var sorted=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+      histHtml='<div style="margin-top:10px">'
+        +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Historial de entregas</div>'
+        +'<div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">';
+      sorted.forEach(function(h){
+        var hm=members.find(function(x){return x.id===h.memberId;});
+        histHtml+='<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)">'
+          +'<div style="font-size:10px;color:var(--muted);min-width:70px">'+fmtDate(h.fecha)+'</div>'
+          +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+(hm?hm.rank+' '+hm.name:'Desconocido')+'</div>'
+          +(h.obs?'<div style="font-size:9px;color:var(--muted);margin-left:auto">'+h.obs+'</div>':'')
           +'</div>';
-      })()}
+      });
+      histHtml+='</div></div>';
+    }
 
-      <!-- Member order list -->
-      <div style="margin-bottom:4px">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Orden del turno</div>
-        ${memberList||'<div style="font-size:11px;color:var(--muted)">Sin miembros</div>'}
-      </div>
-
-      <!-- Historial del turno -->
-      ${t.historial.length?`
-      <div style="margin-top:10px">
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Historial de entregas</div>
-        <div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
-          ${[...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(h=>{
-            const hm=members.find(x=>x.id===h.memberId);
-            return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)">'
-              +'<div style="font-size:10px;color:var(--muted);min-width:70px">'+fmtDate(h.fecha)+'</div>'
-              +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+(hm?hm.rank+' '+hm.name:'Desconocido')+'</div>'
-              +(h.obs?'<div style="font-size:9px;color:var(--muted);margin-left:auto">'+h.obs+'</div>':'')
-              +'</div>';
-          }).join('')}
-        </div>
-      </div>`:''}
-    </div>`;
-  }).join('');
+    out+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+      +'<div style="font-size:22px">'+(t.tipo==='semanal_laboral'?'📖':t.tipo==='semanal'?'📅':'📆')+'</div>'
+      +'<div style="flex:1">'
+      +'<div style="font-size:17px;font-weight:700;letter-spacing:1px;color:var(--gold2)">'+t.nombre+'</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+t.escuadra+' · '+t.miembros.length+' personas</div>'
+      +'</div>'
+      +"<button data-tid='"+t.id+"' onclick='deleteTurno(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
+      +'</div>'
+      +proximoBanner
+      +'<div style="margin-bottom:4px">'
+      +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Orden del turno</div>'
+      +(memberListHtml||'<div style="font-size:11px;color:var(--muted)">Sin miembros</div>')
+      +'</div>'
+      +histHtml
+      +'</div>';
+  });
+  container.innerHTML=out;
 }
 
 function getDiasLaboralesDesde(fechaStr){
