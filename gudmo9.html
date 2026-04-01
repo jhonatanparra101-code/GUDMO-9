@@ -284,6 +284,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <button class="tab-btn" onclick="showTab('municion',this)">🔴 Munición</button>
   <button class="tab-btn" onclick="showTab('pines',this)">📡 PINes</button>
   <button class="tab-btn" onclick="showTab('planilla',this)">📋 Planilla</button>
+  <button class="tab-btn" onclick="showTab('guardia',this)">🔒 Guardia</button>
   <button class="tab-btn" onclick="showTab('add',this)">⚙️ Config</button>
 </div>
 
@@ -788,49 +789,100 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 </div>
 
 
-<!-- PLANILLA IA -->
+<!-- PLANILLA MANUAL -->
 <div class="section" id="tab-planilla">
-  <div class="sh">📋 Lectura de Planilla con IA</div>
+  <div class="sh">📋 Planilla del Día Siguiente</div>
 
-  <div style="background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:9px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--muted2);line-height:1.7">
-    📸 Tome foto de la planilla del día siguiente → la IA la lee → le muestra qué actividad tiene cada DEI → usted confirma los cambios.
-  </div>
-
-  <!-- Upload zone -->
-  <div id="planillaUpload" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px;transition:all .2s"
-    onclick="document.getElementById('planillaInput').click()"
-    ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
-    ondragleave="this.style.borderColor='var(--border)'">
-    <div style="font-size:36px;margin-bottom:8px">📷</div>
-    <div style="font-size:13px;font-weight:600;color:var(--text)">Toque para adjuntar foto de la planilla</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG — desde cámara o galería</div>
-  </div>
-  <input type="file" id="planillaInput" accept="image/*" capture="environment" style="display:none" onchange="procesarPlanilla(event)">
-
-  <!-- Preview -->
-  <div id="planillaPreview" style="display:none;margin-bottom:12px">
-    <img id="planillaImg" style="width:100%;border-radius:8px;border:1px solid var(--border);max-height:200px;object-fit:contain">
-  </div>
-
-  <!-- Loading -->
-  <div id="planillaLoading" style="display:none;text-align:center;padding:20px">
-    <div style="font-size:28px;margin-bottom:8px">🤖</div>
-    <div style="font-size:13px;color:var(--gold2);font-weight:600">Analizando planilla...</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:4px">La IA está leyendo las actividades</div>
-  </div>
-
-  <!-- Results -->
-  <div id="planillaResultados" style="display:none">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--gold2);margin-bottom:10px">📊 Lo que encontró la IA</div>
-    <div id="planillaCards"></div>
-    <div style="margin-top:12px;display:flex;gap:8px">
-      <button onclick="aplicarPlanilla()" class="btn btn-primary" style="flex:1">✅ Aplicar cambios</button>
-      <button onclick="resetPlanilla()" class="btn btn-ghost" style="flex:none;padding:8px 14px">🔄 Nueva foto</button>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+    <div style="font-size:11px;color:var(--muted2);margin-bottom:12px;line-height:1.6">
+      Registre la actividad de cada DEI para mañana. Queda guardado como referencia del dispositivo.
     </div>
+
+    <!-- Fecha -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Fecha de la planilla</div>
+      <input type="date" id="planFecha" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px">
+    </div>
+
+    <!-- DEI selectors -->
+    <div id="planDEIsContainer"></div>
+
+    <!-- Observaciones generales -->
+    <div style="margin-top:10px">
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Observaciones generales</div>
+      <textarea id="planObs" rows="2" placeholder="Ej: Reunión de comandantes a las 08:00..." style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px"></textarea>
+    </div>
+
+    <button onclick="guardarPlanilla()" class="btn btn-primary" style="width:100%;margin-top:12px">💾 Guardar Planilla</button>
   </div>
 
-  <!-- Historial planillas -->
-  <div id="planillaHistorial" style="margin-top:16px"></div>
+  <!-- Vista previa del parte del día siguiente -->
+  <div id="planPreview" style="display:none;background:var(--navy);border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px;font-family:monospace;font-size:11px;color:var(--text);line-height:1.8;white-space:pre-wrap" id="planTexto"></div>
+
+  <!-- Historial -->
+  <div id="planillaHistorial" style="margin-top:4px"></div>
+</div>
+
+
+<!-- GUARDIA -->
+<div class="section" id="tab-guardia">
+  <div class="sh">🔒 Control de Guardias DEI 2</div>
+
+  <!-- Registrar turno -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+    <div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:10px">➕ Registrar turno de guardia</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Funcionario</div>
+        <select id="guardiaPersona" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
+          <option value="">— Seleccione —</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Fecha</div>
+        <input type="date" id="guardiaFecha" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Días</div>
+        <input type="number" id="guardiaDias" min="1" max="24" value="12" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;font-weight:700">
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Tipo</div>
+        <select id="guardiaTipo" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
+          <option value="Comandante">Cte. Guardia</option>
+          <option value="Centinela">Centinela</option>
+          <option value="Reemplazo">Reemplazo</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="registrarGuardia()" class="btn btn-primary" style="width:100%">✅ Registrar</button>
+  </div>
+
+  <!-- Filtro mes -->
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+    <div style="font-size:10px;color:var(--muted)">Mes:</div>
+    <select id="guardiaMesFiltro" onchange="renderGuardiaTabla()" style="flex:1;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:6px;color:var(--text);font-size:12px">
+      <option value="todos">Todos (acumulado)</option>
+      <option value="enero">Enero</option>
+      <option value="febrero">Febrero</option>
+      <option value="marzo">Marzo</option>
+      <option value="abril">Abril</option>
+      <option value="mayo">Mayo</option>
+      <option value="junio">Junio</option>
+      <option value="julio">Julio</option>
+      <option value="agosto">Agosto</option>
+      <option value="septiembre">Septiembre</option>
+      <option value="octubre">Octubre</option>
+      <option value="noviembre">Noviembre</option>
+      <option value="diciembre">Diciembre</option>
+    </select>
+    <button onclick="exportarGuardiaExcel()" style="background:rgba(34,197,94,.12);border:1px solid var(--green);border-radius:6px;padding:6px 12px;color:var(--green);font-size:11px;cursor:pointer;font-weight:700;white-space:nowrap">📥 Excel</button>
+  </div>
+
+  <!-- Tabla -->
+  <div id="guardiaTabla"></div>
 </div>
 
 <!-- EDIT MODAL -->
@@ -1238,7 +1290,7 @@ function showCloudStatus(msg, color){
   if(el){ el.textContent = msg; el.style.color = color||'var(--muted)'; }
 }
 
-async function initFirebase(){
+async function initFirebase_UNUSED(){
   // Firebase config pre-configurado para GUDMO-9
   var cfg = {
     apiKey: "AIzaSyBqBBTN0PAaFfGJbfzmCyMbbQB5dsY-_v8",
@@ -2373,15 +2425,31 @@ function renderTurnos(){
       </div>
 
       <!-- Próximo turno highlight -->
-      ${siguiente?`<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
-        <div style="font-size:24px">👤</div>
-        <div>
-          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Le toca esta vez</div>
-          <div style="font-size:14px;font-weight:700;color:var(--green)">${siguiente.rank} ${siguiente.name}</div>
-        </div>
-        <button class="btn btn-primary" style="margin-left:auto;flex:none;padding:8px 14px;font-size:11px" onclick="marcarCumplido('${t.id}')">✅ Marcar cumplido</button>
-      </div>`:
-      `<div style="font-size:12px;color:var(--muted);margin-bottom:10px">⚠️ No hay miembros configurados</div>`}
+      ${(function(){
+        if(!siguiente) return '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">⚠️ Sin miembros configurados</div>';
+        var diasR = t.tipo==='semanal_laboral'?getDiasRestantes(t):null;
+        var lastH = t.historial.length?[...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0]:null;
+        var lastM = lastH?members.find(m=>m.id===lastH.memberId):null;
+        var enPerm = members.filter(m=>m.escuadra===t.escuadra&&m.status==='Permiso').length > 3;
+        var diasMsg = '';
+        if(diasR!==null){
+          if(enPerm) diasMsg='<div style="font-size:10px;color:var(--yellow);margin-top:3px">⏸️ Contador pausado — en permiso</div>';
+          else if(diasR===0) diasMsg='<div style="font-size:10px;color:var(--red);margin-top:3px;font-weight:700">🔔 ¡Toca entregar hoy!</div>';
+          else diasMsg='<div style="font-size:10px;color:var(--muted);margin-top:3px">📅 '+diasR+' día'+(diasR!==1?'s':'')+' laborable'+(diasR!==1?'s':'')+' restante'+(diasR!==1?'s':'')+'</div>';
+        }
+        return '<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px">'
+          +'<div style="display:flex;align-items:center;gap:10px">'
+          +'<div style="font-size:24px">👤</div>'
+          +'<div style="flex:1">'
+          +(lastM&&lastM.id!==siguiente.id?'<div style="font-size:10px;color:var(--muted)">Tiene ahora: <strong>'+lastM.rank+' '+lastM.name.split(' ')[0]+'</strong></div>':'')
+          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Próximo</div>'
+          +'<div style="font-size:14px;font-weight:700;color:var(--green)">'+siguiente.rank+' '+siguiente.name+'</div>'
+          +diasMsg
+          +'</div>'
+          +'<button class="btn btn-primary" style="flex:none;padding:8px 14px;font-size:11px" data-tid="'+t.id+'" onclick="marcarCumplido(this.getAttribute(\"data-tid\"))">✅ Entregar</button>'
+          +'</div>'
+          +'</div>';
+      })()}
 
       <!-- Member order list -->
       <div style="margin-bottom:4px">
@@ -2389,12 +2457,21 @@ function renderTurnos(){
         ${memberList||'<div style="font-size:11px;color:var(--muted)">Sin miembros</div>'}
       </div>
 
-      <!-- Ver historial completo link -->
-      <div style="margin-top:8px;text-align:right">
-        <button onclick="verHistTurno('${t.id}')" style="background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;text-decoration:underline">
-          📊 Ver historial completo en Reportes →
-        </button>
-      </div>
+      <!-- Historial del turno -->
+      ${t.historial.length?`
+      <div style="margin-top:10px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Historial de entregas</div>
+        <div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+          ${[...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(h=>{
+            const hm=members.find(x=>x.id===h.memberId);
+            return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)">'
+              +'<div style="font-size:10px;color:var(--muted);min-width:70px">'+fmtDate(h.fecha)+'</div>'
+              +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+(hm?hm.rank+' '+hm.name:'Desconocido')+'</div>'
+              +(h.obs?'<div style="font-size:9px;color:var(--muted);margin-left:auto">'+h.obs+'</div>':'')
+              +'</div>';
+          }).join('')}
+        </div>
+      </div>`:''}
     </div>`;
   }).join('');
 }
@@ -3863,175 +3940,346 @@ function compartirPin(){
 
 
 // ════════════════════════════════════════════════
-//  PLANILLA IA
+//  PLANILLA MANUAL
 // ════════════════════════════════════════════════
 var planillaData = ld('g9_planillas', []);
-var planillaResultadoActual = null;
 
-var ACTIVIDADES_MAP = {
-  'semana santa':        {mision:'Control disturbios', estado:'Servicio'},
-  'base':                {mision:'Disponible en base', estado:'Servicio'},
-  'disponible':          {mision:'Disponible en base', estado:'Servicio'},
-  'bloque':              {mision:'Apoyo bloque búsqueda', estado:'Servicio'},
-  'búsqueda':            {mision:'Apoyo bloque búsqueda', estado:'Servicio'},
-  'busqueda':            {mision:'Apoyo bloque búsqueda', estado:'Servicio'},
-  'verde':               {mision:'Servicio verde', estado:'Servicio'},
-  'vigilancia':          {mision:'Servicio verde', estado:'Servicio'},
-  'disturbios':          {mision:'Control disturbios', estado:'Servicio'},
-  'antimotines':         {mision:'Control disturbios', estado:'Servicio'},
-  'comisión':            {mision:'Comisión', estado:'Comision'},
-  'comision':            {mision:'Comisión', estado:'Comision'},
-  'descanso':            {mision:'Descanso', estado:'Permiso'},
-  'permiso':             {mision:'Permiso', estado:'Permiso'},
-  'guardia':             {mision:'Guardia interna', estado:'Guardia'},
-};
+var ACTIVIDADES = [
+  'Disponible en base',
+  'Apoyo bloque búsqueda',
+  'Control disturbios / Semana Santa',
+  'Servicio verde (apoyo vigilancia)',
+  'Comisión fuera de Pereira',
+  'Descanso / Permiso',
+  'Guardia interna',
+  'Apoyo evento especial',
+  'Otra actividad',
+];
 
 function renderPlanilla(){
-  renderPlanillaHistorial();
-}
+  // Set tomorrow as default date
+  var tom = new Date(); tom.setDate(tom.getDate()+1);
+  var fechaEl = document.getElementById('planFecha');
+  if(fechaEl) fechaEl.value = tom.getFullYear()+'-'+String(tom.getMonth()+1).padStart(2,'0')+'-'+String(tom.getDate()).padStart(2,'0');
 
-async function procesarPlanilla(evt){
-  var file = evt.target.files[0];
-  if(!file) return;
-
-  // Show preview
-  var reader = new FileReader();
-  reader.onload = async function(e){
-    var base64 = e.target.result.split(',')[1];
-    var mediaType = file.type || 'image/jpeg';
-
-    document.getElementById('planillaImg').src = e.target.result;
-    document.getElementById('planillaPreview').style.display='block';
-    document.getElementById('planillaLoading').style.display='block';
-    document.getElementById('planillaResultados').style.display='none';
-
-    try {
-      var prompt = 'Analiza esta planilla de servicios de la Policía Nacional. '+
-        'Identifica qué actividad tiene asignada cada DEI (DEI 1, DEI 2, DEI 3) y Plana Mayor para el día que muestra. '+
-        'Responde SOLO en JSON con este formato exacto: '+
-        '{"fecha":"DD/MM/AAAA","DEI 1":"actividad","DEI 2":"actividad","DEI 3":"actividad","Plana Mayor":"actividad","observaciones":"texto opcional"} '+
-        'Si no puedes leer algún DEI escribe "No identificado". '+
-        'Las actividades posibles son: Disponible en base, Apoyo bloque búsqueda, Control disturbios, Servicio verde, Comisión, Descanso/Permiso, Guardia interna, o el texto exacto que veas.';
-
-      var response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: [
-              {type:'image', source:{type:'base64', media_type:mediaType, data:base64}},
-              {type:'text', text:prompt}
-            ]
-          }]
-        })
-      });
-
-      var data = await response.json();
-      var texto = data.content && data.content[0] ? data.content[0].text : '';
-
-      // Parse JSON from response
-      var jsonMatch = texto.match(/\{[\s\S]*\}/);
-      if(!jsonMatch) throw new Error('No se pudo parsear la respuesta');
-      var resultado = JSON.parse(jsonMatch[0]);
-
-      planillaResultadoActual = resultado;
-      mostrarResultadoPlanilla(resultado);
-
-    } catch(err) {
-      document.getElementById('planillaLoading').style.display='none';
-      showToast('⚠️ Error leyendo la planilla: '+err.message, '#ef4444');
-    }
-  };
-  reader.readAsDataURL(file);
-  evt.target.value='';
-}
-
-function mostrarResultadoPlanilla(r){
-  document.getElementById('planillaLoading').style.display='none';
-  document.getElementById('planillaResultados').style.display='block';
-
-  var escuadras = ['DEI 1','DEI 2','DEI 3','Plana Mayor'];
-  var cards = escuadras.map(function(esc){
-    var actividad = r[esc]||'No identificado';
-    var esPropia = esc === (curEscuadra==='all'?'DEI 2':curEscuadra);
-    var info = mapearActividad(actividad);
-    return '<div style="background:var(--card);border:1px solid '+(esPropia?'var(--gold)':'var(--border)')+';border-radius:8px;padding:10px 12px;margin-bottom:8px">'
-      +'<div style="display:flex;align-items:center;gap:8px">'
-      +'<div style="font-family:Bebas Neue,sans-serif;font-size:16px;color:'+(esPropia?'var(--gold2)':'var(--text)')+'">'+esc+(esPropia?' ★':'')+'</div>'
-      +'<div style="flex:1;font-size:12px;color:var(--muted2)">'+actividad+'</div>'
-      +'<div class="status-pill p-'+info.estado+'" style="font-size:9px">'+info.mision+'</div>'
+  // Build DEI selectors
+  var container = document.getElementById('planDEIsContainer');
+  if(!container) return;
+  var deis = ['DEI 1','DEI 2','DEI 3','Plana Mayor'];
+  var miDEI = curEscuadra==='all'?'DEI 2':curEscuadra;
+  container.innerHTML = deis.map(function(dei){
+    var esMio = dei===miDEI;
+    var opts = ACTIVIDADES.map(function(a){
+      return '<option value="'+a+'">'+a+'</option>';
+    }).join('');
+    return '<div style="margin-bottom:10px">'
+      +'<div style="font-size:10px;font-weight:700;color:'+(esMio?'var(--gold2)':'var(--text)')+';margin-bottom:4px">'
+      +dei+(esMio?' ★ (su escuadra)':'')
       +'</div>'
+      +'<select id="plan_'+dei.replace(' ','_')+'" style="width:100%;background:var(--navy);border:1px solid '+(esMio?'var(--gold)':'var(--border)')+';border-radius:6px;padding:8px;color:var(--text);font-size:12px">'
+      +'<option value="">— Sin asignar —</option>'+opts
+      +'</select>'
+      +'<input type="text" id="planDetalle_'+dei.replace(' ','_')+'" placeholder="Detalle adicional (opcional)" '
+      +'style="width:100%;margin-top:4px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:11px">'
       +'</div>';
   }).join('');
 
-  if(r.observaciones){
-    cards += '<div style="font-size:10px;color:var(--muted);padding:6px;font-style:italic">📝 '+r.observaciones+'</div>';
-  }
-
-  document.getElementById('planillaCards').innerHTML = cards;
-}
-
-function mapearActividad(texto){
-  if(!texto) return {mision:'Desconocida', estado:'Servicio'};
-  var t = texto.toLowerCase();
-  for(var kw in ACTIVIDADES_MAP){
-    if(t.includes(kw)) return ACTIVIDADES_MAP[kw];
-  }
-  return {mision:texto, estado:'Servicio'};
-}
-
-function aplicarPlanilla(){
-  if(!planillaResultadoActual) return;
-  var r = planillaResultadoActual;
-  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
-  var actividad = r[esc];
-  if(!actividad||actividad==='No identificado'){
-    showToast('⚠️ No se identificó actividad para '+esc, '#f97316');
-    return;
-  }
-  var info = mapearActividad(actividad);
-  // Save planilla record
-  planillaData.unshift({
-    id: uid(),
-    fecha: r.fecha||localDateStr(),
-    registrado: localDateStr(),
-    resultado: r
-  });
-  if(planillaData.length > 30) planillaData = planillaData.slice(0,30);
-  sv('g9_planillas', planillaData);
-  // Update mision in misiones data if applicable
-  showToast('✅ Planilla del '+r.fecha+' guardada · '+esc+': '+info.mision);
   renderPlanillaHistorial();
-  resetPlanilla();
 }
 
-function resetPlanilla(){
-  planillaResultadoActual = null;
-  document.getElementById('planillaPreview').style.display='none';
-  document.getElementById('planillaResultados').style.display='none';
-  document.getElementById('planillaLoading').style.display='none';
-  document.getElementById('planillaInput').value='';
+function guardarPlanilla(){
+  var fecha = document.getElementById('planFecha').value;
+  if(!fecha){ showToast('⚠️ Ingrese la fecha','#f97316'); return; }
+
+  var deis = ['DEI 1','DEI 2','DEI 3','Plana Mayor'];
+  var resultado = {};
+  deis.forEach(function(dei){
+    var id = dei.replace(' ','_');
+    var act = document.getElementById('plan_'+id).value;
+    var det = document.getElementById('planDetalle_'+id).value.trim();
+    resultado[dei] = act + (det?' — '+det:'');
+  });
+  var obs = document.getElementById('planObs').value.trim();
+
+  var registro = {
+    id: uid(),
+    fecha: fecha,
+    registrado: localDateStr(),
+    resultado: resultado,
+    obs: obs
+  };
+
+  // Replace if same date exists
+  planillaData = planillaData.filter(function(p){ return p.fecha!==fecha; });
+  planillaData.unshift(registro);
+  if(planillaData.length>30) planillaData=planillaData.slice(0,30);
+  sv('g9_planillas', planillaData);
+
+  // Show preview
+  mostrarPreviaPlanilla(registro);
+  renderPlanillaHistorial();
+  showToast('✅ Planilla del '+fmtDate(fecha)+' guardada');
 }
 
+function mostrarPreviaPlanilla(p){
+  var preview = document.getElementById('planPreview');
+  if(!preview) return;
+  var partes = p.fecha.split('-');
+  var fechaFmt = partes[2]+'/'+partes[1]+'/'+partes[0];
+  var deis = ['DEI 1','DEI 2','DEI 3','Plana Mayor'];
+  var lines = ['PLANILLA GUDMO-9', 'Fecha: '+fechaFmt, ''];
+  deis.forEach(function(dei){
+    var act = p.resultado[dei] || 'Sin asignar';
+    lines.push(dei+': '+act);
+  });
+  if(p.obs) lines.push('', 'Obs: '+p.obs);
+  preview.textContent = lines.join('\n');
+  preview.style.display = 'block';
+}
 function renderPlanillaHistorial(){
   var container = document.getElementById('planillaHistorial');
-  if(!container||!planillaData.length) return;
-  container.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">📂 Planillas anteriores</div>'
-    + planillaData.slice(0,5).map(function(p){
-      var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
-      var act = p.resultado[esc]||'—';
-      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px">'
+  if(!container) return;
+  if(!planillaData.length){
+    container.innerHTML='';
+    return;
+  }
+  var miDEI = curEscuadra==='all'?'DEI 2':curEscuadra;
+  container.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">📂 Planillas guardadas</div>'
+    +planillaData.slice(0,7).map(function(p){
+      var act = p.resultado[miDEI]||'—';
+      var partes = p.fecha.split('-');
+      var fechaFmt = partes[2]+'/'+partes[1]+'/'+partes[0];
+      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer" onclick="mostrarPreviaPlanilla(this.__data__)" >'
+        +'<div style="display:flex;align-items:center;gap:10px">'
         +'<div style="font-size:18px">📋</div>'
         +'<div style="flex:1">'
-        +'<div style="font-size:11px;font-weight:600">Planilla '+p.fecha+'</div>'
-        +'<div style="font-size:10px;color:var(--muted)">'+esc+': '+act+'</div>'
+        +'<div style="font-size:12px;font-weight:600">'+fechaFmt+'</div>'
+        +'<div style="font-size:10px;color:var(--muted)">'+miDEI+': '+act+'</div>'
         +'</div>'
-        +'<div style="font-size:9px;color:var(--muted)">'+fmtDate(p.registrado)+'</div>'
+        +'<button data-pid="'+p.id+'" onclick="event.stopPropagation();eliminarPlanilla(this.getAttribute(\"data-pid\"))" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer">🗑️</button>'
+        +'</div>'
         +'</div>';
     }).join('');
+
+  // Attach data to cards
+  var cards = container.querySelectorAll('[onclick*="mostrarPreviaPlanilla"]');
+  planillaData.slice(0,7).forEach(function(p,i){
+    if(cards[i]) cards[i].__data__ = p;
+  });
+}
+
+function eliminarPlanilla(id){
+  planillaData = planillaData.filter(function(p){ return p.id!==id; });
+  sv('g9_planillas', planillaData);
+  renderPlanillaHistorial();
+  showToast('🗑️ Planilla eliminada');
+}
+
+// ════════════════════════════════════════════════
+//  CONTROL DE GUARDIAS
+// ════════════════════════════════════════════════
+var guardiaData = ld('g9_guardia', [{"memberId": "m0041", "nombre": "BETANCUR GUERRA FRANCISCO JAVIER", "grado": "IT", "mes": "enero", "ano": 2026, "dias": 6}, {"memberId": "m0046", "nombre": "ARCE OCAMPO DUVERNEY", "grado": "SI", "mes": "enero", "ano": 2026, "dias": 18}, {"memberId": "m0047", "nombre": "GARZON OCHOA ESTEFANY", "grado": "SI", "mes": "marzo", "ano": 2026, "dias": 5}, {"memberId": "m0050", "nombre": "CARDONA MARULANDA JHON BAYRON", "grado": "SI", "mes": "enero", "ano": 2026, "dias": 1}, {"memberId": "m0049", "nombre": "QUESADA JHON MAURICIO", "grado": "SI", "mes": "febrero", "ano": 2026, "dias": 28}, {"memberId": "m0049", "nombre": "QUESADA JHON MAURICIO", "grado": "SI", "mes": "marzo", "ano": 2026, "dias": 7}, {"memberId": "m0063", "nombre": "RODRIGUEZ MIRANDA JEISON", "grado": "SI", "mes": "marzo", "ano": 2026, "dias": 11}, {"memberId": "m0048", "nombre": "RAMOS RAMIREZ EDUARDO ANDRES", "grado": "SI", "mes": "marzo", "ano": 2026, "dias": 14}, {"memberId": "m0054", "nombre": "ESQUIVEL HERRERA GIAN CARLO", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 5}, {"memberId": "m0073", "nombre": "ARANGO LONDOÑO ALVARO JAVIER", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 26}, {"memberId": "m0051", "nombre": "AVILA BAQUERO JUAN DAVID", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 1}, {"memberId": "m0075", "nombre": "BETANCUR ANGEL JAIME", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 1}, {"memberId": "m0075", "nombre": "BETANCUR ANGEL JAIME", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 5}, {"memberId": "m0066", "nombre": "CANO MOLINA YEISON", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 6}, {"memberId": "m0066", "nombre": "CANO MOLINA YEISON", "grado": "PT", "mes": "febrero", "ano": 2026, "dias": 20}, {"memberId": "m0066", "nombre": "CANO MOLINA YEISON", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 5}, {"memberId": "m0052", "nombre": "CORTES PEÑA JHOAN", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 18}, {"memberId": "m0069", "nombre": "DIAZ BELLO DIEGO ARMANDO", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 7}, {"memberId": "m0069", "nombre": "DIAZ BELLO DIEGO ARMANDO", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 2}, {"memberId": "m0053", "nombre": "DURAN COY BRANDON ROBERTO", "grado": "PT", "mes": "febrero", "ano": 2026, "dias": 2}, {"memberId": "m0055", "nombre": "GARCIA MARULANDA CESAR AUGUSTO", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 6}, {"memberId": "m0056", "nombre": "GOMEZ ORDOÑEZ OSCAR EDUARDO", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 6}, {"memberId": "m0056", "nombre": "GOMEZ ORDOÑEZ OSCAR EDUARDO", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 1}, {"memberId": "m0057", "nombre": "LOPEZ ACEVEDO MICHAEL STEVEN", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 18}, {"memberId": "m0058", "nombre": "LOPEZ VARGAS JOHAN SEBASTIAN", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 1}, {"memberId": "m0072", "nombre": "MUR VELASCO LUIS ALBERTO", "grado": "PT", "mes": "febrero", "ano": 2026, "dias": 4}, {"memberId": "m0072", "nombre": "MUR VELASCO LUIS ALBERTO", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 9}, {"memberId": "m0059", "nombre": "OBANDO ARISTIZABAL JHON WILMER", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 1}, {"memberId": "m0068", "nombre": "OSSA ROJAS JOSE FERNANDO", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 7}, {"memberId": "m0068", "nombre": "OSSA ROJAS JOSE FERNANDO", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 2}, {"memberId": "m0060", "nombre": "PARRA ORTIZ DAVID", "grado": "PT", "mes": "febrero", "ano": 2026, "dias": 26}, {"memberId": "m0060", "nombre": "PARRA ORTIZ DAVID", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 5}, {"memberId": "m0061", "nombre": "PINZON GIRALDO MIGUEL ANGEL", "grado": "PT", "mes": "febrero", "ano": 2026, "dias": 5}, {"memberId": "m0062", "nombre": "GARCIA PEDROZO JEAN CARLOS", "grado": "PP", "mes": "marzo", "ano": 2026, "dias": 10}, {"memberId": "m0074", "nombre": "RUIZ PESTANA CAMILO", "grado": "PP", "mes": "marzo", "ano": 2026, "dias": 17}]);
+
+function saveGuardia(){ sv('g9_guardia', guardiaData); }
+
+var MESES_NUM = {enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12};
+var MESES_NOMBRE = ['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function getMesActual(){
+  return MESES_NOMBRE[new Date().getMonth()+1];
+}
+
+function renderGuardia(){
+  // Always repopulate persona select
+  var sel = document.getElementById('guardiaPersona');
+  if(sel){
+    sel.innerHTML = '<option value="">— Seleccione —</option>';
+    var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+    var personal = members.filter(function(m){ return m.escuadra===esc&&!m.esEspejo; });
+    personal.sort(function(a,b){ return (RANK_ORDER[a.rank]||99)-(RANK_ORDER[b.rank]||99); });
+    // Group NE and PT
+    var ne = personal.filter(function(m){ return ['IJ','IN','IT','SI'].includes(m.rank); });
+    var pt = personal.filter(function(m){ return ['PT','PP','AG'].includes(m.rank); });
+    if(ne.length){
+      var grp1 = document.createElement('optgroup'); grp1.label='── Nivel Ejecutivo ──';
+      ne.forEach(function(m){ var o=document.createElement('option');o.value=m.id;o.textContent=m.rank+' '+m.name;grp1.appendChild(o); });
+      sel.appendChild(grp1);
+    }
+    if(pt.length){
+      var grp2 = document.createElement('optgroup'); grp2.label='── Patrulleros ──';
+      pt.forEach(function(m){ var o=document.createElement('option');o.value=m.id;o.textContent=m.rank+' '+m.name;grp2.appendChild(o); });
+      sel.appendChild(grp2);
+    }
+  }
+  // Set default date and month filter
+  var fechaEl = document.getElementById('guardiaFecha');
+  if(fechaEl) fechaEl.value = localDateStr();
+  var mesEl = document.getElementById('guardiaMesFiltro');
+  if(mesEl && mesEl.value==='todos') mesEl.value = getMesActual();
+  renderGuardiaTabla();
+}
+
+function registrarGuardia(){
+  var mid = document.getElementById('guardiaPersona').value;
+  var fecha = document.getElementById('guardiaFecha').value;
+  var horas = parseInt(document.getElementById('guardiaDias').value)||12;
+  var tipo = document.getElementById('guardiaTipo').value;
+  if(!mid||!fecha){ showToast('⚠️ Complete todos los campos','#f97316'); return; }
+  var partes = fecha.split('-');
+  var mesNom = MESES_NOMBRE[parseInt(partes[1])];
+  var m = members.find(function(x){ return x.id===mid; });
+  guardiaData.push({
+    memberId: mid,
+    nombre: m?m.name:'',
+    grado: m?m.rank:'',
+    mes: mesNom,
+    ano: parseInt(partes[0]),
+    dias: dias,
+    tipo: tipo,
+    fecha: fecha
+  });
+  saveGuardia();
+  renderGuardiaTabla();
+  showToast('✅ Guardia registrada — '+dias+' día(s) '+tipo);
+}
+
+function renderGuardiaTabla(){
+  var container = document.getElementById('guardiaTabla');
+  if(!container) return;
+  var mesFiltro = document.getElementById('guardiaMesFiltro').value;
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var personal = members.filter(function(m){ return m.escuadra===esc; });
+  // Sort by rank (seniority) — IJ, IT, SI, IN first, then PT, PP
+  personal.sort(function(a,b){ return (RANK_ORDER[a.rank]||99)-(RANK_ORDER[b.rank]||99); });
+
+  var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Stats
+  var totalDias = 0;
+  guardiaData.forEach(function(r){ if(mesFiltro==='todos'||r.mes===mesFiltro) totalDias+=(r.dias||0); });
+  var conGuardia = personal.filter(function(m){
+    return guardiaData.some(function(r){ return r.memberId===m.id&&(mesFiltro==='todos'||r.mes===mesFiltro); });
+  }).length;
+
+  var out = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'
+    +'<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">'
+    +'<div style="font-size:22px;font-weight:900;color:var(--blue)">'+totalDias+'</div>'
+    +'<div style="font-size:9px;color:var(--muted)">Días totales</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">'
+    +'<div style="font-size:22px;font-weight:900;color:var(--green)">'+conGuardia+'</div>'
+    +'<div style="font-size:9px;color:var(--muted)">Han hecho guardia</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">'
+    +'<div style="font-size:22px;font-weight:900;color:var(--orange)">'+(personal.length-conGuardia)+'</div>'
+    +'<div style="font-size:9px;color:var(--muted)">Sin guardia</div></div>'
+    +'</div>';
+
+  if(mesFiltro==='todos'){
+    // GRID VIEW — persona × mes (like Excel)
+    out += '<div style="overflow-x:auto;margin-bottom:8px">'
+      +'<table style="width:100%;border-collapse:collapse;font-size:10px">'
+      +'<thead><tr>'
+      +'<th style="background:var(--navy);padding:6px 8px;text-align:left;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:120px">FUNCIONARIO</th>'
+      +MESES_CORTO.map(function(m){ return '<th style="background:var(--navy);padding:6px 4px;text-align:center;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:32px">'+m+'</th>'; }).join('')
+      +'<th style="background:var(--navy);padding:6px 4px;text-align:center;color:var(--gold2);font-size:9px;border:1px solid var(--border);min-width:40px;font-weight:700">TOT</th>'
+      +'</tr></thead><tbody>';
+
+    // Separate NE from PT/PP
+    var ne = personal.filter(function(m){ return ['IJ','IN','IT','SI'].includes(m.rank); });
+    var pt = personal.filter(function(m){ return ['PT','PP','AG'].includes(m.rank); });
+
+    function buildRows(grupo, label){
+      if(!grupo.length) return '';
+      var rows = '<tr><td colspan="14" style="background:rgba(200,146,42,.08);color:var(--gold2);font-size:9px;font-weight:700;padding:4px 8px;border:1px solid var(--border)">'+label+'</td></tr>';
+      grupo.forEach(function(m){
+        var total = 0;
+        var cells = MESES.map(function(mes){
+          var d = guardiaData.filter(function(r){ return r.memberId===m.id&&r.mes===mes; })
+                             .reduce(function(s,r){ return s+(r.dias||0); },0);
+          total += d;
+          var bg = d>0?'rgba(34,197,94,.12)':'transparent';
+          var col = d>0?'var(--green)':'var(--muted)';
+          return '<td style="background:'+bg+';color:'+col+';text-align:center;padding:5px 2px;border:1px solid var(--border);font-weight:'+(d>0?'700':'400')+'">'+(d>0?d:'-')+'</td>';
+        }).join('');
+        var nomCorto = m.name.split(' ').slice(0,2).join(' ');
+        rows += '<tr>'
+          +'<td style="padding:5px 8px;border:1px solid var(--border);color:var(--text)">'
+          +'<span style="font-size:8px;color:var(--muted);margin-right:4px">'+m.rank+'</span>'+nomCorto
+          +'</td>'
+          +cells
+          +'<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?'var(--gold2)':'var(--muted)')+';font-weight:700">'+(total||'-')+'</td>'
+          +'</tr>';
+      });
+      return rows;
+    }
+
+    out += buildRows(ne, '── Nivel Ejecutivo ──');
+    out += buildRows(pt, '── Patrulleros ──');
+    out += '</tbody></table></div>';
+
+  } else {
+    // MONTH VIEW — simple list for selected month
+    out += '<div style="display:flex;flex-direction:column;gap:5px">';
+    personal.forEach(function(m){
+      var d = guardiaData.filter(function(r){ return r.memberId===m.id&&r.mes===mesFiltro; })
+                         .reduce(function(s,r){ return s+(r.dias||0); },0);
+      var color = d===0?'var(--muted)':d<5?'var(--green)':'var(--orange)';
+      out += '<div style="background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px 11px;display:flex;align-items:center;gap:8px">'
+        +'<div class="rank-badge" style="width:26px;height:26px;font-size:8px">'+m.rank+'</div>'
+        +'<div style="flex:1;font-size:11px;font-weight:600">'+m.name+'</div>'
+        +'<div style="font-size:18px;font-weight:900;color:'+color+'">'+(d||'-')+'<span style="font-size:9px;font-weight:400">'+(d>0?' d':'')+'</span></div>'
+        +'<button data-mid="'+m.id+'" onclick="eliminarUltimaGuardia(this.getAttribute(\"data-mid\"))" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer">✕</button>'
+        +'</div>';
+    });
+    out += '</div>';
+  }
+
+  container.innerHTML = out;
+}
+
+function eliminarUltimaGuardia(mid){
+  var idx = -1;
+  for(var i=guardiaData.length-1;i>=0;i--){
+    if(guardiaData[i].memberId===mid){ idx=i; break; }
+  }
+  if(idx<0){ showToast('Sin registros para eliminar','#f97316'); return; }
+  if(!confirm('¿Eliminar el último registro de guardia de este funcionario?')) return;
+  guardiaData.splice(idx,1);
+  saveGuardia();
+  renderGuardiaTabla();
+}
+
+function exportarGuardiaExcel(){
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var personal = members.filter(function(m){ return m.escuadra===esc; });
+  personal.sort(function(a,b){ return (RANK_ORDER[a.rank]||99)-(RANK_ORDER[b.rank]||99); });
+  var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var header = ['NRO','GRADO','APELLIDOS Y NOMBRES','CEDULA'].concat(meses).concat(['TOTAL']);
+  var rows = [header];
+  personal.forEach(function(m, i){
+    var row = [i+1, m.rank, m.name, m.idNum||''];
+    var total = 0;
+    meses.forEach(function(mes){
+      var h = guardiaData.filter(function(r){ return r.memberId===m.id&&r.mes===mes; })
+                         .reduce(function(s,r){ return s+(r.dias||0); },0);
+      row.push(h||'');
+      total += h;
+    });
+    row.push(total||'');
+    rows.push(row);
+  });
+  var lines = rows.map(function(r){
+    return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(',');
+  });
+  var csv = lines.join('\n');
+  var blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href=url;
+  a.download='GUARDIA_'+esc.replace(' ','_')+'_'+localDateStr()+'.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 Excel descargado');
 }
 
 // ════════════════════════════════════════════════
