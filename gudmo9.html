@@ -280,8 +280,8 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 </div>
 <div id="returnAlerts" style="display:none;background:rgba(240,192,64,.1);border-bottom:2px solid var(--yellow);padding:8px 14px;font-size:11px;color:var(--yellow);line-height:1.8"></div>
 <div class="tabs">
-  <button class="tab-btn" onclick="showTab('dashboard',this)">📊 Dashboard</button>
-  <button class="tab-btn active" onclick="showTab('roster',this)">📋 Nómina</button>
+  <button class="tab-btn active" onclick="showTab('dashboard',this)">📊 Dashboard</button>
+  <button class="tab-btn" onclick="showTab('roster',this)">📋 Nómina</button>
   <button class="tab-btn" onclick="showTab('parte',this)">📄 Parte</button>
   <button class="tab-btn" onclick="showTab('historial',this)">📆 Historial</button>
   <button class="tab-btn" onclick="showTab('turnos',this)">📖 Bitácora</button>
@@ -297,7 +297,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 </div>
 
 <!-- ROSTER -->
-<div class="section" id="tab-dashboard">
+<div class="section active" id="tab-dashboard">
 
   <!-- KPI Row -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px" id="dashKpis"></div>
@@ -336,7 +336,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <div id="dashAlertas"></div>
 </div>
 
-<div class="section active" id="tab-roster">
+<div class="section" id="tab-roster">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
   <div id="sortModeLabel" style="display:none;font-size:11px;color:var(--yellow);font-weight:600">✋ Arrastra para reordenar · <button onclick="exitSortMode()" style="background:none;border:none;color:var(--gold2);font-size:11px;cursor:pointer;font-weight:700">Listo ✓</button></div>
 </div>
