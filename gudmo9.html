@@ -651,13 +651,18 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 <div class="section" id="tab-municion">
   <div class="sh">🔴 Control de Munición</div>
 
+  <!-- Alerta contextual AML (se muestra/oculta según tipo seleccionado) -->
+  <div id="munAlerta" style="display:none;background:rgba(234,179,8,.10);border:1px solid rgba(234,179,8,.35);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--text);line-height:1.6"></div>
+
   <!-- Nueva recepción -->
   <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
     <div style="font-size:12px;font-weight:700;color:var(--gold2);margin-bottom:10px">📥 Registrar recepción del almacén</div>
+
+    <!-- Fila 1: tipo + cantidad -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div>
         <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Tipo de material</div>
-        <select id="munTipo" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
+        <select id="munTipo" onchange="munOnTipoChange()" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
           <option value="">— Seleccione —</option>
           <option value="Granada CS">💣 Granada de mano CS</option>
           <option value="Granada Humo">💨 Granada de humo</option>
@@ -674,19 +679,44 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
         <input type="number" id="munCantidad" min="1" placeholder="Ej: 40" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;font-weight:700">
       </div>
     </div>
-    <div style="margin-bottom:8px">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Distribuir entre cargo</div>
-      <select id="munCargo" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
-        <option value="SPI">SPI</option>
-        <option value="Escudero">Escuderos</option>
-        <option value="Operador 37">Operadores 37mm</option>
-        <option value="Operador 40">Operadores 40mm</option>
-        <option value="Op. Lanzadora">Operadores Lanzadora</option>
-        <option value="Cte. Escuadra">Comandantes Escuadra</option>
-        <option value="Líder Escuderos">Líder Escuderos</option>
-        <option value="todos_servicio">Todo el personal en servicio</option>
-      </select>
+
+    <!-- Fila 2: cargo + estado del material -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Distribuir entre cargo</div>
+        <select id="munCargo" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
+          <option value="SPI">SPI</option>
+          <option value="Escudero">Escuderos</option>
+          <option value="Operador 37">Operadores 37mm</option>
+          <option value="Operador 40">Operadores 40mm</option>
+          <option value="Op. Lanzadora">Operadores Lanzadora</option>
+          <option value="Cte. Escuadra">Comandantes Escuadra</option>
+          <option value="Líder Escuderos">Líder Escuderos</option>
+          <option value="todos_servicio">Todo el personal en servicio</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Estado del material</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div id="munEstadoApto" onclick="munSelEstado('apto')"
+            style="padding:8px 4px;border-radius:6px;border:2px solid var(--green);background:rgba(34,197,94,.15);cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--green)">
+            ✅ Apto
+          </div>
+          <div id="munEstadoDanado" onclick="munSelEstado('danado')"
+            style="padding:8px 4px;border-radius:6px;border:2px solid var(--border);background:transparent;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--muted)">
+            ⚠️ Dañado
+          </div>
+        </div>
+        <input type="hidden" id="munEstadoVal" value="apto">
+      </div>
     </div>
+
+    <!-- Lugar del servicio (para informe) -->
+    <div style="margin-bottom:8px">
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Lugar / Operación (opcional)</div>
+      <input type="text" id="munLugar" placeholder="Ej: Centro Pereira — Control disturbios" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
+    </div>
+
     <button onclick="distribuirMunicion()" class="btn btn-primary" style="width:100%">⚡ Distribuir automáticamente</button>
   </div>
 
@@ -697,6 +727,19 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <div style="margin-top:14px">
     <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">📋 Servicios anteriores</div>
     <div id="munHistorial"></div>
+  </div>
+</div>
+
+<!-- MODAL INFORME DE USO AML -->
+<div id="munInformeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;align-items:flex-end;justify-content:center">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:520px;padding:20px;max-height:85vh;overflow-y:auto">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:var(--red);margin-bottom:4px">📋 Informe de uso AML</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:14px">Res. 01840/2025 — Art. 15 num. 18</div>
+    <textarea id="munInformeTxt" readonly style="width:100%;min-height:220px;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:11px;line-height:1.7;resize:none;font-family:monospace"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="munCopiarInforme()" class="btn btn-primary" style="flex:1;font-size:12px">📋 Copiar para WhatsApp</button>
+      <button onclick="document.getElementById('munInformeModal').style.display='none'" style="flex:none;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:12px;cursor:pointer">Cerrar</button>
+    </div>
   </div>
 </div>
 
@@ -3578,22 +3621,79 @@ function exportarBackup(){
 //  CONTROL DE MUNICIÓN
 // ════════════════════════════════════════════════
 let municionData = ld('g9_municion', []); 
-// [{id, fecha, tipo, cantidadTotal, cargo, escuadra,
+// [{id, fecha, tipo, cantidadTotal, cargo, escuadra, estado, lugar
 //   asignaciones:[{memberId,memberName,memberRank,cargo,cantidad,devuelto}],
 //   cerrado:bool}]
 
 function saveMunicion(){ sv('g9_municion', municionData); }
 
-function distribuirMunicion(){
-  var tipo = document.getElementById('munTipo').value;
-  var cantidad = parseInt(document.getElementById('munCantidad').value)||0;
-  var cargo = document.getElementById('munCargo').value;
-  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+// Alertas contextuales por tipo de material — discretas, útiles para la decisión
+var MUN_ALERTAS = {
+  'Granada CS':    '⚠️ Agente CS: evitar espacios cerrados o con poca ventilación. Garantizar ruta de evacuación libre antes de usar.',
+  'Gas CS 37mm':   '⚠️ Agente CS: evitar espacios cerrados. Lanzar en parábola — nunca directo contra personas. Viento a favor.',
+  'Gas CS 40mm':   '⚠️ Agente CS: evitar espacios cerrados. Lanzar en parábola — nunca directo contra personas. Viento a favor.',
+  'Cartucho Impacto': '🎯 Impacto dirigido: apuntar a zonas de mayor masa muscular. Evitar cabeza, cuello y genitales.',
+  'Stingball':     '🔊 Mini Bang: producen detonación + fragmentos plásticos. Verificar que no haya personas en posición elevada o inmovilizadas.',
+  'Supresor Fuego':'🔴 Supresor: uso solo cuando los demás AML sean ineficaces. Registrar informe detallado al superior jerárquico.'
+};
 
-  if(!tipo){ showToast('⚠️ Seleccione el tipo de material','#f97316'); return; }
+var MUN_CARGO_SUGERIDO = {
+  'Granada CS':'todos_servicio', 'Granada Humo':'todos_servicio',
+  'Stingball':'SPI',
+  'Cartucho Impulsor':'Operador 37',
+  'Cartucho Impacto':'Operador 37',
+  'Gas CS 37mm':'Operador 37',
+  'Gas CS 40mm':'Operador 40',
+  'Supresor Fuego':'SPI'
+};
+
+function munOnTipoChange(){
+  var tipo = document.getElementById('munTipo').value;
+  var alertaEl = document.getElementById('munAlerta');
+  var cargoSel = document.getElementById('munCargo');
+  // Mostrar alerta si aplica
+  if(MUN_ALERTAS[tipo]){
+    alertaEl.textContent = MUN_ALERTAS[tipo];
+    alertaEl.style.display = 'block';
+  } else {
+    alertaEl.style.display = 'none';
+  }
+  // Sugerir cargo automáticamente
+  if(MUN_CARGO_SUGERIDO[tipo] && cargoSel){
+    cargoSel.value = MUN_CARGO_SUGERIDO[tipo];
+  }
+}
+
+function munSelEstado(val){
+  document.getElementById('munEstadoVal').value = val;
+  var aptoEl = document.getElementById('munEstadoApto');
+  var dEl    = document.getElementById('munEstadoDanado');
+  if(val==='apto'){
+    aptoEl.style.borderColor='var(--green)'; aptoEl.style.background='rgba(34,197,94,.15)'; aptoEl.style.color='var(--green)';
+    dEl.style.borderColor='var(--border)';   dEl.style.background='transparent';             dEl.style.color='var(--muted)';
+  } else {
+    dEl.style.borderColor='var(--red)';   dEl.style.background='rgba(239,68,68,.15)'; dEl.style.color='var(--red)';
+    aptoEl.style.borderColor='var(--border)'; aptoEl.style.background='transparent'; aptoEl.style.color='var(--muted)';
+  }
+}
+
+function distribuirMunicion(){
+  var tipo    = document.getElementById('munTipo').value;
+  var cantidad= parseInt(document.getElementById('munCantidad').value)||0;
+  var cargo   = document.getElementById('munCargo').value;
+  var estado  = document.getElementById('munEstadoVal').value;
+  var lugar   = (document.getElementById('munLugar').value||'').trim();
+  var esc     = curEscuadra==='all'?'DEI 2':curEscuadra;
+
+  if(!tipo)    { showToast('⚠️ Seleccione el tipo de material','#f97316'); return; }
   if(cantidad<1){ showToast('⚠️ Ingrese la cantidad','#f97316'); return; }
 
-  // Get personnel in service with the required cargo
+  // Bloquear material dañado
+  if(estado==='danado'){
+    showToast('🚫 Material marcado como dañado — no puede distribuirse','#ef4444');
+    return;
+  }
+
   var personal = escMembers().filter(function(m){
     if(m.status!=='Servicio') return false;
     if(cargo==='todos_servicio') return true;
@@ -3606,13 +3706,11 @@ function distribuirMunicion(){
   }
 
   var porPersona = Math.floor(cantidad / personal.length);
-  var sobrante = cantidad % personal.length;
+  var sobrante   = cantidad % personal.length;
 
   var asignaciones = personal.map(function(m, i){
     return {
-      memberId: m.id,
-      memberName: m.name,
-      memberRank: m.rank,
+      memberId: m.id, memberName: m.name, memberRank: m.rank,
       cargo: m.cargo||cargo,
       cantidad: porPersona + (i<sobrante?1:0),
       devuelto: 0
@@ -3623,18 +3721,18 @@ function distribuirMunicion(){
     id: uid(),
     fecha: localDateStr(),
     hora: new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
-    tipo: tipo,
-    cantidadTotal: cantidad,
-    cargo: cargo,
-    escuadra: esc,
-    asignaciones: asignaciones,
-    cerrado: false
+    tipo: tipo, cantidadTotal: cantidad, cargo: cargo,
+    escuadra: esc, estado: estado, lugar: lugar,
+    asignaciones: asignaciones, cerrado: false
   };
 
   municionData.unshift(servicio);
   saveMunicion();
   document.getElementById('munCantidad').value='';
   document.getElementById('munTipo').value='';
+  document.getElementById('munLugar').value='';
+  document.getElementById('munAlerta').style.display='none';
+  munSelEstado('apto');
   renderMunicion();
   showToast('✅ Distribuido entre '+personal.length+' operadores');
 }
@@ -3651,6 +3749,48 @@ function munIcon(tipo){
     'Gas CS 37mm':'🟡','Gas CS 40mm':'🟡','Supresor Fuego':'🔴'
   };
   return icons[tipo]||'🔴';
+}
+
+// Genera el texto del informe de uso AML listo para WhatsApp
+function munGenerarInforme(s){
+  var cfg = ld('g9_config',{});
+  var cmdt = cfg.cmdt||'IT Parra Quiceno Jhonatan';
+  var totalDevuelto = s.asignaciones.reduce(function(sum,a){ return sum+(a.devuelto||0); },0);
+  var gastado = s.cantidadTotal - totalDevuelto;
+  var lineas = [];
+  lineas.push('📋 *INFORME USO AML — '+s.escuadra+'*');
+  lineas.push('━━━━━━━━━━━━━━━━━━━━');
+  lineas.push('📅 Fecha: '+s.fecha+'  ⏰ Hora: '+s.hora);
+  if(s.lugar) lineas.push('📍 Lugar/Operación: '+s.lugar);
+  lineas.push('🔴 Material: '+s.tipo);
+  lineas.push('📦 Recibidos: '+s.cantidadTotal+'  |  Gastados: '+gastado+'  |  Devueltos: '+totalDevuelto);
+  lineas.push('👥 Cargo operador: '+s.cargo);
+  lineas.push('');
+  lineas.push('*Asignaciones:*');
+  s.asignaciones.forEach(function(a){
+    var gasto = a.cantidad - (a.devuelto||0);
+    lineas.push('• '+a.memberRank+' '+a.memberName+': '+a.cantidad+' asig. / '+gasto+' gastados');
+  });
+  lineas.push('');
+  lineas.push('Modo de despliegue: _______________');
+  lineas.push('Objetivo legal alcanzado: _______________');
+  lineas.push('Novedades/personas afectadas: _______________');
+  lineas.push('');
+  lineas.push('Firma: '+cmdt+' — Cte. Escuadra DEI 2');
+  return lineas.join('\n');
+}
+
+function munAbrirInforme(id){
+  var s = municionData.find(function(x){ return x.id===id; });
+  if(!s) return;
+  document.getElementById('munInformeTxt').value = munGenerarInforme(s);
+  document.getElementById('munInformeModal').style.display = 'flex';
+}
+
+function munCopiarInforme(){
+  var txt = document.getElementById('munInformeTxt').value;
+  if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(function(){ showToast('✅ Informe copiado','#22c55e'); }); }
+  else { document.getElementById('munInformeTxt').select(); document.execCommand('copy'); showToast('✅ Informe copiado','#22c55e'); }
 }
 
 function buildAsignacionList(s){
@@ -3717,8 +3857,9 @@ function renderMunDistribucion(){
       // Assignment list
       +buildAsignacionList(s)
       // Buttons
-      +'<div style="display:flex;gap:8px">'
-      +'<button onclick="cerrarServicioMunicion(this.getAttribute(\"data-id\"))" data-id="'+s.id+'" class="btn btn-primary" style="flex:1;font-size:11px">✅ Cerrar servicio</button>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      +'<button onclick="munAbrirInforme(this.getAttribute(\"data-id\"))" data-id="'+s.id+'" style="flex:1;padding:8px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:11px;cursor:pointer;white-space:nowrap">📋 Informe</button>'
+      +'<button onclick="cerrarServicioMunicion(this.getAttribute(\"data-id\"))" data-id="'+s.id+'" class="btn btn-primary" style="flex:2;font-size:11px">✅ Cerrar servicio</button>'
       +'<button onclick="eliminarServicioMunicion(this.getAttribute(\"data-id\"))" data-id="'+s.id+'" class="btn btn-danger" style="flex:none;padding:8px 12px;font-size:11px">🗑️</button>'
       +'</div>'
       +'</div>';
@@ -3766,16 +3907,19 @@ function renderMunHistorial(){
   }
   container.innerHTML = cerrados.map(function(s){
     var totalDevuelto = s.asignaciones.reduce(function(sum,a){ return sum+(a.devuelto||0); },0);
-    var diff = s.cantidadTotal - totalDevuelto;
-    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px">'
+    var gastado = s.cantidadTotal - totalDevuelto;
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
       +'<div style="font-size:18px">'+munIcon(s.tipo)+'</div>'
       +'<div style="flex:1">'
       +'<div style="font-size:12px;font-weight:600">'+s.tipo+'</div>'
-      +'<div style="font-size:10px;color:var(--muted)">'+s.fecha+' · '+s.escuadra+' · '+s.asignaciones.length+' operadores</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+s.fecha+' · '+s.escuadra+' · '+s.asignaciones.length+' op.'+(s.lugar?' · '+s.lugar:'')+'</div>'
       +'</div>'
-      +'<div style="text-align:right">'
-      +'<div style="font-size:13px;font-weight:700;color:'+(diff>0?'var(--red)':'var(--green)')+'">'+totalDevuelto+'/'+s.cantidadTotal+'</div>'
-      +'<div style="font-size:9px;color:var(--muted)">'+(diff>0?diff+' sin devolver':'Completo')+'</div>'
+      +'<div style="text-align:right;margin-right:8px">'
+      +'<div style="font-size:13px;font-weight:700;color:'+(gastado>0?'var(--red)':'var(--green)')+'">'+totalDevuelto+'/'+s.cantidadTotal+'</div>'
+      +'<div style="font-size:9px;color:var(--muted)">'+(gastado>0?gastado+' gastados':'Completo')+'</div>'
+      +'</div>'
+      +'<button onclick="munAbrirInforme(\''+s.id+'\')" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:10px;cursor:pointer;white-space:nowrap">📋</button>'
       +'</div>'
       +'</div>';
   }).join('');
