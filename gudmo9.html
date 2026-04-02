@@ -695,7 +695,14 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       </div>
     </div>
 
-    <div id="pmPersonalList" style="background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:14px;max-height:160px;overflow-y:auto;font-size:11px;color:var(--muted2)"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div id="pmCountLabel" style="font-size:10px;color:var(--muted)">Seleccione quiénes salen</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="pmSelAll(true)" style="background:rgba(59,130,246,.12);border:1px solid var(--blue);border-radius:5px;padding:3px 8px;color:var(--blue);font-size:9px;cursor:pointer">Todos</button>
+        <button onclick="pmSelAll(false)" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:5px;padding:3px 8px;color:var(--muted);font-size:9px;cursor:pointer">Ninguno</button>
+      </div>
+    </div>
+    <div id="pmPersonalList" style="background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:14px;max-height:220px;overflow-y:auto"></div>
 
     <div style="display:flex;gap:8px">
       <button onclick="document.getElementById('permisoMasivoModal').style.display='none'" style="flex:1;padding:11px;border-radius:9px;border:none;background:var(--border);color:var(--muted2);font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
@@ -3738,6 +3745,20 @@ function renderMunHistorial(){
 // ════════════════════════════════════════════════
 var pmTipoSel = 'GUDMO';
 
+function pmSelAll(checked){
+  document.querySelectorAll('#pmPersonalList input[type="checkbox"]').forEach(function(cb){
+    cb.checked = checked;
+  });
+  pmUpdateCount();
+}
+
+function pmUpdateCount(){
+  var total = document.querySelectorAll('#pmPersonalList input[type="checkbox"]').length;
+  var sel = document.querySelectorAll('#pmPersonalList input[type="checkbox"]:checked').length;
+  var lbl = document.getElementById('pmCountLabel');
+  if(lbl) lbl.textContent = sel+' de '+total+' seleccionados';
+}
+
 function selPmTipo(tipo){
   pmTipoSel = tipo;
   var g=document.getElementById('pmGUDMO'), d=document.getElementById('pmDEI');
@@ -3761,11 +3782,20 @@ function abrirPermisoMasivo(){
 
   var list = document.getElementById('pmPersonalList');
   if(list){
-    list.innerHTML = personal.length
-      ? personal.map(function(m){
-          return '<div style="padding:3px 0;border-bottom:1px solid var(--border)">'+m.rank+' '+m.name+'</div>';
-        }).join('')
-      : '<div style="color:var(--muted)">No hay personal en servicio</div>';
+    if(!personal.length){
+      list.innerHTML='<div style="color:var(--muted);font-size:11px;padding:8px">No hay personal en servicio</div>';
+    } else {
+      list.innerHTML = personal.map(function(m){
+        return '<label style="display:flex;align-items:center;gap:10px;padding:7px 6px;border-bottom:1px solid var(--border);cursor:pointer">'
+          +'<input type="checkbox" checked data-mid="'+m.id+'" onchange="pmUpdateCount()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--blue)">'
+          +'<div style="flex:1">'
+          +'<div style="font-size:12px;font-weight:600;color:var(--text)">'+m.rank+' '+m.name+'</div>'
+          +(m.cargo?'<div style="font-size:9px;color:var(--muted)">'+m.cargo+'</div>':'')
+          +'</div>'
+          +'</label>';
+      }).join('');
+      pmUpdateCount();
+    }
   }
 
   document.getElementById('permisoMasivoModal').style.display='flex';
@@ -3778,13 +3808,19 @@ function aplicarPermisoMasivo(){
 
   if(!salida){ showToast('⚠️ Ingrese la fecha de salida','#f97316'); return; }
 
+  // Only apply to CHECKED members
+  var checkboxes = document.querySelectorAll('#pmPersonalList input[type="checkbox"]:checked');
+  var checkedIds = Array.from(checkboxes).map(function(cb){ return cb.getAttribute('data-mid'); });
+
+  if(!checkedIds.length){ showToast('⚠️ Seleccione al menos un funcionario','#f97316'); return; }
+
   var personal = escMembers().filter(function(m){
-    return m.status==='Servicio'||m.status==='Guardia'||m.status==='Anexo';
+    return checkedIds.includes(m.id);
   });
 
   if(!personal.length){ showToast('⚠️ Sin personal que actualizar','#f97316'); return; }
 
-  // Update all members
+  // Update selected members
   personal.forEach(function(m){
     m.status = 'Permiso';
     m.tipoPermiso = pmTipoSel;
