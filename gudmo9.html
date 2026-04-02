@@ -280,6 +280,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 </div>
 <div id="returnAlerts" style="display:none;background:rgba(240,192,64,.1);border-bottom:2px solid var(--yellow);padding:8px 14px;font-size:11px;color:var(--yellow);line-height:1.8"></div>
 <div class="tabs">
+  <button class="tab-btn" onclick="showTab('dashboard',this)">📊 Dashboard</button>
   <button class="tab-btn active" onclick="showTab('roster',this)">📋 Nómina</button>
   <button class="tab-btn" onclick="showTab('parte',this)">📄 Parte</button>
   <button class="tab-btn" onclick="showTab('historial',this)">📆 Historial</button>
@@ -296,6 +297,45 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 </div>
 
 <!-- ROSTER -->
+<div class="section" id="tab-dashboard">
+
+  <!-- KPI Row -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px" id="dashKpis"></div>
+
+  <!-- Parte visual -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+    <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">⚡ Parte del día — efectivos en servicio</div>
+    <div id="dashParteFormula" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px"></div>
+    <div id="dashParteBars" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+  </div>
+
+  <!-- Donut + Semáforo -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px">
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Novedades</div>
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <canvas id="dashDonut" width="110" height="110"></canvas>
+        <div id="dashLegend" style="width:100%;margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+    </div>
+    <div id="dashSemaforo" style="border-radius:12px;padding:14px;display:flex;flex-direction:column;justify-content:center"></div>
+  </div>
+
+  <!-- Ciclo + Bloque -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px">
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Ciclo laboral</div>
+      <div id="dashCiclo"></div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px">
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Bloque búsqueda</div>
+      <div id="dashBloque"></div>
+    </div>
+  </div>
+
+  <div id="dashAlertas"></div>
+</div>
+
 <div class="section active" id="tab-roster">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
   <div id="sortModeLabel" style="display:none;font-size:11px;color:var(--yellow);font-weight:600">✋ Arrastra para reordenar · <button onclick="exitSortMode()" style="background:none;border:none;color:var(--gold2);font-size:11px;cursor:pointer;font-weight:700">Listo ✓</button></div>
@@ -1451,6 +1491,8 @@ function showTab(id,btn){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   if(btn) btn.classList.add('active');
+  if(id==='dashboard') renderDashboard();
+  if(id==='dashboard') renderDashboard();
   if(id==='parte') buildParte();
   if(id==='historial'){populateHistSelects();renderHistorial();}
   if(id==='turnos') renderTurnos();
@@ -4429,6 +4471,257 @@ function exportarGuardiaExcel(){
   showToast('📥 Excel descargado');
 }
 
+
+// ════════════════════════════════════════════════
+//  DASHBOARD
+// ════════════════════════════════════════════════
+var NOVEDAD_COLORS = {
+  'Servicio':    '#22c55e',
+  'Guardia':     '#f97316',
+  'Permiso':     '#8b5cf6',
+  'Vacaciones':  '#06b6d4',
+  'Franquicia':  '#eab308',
+  'Incapacidad': '#ef4444',
+  'Curso':       '#3b82f6',
+  'Anexo':       '#ec4899',
+  'Secretario':  '#14b8a6',
+  'Excusa':      '#a78bfa',
+  'Comision':    '#f59e0b',
+};
+
+function renderDashboard(){
+  var esc = curEscuadra==='all'?'GUDMO-9':curEscuadra;
+  var personal = curEscuadra==='all' ? members : escMembers();
+  personal = personal.filter(function(m){ return !m.esEspejo; });
+
+  var enServicio = personal.filter(function(m){ return m.status==='Servicio'&&!m.restriccion; });
+  var total = personal.length;
+
+  // KPI Cards
+  var kpis = document.getElementById('dashKpis');
+  if(kpis){
+    var pct = total>0?Math.round(enServicio.length/total*100):0;
+    var disponibles = enServicio.length;
+    var noDisponibles = total - disponibles;
+    kpis.innerHTML =
+      dashKpi('EFECTIVOS EN SERVICIO', disponibles, 'de '+total, '#22c55e', '✅') +
+      dashKpi('FUERA DE SERVICIO', noDisponibles, 'con novedad', '#ef4444', '📋') +
+      dashKpi('DISPONIBILIDAD', pct+'%', esc, pct>=70?'#22c55e':pct>=50?'#f97316':'#ef4444', '📊') +
+      dashKpi('HOY', fmtDate(localDateStr()), new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}), 'var(--gold2)', '📅');
+  }
+
+  // Parte formula visual
+  var srv = curEscuadra==='all' ? members.filter(function(m){return m.status==='Servicio'&&!m.esEspejo;}) : enServicio;
+  var cats = countByCategory(srv);
+  var totCats = countByCategory(personal);
+  var pf = document.getElementById('dashParteFormula');
+  var pb = document.getElementById('dashParteBars');
+  if(pf){
+    pf.innerHTML =
+      '<div style="text-align:center"><span style="font-size:36px;font-weight:900;color:var(--cyan)">'+cats.OF+'</span><div style="font-size:9px;color:var(--muted)">OF</div></div>'+
+      '<div style="font-size:28px;color:var(--border);margin:0 2px">—</div>'+
+      '<div style="text-align:center"><span style="font-size:36px;font-weight:900;color:var(--purple)">'+cats.NE+'</span><div style="font-size:9px;color:var(--muted)">N.E.</div></div>'+
+      '<div style="font-size:28px;color:var(--border);margin:0 2px">—</div>'+
+      '<div style="text-align:center"><span style="font-size:36px;font-weight:900;color:var(--green)">'+cats.PT+'</span><div style="font-size:9px;color:var(--muted)">PT</div></div>'+
+      '<div style="font-size:28px;color:var(--border);margin:0 2px">—</div>'+
+      '<div style="text-align:center"><span style="font-size:36px;font-weight:900;color:var(--gold2)">'+cats.PP+'</span><div style="font-size:9px;color:var(--muted)">PP</div></div>';
+  }
+  if(pb){
+    var catDefs = [{k:'OF',c:'var(--cyan)',l:'Oficiales'},{k:'NE',c:'var(--purple)',l:'Nivel Ejec.'},{k:'PT',c:'var(--green)',l:'Patrulleros'},{k:'PP',c:'var(--gold2)',l:'P. Policía'}];
+    pb.innerHTML = catDefs.map(function(cd){
+      var srv2 = cats[cd.k]; var tot2 = totCats[cd.k]||1;
+      var p = Math.round(srv2/tot2*100);
+      return '<div style="text-align:center">'
+        +'<div style="font-size:9px;color:var(--muted);margin-bottom:4px">'+cd.l+'</div>'
+        +'<div style="height:60px;background:var(--border);border-radius:4px;overflow:hidden;position:relative;display:flex;align-items:flex-end">'
+        +'<div style="width:100%;height:'+p+'%;background:'+cd.c+';border-radius:4px;transition:height .5s"></div>'
+        +'</div>'
+        +'<div style="font-size:10px;font-weight:700;color:'+cd.c+';margin-top:4px">'+srv2+'/'+tot2+'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  // Donut chart
+  dashDrawDonut(personal);
+
+  // Semáforo
+  dashDrawSemaforo(enServicio, personal);
+
+  // Ciclo
+  dashDrawCiclo();
+
+  // Bloque
+  dashDrawBloque();
+
+  // Alertas
+  dashDrawAlertas();
+}
+
+function dashKpi(label, value, sub, color, icon){
+  return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;position:relative;overflow:hidden">'
+    +'<div style="position:absolute;top:10px;right:12px;font-size:28px;opacity:.15">'+icon+'</div>'
+    +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">'+label+'</div>'
+    +'<div style="font-size:28px;font-weight:900;color:'+color+';line-height:1">'+value+'</div>'
+    +'<div style="font-size:10px;color:var(--muted2);margin-top:4px">'+sub+'</div>'
+    +'</div>';
+}
+
+function dashDrawDonut(personal){
+  var canvas = document.getElementById('dashDonut');
+  var legend = document.getElementById('dashLegend');
+  if(!canvas||!legend) return;
+  var ctx = canvas.getContext('2d');
+  var counts = {};
+  personal.forEach(function(m){ counts[m.status]=(counts[m.status]||0)+1; });
+  var entries = Object.entries(counts).sort(function(a,b){return b[1]-a[1];});
+  var total = personal.length||1;
+  // Draw donut
+  ctx.clearRect(0,0,120,120);
+  var cx=60,cy=60,r=50,ri=30,start=-Math.PI/2;
+  entries.forEach(function(e){
+    var angle = (e[1]/total)*Math.PI*2;
+    var color = NOVEDAD_COLORS[e[0]]||'#666';
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,start+angle);
+    ctx.closePath();
+    ctx.fillStyle=color;
+    ctx.fill();
+    start+=angle;
+  });
+  // Hole
+  ctx.beginPath();
+  ctx.arc(cx,cy,ri,0,Math.PI*2);
+  ctx.fillStyle='#1a2035';
+  ctx.fill();
+  // Center text
+  ctx.fillStyle='#fff';
+  ctx.font='bold 16px sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText(total,cx,cy+3);
+  ctx.font='8px sans-serif';
+  ctx.fillStyle='#888';
+  ctx.fillText('total',cx,cy+14);
+  // Legend
+  legend.innerHTML = entries.slice(0,6).map(function(e){
+    var color = NOVEDAD_COLORS[e[0]]||'#666';
+    var pct = Math.round(e[1]/total*100);
+    return '<div style="display:flex;align-items:center;gap:6px">'
+      +'<div style="width:10px;height:10px;border-radius:2px;background:'+color+';flex-shrink:0"></div>'
+      +'<div style="font-size:10px;color:var(--muted2);flex:1">'+e[0]+'</div>'
+      +'<div style="font-size:10px;font-weight:700;color:'+color+'">'+e[1]+'</div>'
+      +'<div style="font-size:9px;color:var(--muted)">'+pct+'%</div>'
+      +'</div>';
+  }).join('');
+}
+
+function dashDrawSemaforo(enServicio, personal){
+  var el = document.getElementById('dashSemaforo');
+  if(!el) return;
+  var missingCargos = CRITICAL_CARGOS.filter(function(c){
+    return !enServicio.find(function(m){return m.cargo===c;});
+  });
+  var escuderos = enServicio.filter(function(m){return m.cargo==='Escudero';}).length;
+  var escFaltan = Math.max(0, CRITICAL_MIN_ESCUDEROS - escuderos);
+  var problemas = missingCargos.length + (escFaltan>0?1:0);
+
+  var color, bg, icon, title, subtitle;
+  if(problemas===0){
+    color='#22c55e'; bg='rgba(34,197,94,.08)'; icon='🟢';
+    title='OPERACIONAL'; subtitle='Todos los cargos críticos presentes · '+enServicio.length+' efectivos listos';
+  } else if(problemas<=2){
+    color='#f97316'; bg='rgba(249,115,22,.08)'; icon='🟡';
+    title='CAPACIDAD REDUCIDA'; subtitle=problemas+' cargo'+(problemas>1?'s':'')+' crítico'+(problemas>1?'s':'')+' ausente'+(problemas>1?'s':'');
+  } else {
+    color='#ef4444'; bg='rgba(239,68,68,.08)'; icon='🔴';
+    title='NO OPERACIONAL'; subtitle=problemas+' cargos críticos sin cubrir';
+  }
+
+  var details = missingCargos.map(function(c){
+    return '<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:9px;padding:2px 8px;border-radius:20px;margin:2px">⚠️ '+c+'</span>';
+  }).join('');
+  if(escFaltan>0) details+='<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:9px;padding:2px 8px;border-radius:20px;margin:2px">⚠️ Escuderos: '+escuderos+'/'+CRITICAL_MIN_ESCUDEROS+'</span>';
+
+  el.style.background=bg;
+  el.style.border='2px solid '+color;
+  el.innerHTML='<div style="display:flex;align-items:center;gap:12px;margin-bottom:'+(details?'10px':'0')+'">'
+    +'<div style="font-size:40px">'+icon+'</div>'
+    +'<div style="flex:1">'
+    +'<div style="font-size:18px;font-weight:900;color:'+color+';letter-spacing:2px">'+title+'</div>'
+    +'<div style="font-size:11px;color:var(--muted2);margin-top:2px">'+subtitle+'</div>'
+    +'</div>'
+    +'<div style="text-align:center">'
+    +'<div style="font-size:32px;font-weight:900;color:'+color+'">'+enServicio.length+'</div>'
+    +'<div style="font-size:9px;color:var(--muted)">en servicio</div>'
+    +'</div>'
+    +'</div>'
+    +(details?'<div style="display:flex;flex-wrap:wrap;gap:4px">'+details+'</div>':'');
+}
+
+function dashDrawCiclo(){
+  var el = document.getElementById('dashCiclo');
+  if(!el) return;
+  if(!cicloConfig.inicioLaboral){ el.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Configure ⚙️</div>'; return; }
+  var inicio=new Date(cicloConfig.inicioLaboral+'T00:00:00');
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var total=cicloConfig.diasTrabajo+cicloConfig.diasDescanso;
+  var desde=Math.floor((hoy-inicio)/(1000*60*60*24));
+  var diaEn=((desde%total)+total)%total;
+  var enLaboral=diaEn<cicloConfig.diasTrabajo;
+  var num=enLaboral?diaEn+1:diaEn-cicloConfig.diasTrabajo+1;
+  var max=enLaboral?cicloConfig.diasTrabajo:cicloConfig.diasDescanso;
+  var pct=Math.round(num/max*100);
+  var color=enLaboral?(num>=cicloConfig.diasTrabajo-3?'#f97316':'#3b82f6'):'#22c55e';
+  el.innerHTML='<div style="font-size:28px;font-weight:900;color:'+color+'">'+num+'<span style="font-size:13px;font-weight:400;color:var(--muted)">/'+max+'</span></div>'
+    +'<div style="font-size:9px;color:var(--muted);margin-bottom:6px">'+(enLaboral?'días laborados':'días descanso')+'</div>'
+    +'<div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden">'
+    +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px"></div>'
+    +'</div>';
+}
+
+function dashDrawBloque(){
+  var el = document.getElementById('dashBloque');
+  if(!el) return;
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var d = bloqueData[esc];
+  if(!d||!d.fechaInicio){ el.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Sin iniciar</div>'; return; }
+  var dias = calcDiasBloque(esc);
+  var pct = Math.min(100,Math.round(dias/35*100));
+  var color = dias>=35?'#22c55e':d.activo?'#3b82f6':'#f97316';
+  el.innerHTML='<div style="font-size:28px;font-weight:900;color:'+color+'">'+dias+'<span style="font-size:13px;font-weight:400;color:var(--muted)">/35</span></div>'
+    +'<div style="font-size:9px;color:var(--muted);margin-bottom:6px">'+(dias>=35?'✅ Completado':d.activo?'en bloque':'en pausa')+'</div>'
+    +'<div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden">'
+    +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px"></div>'
+    +'</div>';
+}
+
+function dashDrawAlertas(){
+  var el = document.getElementById('dashAlertas');
+  if(!el) return;
+  var hoy=localDateStr(), man=localDateAdd(1);
+  var hoy_ret=members.filter(function(m){return m.fechaFin===hoy&&m.status!=='Servicio';});
+  var man_ret=members.filter(function(m){return m.fechaFin===man&&m.status!=='Servicio';});
+  if(!hoy_ret.length&&!man_ret.length){el.innerHTML='';return;}
+  var html2='<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px">'
+    +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⏰ Retornos próximos</div>';
+  hoy_ret.forEach(function(m){
+    html2+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">'
+      +'<div class="rank-badge" style="width:24px;height:24px;font-size:7px">'+m.rank+'</div>'
+      +'<div style="flex:1;font-size:11px;font-weight:600">'+m.name.split(' ')[0]+' '+( m.name.split(' ')[2]||'')+'</div>'
+      +'<span style="font-size:9px;background:rgba(34,197,94,.15);color:#22c55e;padding:2px 7px;border-radius:10px">HOY</span>'
+      +'</div>';
+  });
+  man_ret.forEach(function(m){
+    html2+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">'
+      +'<div class="rank-badge" style="width:24px;height:24px;font-size:7px">'+m.rank+'</div>'
+      +'<div style="flex:1;font-size:11px;font-weight:600">'+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||'')+'</div>'
+      +'<span style="font-size:9px;background:rgba(249,115,22,.15);color:#f97316;padding:2px 7px;border-radius:10px">MAÑANA</span>'
+      +'</div>';
+  });
+  html2+='</div>';
+  el.innerHTML=html2;
+}
+
 // ════════════════════════════════════════════════
 //  INIT — Pre-cargar datos del Excel GUDMO-9
 // ════════════════════════════════════════════════
@@ -4455,6 +4748,7 @@ async function initApp(){
   } catch(e){ console.warn('IDB sync:', e); }
   initData();
   render();
+  renderDashboard();
   checkAndShowStorageToolbar();
   initFirebase();
 }
