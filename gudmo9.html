@@ -125,6 +125,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .bl-Secretario{border-left:3px solid var(--teal)}
 .bl-Excusa{border-left:3px solid #a78bfa}
 .bl-Luto{border-left:3px solid #6b7280}
+.bl-Luto{border-left:3px solid #6b7280}
 
 .p-Servicio{background:rgba(34,197,94,.13);color:var(--green)}
 .p-Vacaciones{background:rgba(6,182,212,.13);color:var(--cyan)}
@@ -142,6 +143,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .p-Anexo{background:rgba(236,72,153,.13);color:var(--pink)}
 .p-Secretario{background:rgba(20,184,166,.13);color:var(--teal)}
 .p-Excusa{background:rgba(167,139,250,.13);color:#a78bfa}
+.p-Luto{background:rgba(107,114,128,.13);color:#9ca3af}
 .p-Luto{background:rgba(107,114,128,.18);color:#d1d5db}
 
 /* ── MODAL ── */
@@ -176,6 +178,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .sel-Anexo{border-color:var(--pink);background:rgba(236,72,153,.1);color:var(--pink)}
 .sel-Secretario{border-color:var(--teal);background:rgba(20,184,166,.1);color:var(--teal)}
 .sel-Excusa{border-color:#a78bfa;background:rgba(167,139,250,.1);color:#a78bfa}
+.sel-Luto{border-color:#6b7280;background:rgba(107,114,128,.1);color:#9ca3af}
 .sel-Luto{border-color:#9ca3af;background:rgba(107,114,128,.12);color:#d1d5db}
 .btn-row{display:flex;gap:8px;margin-top:14px}
 .btn{flex:1;padding:11px;border-radius:9px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.8px;transition:all .2s}
@@ -395,6 +398,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
     <button class="fb" style="color:var(--pink);border-color:var(--pink)" onclick="setFilter('Anexo',this)">Anexo</button>
     <button class="fb" style="color:var(--teal);border-color:var(--teal)" onclick="setFilter('Secretario',this)">Secr.</button>
     <button class="fb" style="color:#a78bfa;border-color:#a78bfa" onclick="setFilter('Excusa',this)">Excusa</button>
+    <button class="fb" style="color:#9ca3af;border-color:#6b7280" onclick="setFilter('Luto',this)">Luto</button>
     <button class="fb" style="color:#9ca3af;border-color:#9ca3af" onclick="setFilter('Luto',this)">Luto</button>
   </div>
   <div class="roster-list" id="rosterList"></div>
@@ -522,6 +526,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
         <option value="Curso">Curso/Ascenso</option>
         <option value="Anexo">Anexo a otro dispositivo</option>
         <option value="Excusa">Excusa</option>
+        <option value="Luto">🖤 Lic. Luto</option>
       </select>
     </div>
     <button class="btn btn-primary" onclick="addMember()" style="width:100%">Agregar Funcionario</button>
@@ -576,6 +581,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <option value="Incapacidad">Incapacidades</option>
       <option value="PermisoHoras">⏱️ Permisos por Horas</option>
       <option value="Excusa">Excusa</option>
+      <option value="Luto">🖤 Lic. Luto</option>
       <option value="__turno__">📌 Turno específico...</option>
     </select>
     <select id="repTurno" style="display:none" onchange="renderReportes()">
@@ -1041,12 +1047,12 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
         <option value="Comision">📌 Comisión (todas)</option>
       </optgroup>
       <optgroup label="── Otras ──">
+        <option value="Luto">🖤 Lic. Luto</option>
         <option value="Vacaciones">🏖️ Vacaciones</option>
         <option value="Franquicia">🔄 Franquicia</option>
         <option value="Incapacidad">🏥 Incapacidad</option>
         <option value="Curso">🎓 Curso / Ascenso</option>
         <option value="Guardia">🔒 Guardia</option>
-        <option value="Luto">🖤 Lic. Luto</option>
         <option value="Anexo">🔗 Anexo</option>
       </optgroup>
     </select>
@@ -2572,6 +2578,9 @@ ${lines(groups.Secretario)}
 
 📄 EXCUSA — Total: ${groups.Excusa.length}
 ${lines(groups.Excusa)}
+
+🖤 LUTO — Total: ${groups.Luto.length}
+${lines(groups.Luto)}
 🖤 LIC. LUTO — Total: ${groups.Luto.length}
 ${lines(groups.Luto)}
 
@@ -4787,6 +4796,7 @@ var NAV_COLORS = {
   'Guardia':              {bg:'rgba(249,115,22,.15)',  color:'#f97316'},
   'Anexo':                {bg:'rgba(20,184,166,.15)',  color:'#14b8a6'},
   'Comision':             {bg:'rgba(100,116,139,.15)', color:'#94a3b8'},
+  'Luto':                  {bg:'rgba(107,114,128,.15)', color:'#9ca3af'},
   'ComisionRegion':       {bg:'rgba(16,185,129,.15)',  color:'#10b981'},
   'ComisionFuera':        {bg:'rgba(245,158,11,.15)',  color:'#f59e0b'},
   'ComisionErradicacion': {bg:'rgba(220,38,38,.15)',   color:'#dc2626'},
@@ -4818,6 +4828,8 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
   var m = members.find(function(x){ return x.id===memberId; });
   if(m && tiposABuscar.includes(m.status) && m.fechaSalida){
     var sal = new Date(m.fechaSalida+'T00:00:00');
+    // Si la novedad aún no empezó no hay días que contar
+    if(sal <= ayer){
     var fin = m.fechaFin ? new Date(m.fechaFin+'T00:00:00') : ayer;
     var d = navDiasEnRango(sal, fin, mesIdx, anio);
     if(d>0){
@@ -4829,12 +4841,15 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
         origen: 'actual'
       });
     }
+    } // fin if(sal <= ayer)
   }
 
   // 3. Desde historial enriquecido: si tiene fechaSalida en el objeto (guardado al registrar)
   entrHist.forEach(function(h){
     if(h.fechaSalida){
       var sal2 = new Date(h.fechaSalida+'T00:00:00');
+      // Si la novedad aún no empezó (fechaSalida futura) no hay nada que contar
+      if(sal2 > ayer) return;
       // Si hay fechaFin la usamos; si no, usamos ayer como tope — nunca días futuros
       var fin2 = h.fechaFin ? new Date(h.fechaFin+'T00:00:00') : ayer;
       // No doble contar con el estado actual
@@ -4845,9 +4860,9 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
         registros.push({ desde:h.fechaSalida, hasta:h.fechaFin||h.date, dias:d2, origen:'hist' });
       }
     } else {
-      // Si no tiene fechas, contar el día de registro si cae en el mes
+      // Si no tiene fechas, contar el día de registro solo si ya transcurrió (≤ ayer)
       var dh = new Date(h.date+'T00:00:00');
-      if(dh.getMonth()===mesIdx && dh.getFullYear()===anio){
+      if(dh <= ayer && dh.getMonth()===mesIdx && dh.getFullYear()===anio){
         diasCalc += 1;
         registros.push({ desde:h.date, hasta:h.date, dias:1, origen:'hist' });
       }
@@ -5059,6 +5074,7 @@ var NOVEDAD_COLORS = {
   'Anexo':       '#ec4899',
   'Secretario':  '#14b8a6',
   'Excusa':      '#a78bfa',
+  'Luto':        '#9ca3af',
   'Comision':    '#f59e0b',
 };
 
