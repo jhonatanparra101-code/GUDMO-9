@@ -293,6 +293,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <button class="tab-btn" onclick="showTab('pines',this)">📡 PINes</button>
   <button class="tab-btn" onclick="showTab('planilla',this)">📋 Planilla</button>
   <button class="tab-btn" onclick="showTab('guardia',this)">🔒 Guardia</button>
+  <button class="tab-btn" onclick="showTab('novedades-admin',this)">📅 Novedades</button>
   <button class="tab-btn" onclick="showTab('add',this)">⚙️ Config</button>
 </div>
 
@@ -1000,6 +1001,40 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <div id="guardiaTabla"></div>
 </div>
 
+<!-- NOVEDADES ADMINISTRATIVAS -->
+<div class="section" id="tab-novedades-admin">
+  <div class="sh">📅 Novedades Administrativas</div>
+
+  <!-- Filtros -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+    <select id="navTipoFiltro" onchange="renderNavMatriz()" style="flex:1;min-width:120px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px">
+      <option value="Permiso">Permiso</option>
+      <option value="Vacaciones">Vacaciones</option>
+      <option value="Franquicia">Franquicia</option>
+      <option value="Incapacidad">Incapacidad</option>
+      <option value="Curso">Curso / Ascenso</option>
+      <option value="Guardia">Guardia</option>
+      <option value="Anexo">Anexo</option>
+    </select>
+    <select id="navMesFiltro" onchange="renderNavMatriz()" style="flex:1;min-width:100px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px">
+      <option value="todos">Todos los meses</option>
+      <option value="0">Enero</option><option value="1">Febrero</option>
+      <option value="2">Marzo</option><option value="3">Abril</option>
+      <option value="4">Mayo</option><option value="5">Junio</option>
+      <option value="6">Julio</option><option value="7">Agosto</option>
+      <option value="8">Septiembre</option><option value="9">Octubre</option>
+      <option value="10">Noviembre</option><option value="11">Diciembre</option>
+    </select>
+    <button onclick="exportarNavExcel()" style="background:rgba(34,197,94,.12);border:1px solid var(--green);border-radius:6px;padding:7px 12px;color:var(--green);font-size:11px;cursor:pointer;font-weight:700;white-space:nowrap">📥 Excel</button>
+  </div>
+
+  <!-- Stats KPIs -->
+  <div id="navStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px"></div>
+
+  <!-- Matriz -->
+  <div id="navTabla"></div>
+</div>
+
 <!-- EDIT MODAL -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
@@ -1566,6 +1601,7 @@ function showTab(id,btn){
   if(id==='pines') renderPines();
   if(id==='planilla') renderPlanilla();
   if(id==='guardia') renderGuardia();
+  if(id==='novedades-admin') renderNavMatriz();
   if(id==='add'){ loadConfig(); updateStorageInfo(); }
 }
 
@@ -2232,8 +2268,11 @@ function saveEdit(){
       memberId:editingId,
       memberName:members[idx].name,
       memberRank:members[idx].rank,
+      escuadra:members[idx].escuadra,
       status:selStatus,
       date:histDate,
+      fechaSalida:members[idx].fechaSalida||'',
+      fechaFin:members[idx].fechaFin||'',
       obs:histObsVal || (selStatus!==prevStatus?`Cambio de ${prevStatus} a ${selStatus}`:'')
     });
     sv('g9_hist',historial);
@@ -4635,8 +4674,265 @@ function exportarGuardiaExcel(){
 
 
 // ════════════════════════════════════════════════
-//  DASHBOARD
+//  NOVEDADES ADMINISTRATIVAS — Matriz automática
 // ════════════════════════════════════════════════
+
+var NAV_MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+var NAV_MESES_LARGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+var NAV_COLORS = {
+  'Permiso':    {bg:'rgba(139,92,246,.15)', color:'#8b5cf6'},
+  'Vacaciones': {bg:'rgba(6,182,212,.15)',  color:'#06b6d4'},
+  'Franquicia': {bg:'rgba(168,85,247,.15)', color:'#a855f7'},
+  'Incapacidad':{bg:'rgba(239,68,68,.15)',  color:'#ef4444'},
+  'Curso':      {bg:'rgba(234,179,8,.15)',  color:'#eab308'},
+  'Guardia':    {bg:'rgba(249,115,22,.15)', color:'#f97316'},
+  'Anexo':      {bg:'rgba(20,184,166,.15)', color:'#14b8a6'},
+};
+
+// Calcula días de una novedad cruzando fechaSalida/fechaFin con un mes dado
+// Devuelve {dias, registros:[]} — registros son las entradas del historial o del miembro
+function navDiasEnMes(memberId, tipo, mesIdx, anio){
+  var diasCalc = 0;
+  var registros = [];
+
+  // 1. Desde historial: buscar entradas con fecha de inicio en ese mes
+  //    El historial guarda `date` (fecha de registro) y opcionalmente el miembro tiene fechaSalida/fechaFin
+  //    Buscamos entradas del historial con status === tipo y tratamos de calcular días
+  var entrHist = historial.filter(function(h){
+    return h.memberId===memberId && h.status===tipo;
+  });
+
+  // 2. Desde members: estado actual con fechaSalida y fechaFin
+  // Usamos ayer como tope máximo: solo días ya transcurridos
+  var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
+  var m = members.find(function(x){ return x.id===memberId; });
+  if(m && m.status===tipo && m.fechaSalida){
+    var sal = new Date(m.fechaSalida+'T00:00:00');
+    var fin = m.fechaFin ? new Date(m.fechaFin+'T00:00:00') : ayer;
+    var d = navDiasEnRango(sal, fin, mesIdx, anio);
+    if(d>0){
+      diasCalc += d;
+      registros.push({
+        desde: m.fechaSalida,
+        hasta: m.fechaFin||'hoy',
+        dias: d,
+        origen: 'actual'
+      });
+    }
+  }
+
+  // 3. Desde historial enriquecido: si tiene fechaSalida en el objeto (guardado al registrar)
+  entrHist.forEach(function(h){
+    if(h.fechaSalida){
+      var sal2 = new Date(h.fechaSalida+'T00:00:00');
+      // Si hay fechaFin la usamos; si no, usamos ayer como tope — nunca días futuros
+      var fin2 = h.fechaFin ? new Date(h.fechaFin+'T00:00:00') : ayer;
+      // No doble contar con el estado actual
+      if(m && m.status===tipo && m.fechaSalida===h.fechaSalida) return;
+      var d2 = navDiasEnRango(sal2, fin2, mesIdx, anio);
+      if(d2>0){
+        diasCalc += d2;
+        registros.push({ desde:h.fechaSalida, hasta:h.fechaFin||h.date, dias:d2, origen:'hist' });
+      }
+    } else {
+      // Si no tiene fechas, contar el día de registro si cae en el mes
+      var dh = new Date(h.date+'T00:00:00');
+      if(dh.getMonth()===mesIdx && dh.getFullYear()===anio){
+        diasCalc += 1;
+        registros.push({ desde:h.date, hasta:h.date, dias:1, origen:'hist' });
+      }
+    }
+  });
+
+  // 4. Para Guardia: también incluir guardiaData (fuente histórica importada)
+  if(tipo==='Guardia'){
+    var mesNombre = NAV_MESES_LARGO[mesIdx];
+    guardiaData.filter(function(r){ return r.memberId===memberId && r.mes===mesNombre && r.ano===anio; })
+    .forEach(function(r){
+      diasCalc += (r.dias||0);
+      registros.push({ desde:mesNombre+' '+anio, hasta:'', dias:r.dias, origen:'guardia' });
+    });
+  }
+
+  return { dias: diasCalc, registros: registros };
+}
+
+// Cuántos días de un rango [inicio, fin] caen en el mes mesIdx del año anio.
+// REGLA DE INTEGRIDAD: nunca se cuentan días futuros — el tope siempre es ayer
+// (el último día completamente transcurrido). Un día solo aparece en la tabla
+// cuando ya ocurrió. Si el funcionario regresa antes de la fecha prevista, al
+// actualizarle el estado en nómina el sistema recalcula automáticamente.
+function navDiasEnRango(inicio, fin, mesIdx, anio){
+  var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
+  var primerDia = new Date(anio, mesIdx, 1);
+  var ultimoDia = new Date(anio, mesIdx+1, 0);
+  var finReal   = fin < ayer ? fin : ayer;           // nunca días futuros
+  var real_inicio = inicio  > primerDia ? inicio  : primerDia;
+  var real_fin    = finReal < ultimoDia ? finReal : ultimoDia;
+  if(real_inicio > real_fin) return 0;
+  return Math.round((real_fin - real_inicio)/(1000*60*60*24)) + 1;
+}
+
+function renderNavMatriz(){
+  var tipoFiltro = document.getElementById('navTipoFiltro').value;
+  var mesFiltro  = document.getElementById('navMesFiltro').value;
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var personal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
+  personal.sort(function(a,b){ return (RANK_ORDER[a.rank]||99)-(RANK_ORDER[b.rank]||99); });
+  var anio = new Date().getFullYear();
+  var colores = NAV_COLORS[tipoFiltro]||{bg:'rgba(99,102,241,.15)',color:'#6366f1'};
+
+  // ── STATS ──────────────────────────────────────
+  var statsEl = document.getElementById('navStats');
+  var totalDiasAnio = 0;
+  var conNovedad = 0;
+  personal.forEach(function(m){
+    var diasPersona = 0;
+    for(var mi=0;mi<12;mi++){
+      diasPersona += navDiasEnMes(m.id, tipoFiltro, mi, anio).dias;
+    }
+    if(diasPersona>0) conNovedad++;
+    totalDiasAnio += diasPersona;
+  });
+  var promedio = conNovedad>0 ? (totalDiasAnio/conNovedad).toFixed(1) : 0;
+
+  statsEl.innerHTML =
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">'
+    +'<div style="font-size:22px;font-weight:900;color:'+colores.color+'">'+totalDiasAnio+'</div>'
+    +'<div style="font-size:9px;color:var(--muted)">Días totales</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">'
+    +'<div style="font-size:22px;font-weight:900;color:var(--green)">'+conNovedad+'</div>'
+    +'<div style="font-size:9px;color:var(--muted)">Funcionarios</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">'
+    +'<div style="font-size:22px;font-weight:900;color:var(--gold2)">'+promedio+'</div>'
+    +'<div style="font-size:9px;color:var(--muted)">Días promedio</div></div>';
+
+  // ── TABLA ──────────────────────────────────────
+  var tablaEl = document.getElementById('navTabla');
+
+  if(mesFiltro==='todos'){
+    // Vista anual — persona × mes (tipo Excel)
+    var out = '<div style="overflow-x:auto">'
+      +'<table style="width:100%;border-collapse:collapse;font-size:10px">'
+      +'<thead><tr>'
+      +'<th style="background:var(--navy);padding:6px 8px;text-align:left;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:110px;position:sticky;left:0;z-index:1">FUNCIONARIO</th>'
+      +NAV_MESES_CORTO.map(function(m){ return '<th style="background:var(--navy);padding:6px 3px;text-align:center;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:30px">'+m+'</th>'; }).join('')
+      +'<th style="background:var(--navy);padding:6px 4px;text-align:center;color:'+colores.color+';font-size:9px;border:1px solid var(--border);min-width:36px;font-weight:700">TOT</th>'
+      +'</tr></thead><tbody>';
+
+    var ne = personal.filter(function(m){ return ['IJ','IN','IT','SI'].includes(m.rank); });
+    var pt = personal.filter(function(m){ return ['PT','PP','AG'].includes(m.rank); });
+
+    function buildNavRows(grupo, label){
+      if(!grupo.length) return '';
+      var rows = '<tr><td colspan="14" style="background:rgba(200,146,42,.06);color:var(--gold2);font-size:9px;font-weight:700;padding:4px 8px;border:1px solid var(--border)">'+label+'</td></tr>';
+      grupo.forEach(function(m){
+        var total = 0;
+        var cells = '';
+        for(var mi=0;mi<12;mi++){
+          var res = navDiasEnMes(m.id, tipoFiltro, mi, anio);
+          total += res.dias;
+          var bg   = res.dias>0 ? colores.bg : 'transparent';
+          var col  = res.dias>0 ? colores.color : 'var(--muted)';
+          var val  = res.dias>0 ? res.dias : '-';
+          // Tooltip con detalle al tocar
+          var tip  = res.registros.map(function(r){ return r.desde+(r.hasta&&r.hasta!==r.desde?' → '+r.hasta:'')+(r.dias?' ('+r.dias+'d)':''); }).join(' | ');
+          cells += '<td onclick="navShowDetalle(\''+m.id+'\',\''+tipoFiltro+'\','+mi+','+anio+')" title="'+tip+'" style="background:'+bg+';color:'+col+';text-align:center;padding:5px 2px;border:1px solid var(--border);font-weight:'+(res.dias>0?'700':'400')+';cursor:'+(res.dias>0?'pointer':'default')+'">'+val+'</td>';
+        }
+        var nomCorto = m.name.split(' ').slice(0,2).join(' ');
+        rows += '<tr>'
+          +'<td style="padding:5px 8px;border:1px solid var(--border);color:var(--text);background:var(--navy);position:sticky;left:0;z-index:1">'
+          +'<span style="font-size:8px;color:var(--muted);margin-right:3px">'+m.rank+'</span>'+nomCorto+'</td>'
+          +cells
+          +'<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?colores.color:'var(--muted)')+';font-weight:700;background:'+(total>0?colores.bg:'transparent')+'">'+(total||'-')+'</td>'
+          +'</tr>';
+      });
+      return rows;
+    }
+
+    out += buildNavRows(ne, '── Nivel Ejecutivo ──');
+    out += buildNavRows(pt, '── Patrulleros ──');
+    out += '</tbody></table></div>';
+    out += '<div style="font-size:9px;color:var(--muted);text-align:center;margin-top:6px">Toque un número para ver el detalle de esa novedad</div>';
+    tablaEl.innerHTML = out;
+
+  } else {
+    // Vista de un mes — lista vertical con barra de días
+    var mesIdx = parseInt(mesFiltro);
+    var maxDias = 31;
+    var out2 = '<div style="display:flex;flex-direction:column;gap:6px">';
+    personal.forEach(function(m){
+      var res = navDiasEnMes(m.id, tipoFiltro, mesIdx, anio);
+      var pct = Math.min(100, Math.round(res.dias/maxDias*100));
+      var nomCorto = m.name.split(' ').slice(0,2).join(' ');
+      out2 += '<div style="background:var(--card);border:1px solid '+(res.dias>0?colores.color:'var(--border)')+';border-radius:8px;padding:10px 12px;cursor:'+(res.dias>0?'pointer':'default')+'" '
+        +(res.dias>0?'onclick="navShowDetalle(\''+m.id+'\',\''+tipoFiltro+'\','+mesIdx+','+anio+')"':'')+' >'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(res.dias>0?'7px':'0')+'">'
+        +'<div class="rank-badge" style="width:26px;height:26px;font-size:8px;flex-shrink:0">'+m.rank+'</div>'
+        +'<div style="flex:1;font-size:11px;font-weight:600;color:var(--text)">'+nomCorto+'</div>'
+        +'<div style="font-size:18px;font-weight:900;color:'+(res.dias>0?colores.color:'var(--muted)')+'">'+( res.dias||'—' )+'</div>'
+        +(res.dias>0?'<div style="font-size:9px;color:var(--muted)">días</div>':'')
+        +'</div>'
+        +(res.dias>0?'<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">'
+          +'<div style="height:100%;width:'+pct+'%;background:'+colores.color+';border-radius:2px"></div>'
+          +'</div>':'')
+        +'</div>';
+    });
+    out2 += '</div>';
+    tablaEl.innerHTML = out2;
+  }
+}
+
+// Panel de detalle al tocar un número de la matriz
+function navShowDetalle(memberId, tipo, mesIdx, anio){
+  var m = members.find(function(x){ return x.id===memberId; });
+  if(!m) return;
+  var res = navDiasEnMes(memberId, tipo, mesIdx, anio);
+  if(!res.dias) return;
+  var colores = NAV_COLORS[tipo]||{bg:'rgba(99,102,241,.15)',color:'#6366f1'};
+  var mesNom = NAV_MESES_LARGO[mesIdx];
+  var nomCorto = m.rank+' '+m.name.split(' ').slice(0,2).join(' ');
+  var detalle = res.registros.map(function(r){
+    return '<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px;color:var(--text)">'
+      +'<span style="color:'+colores.color+';font-weight:700">'+r.dias+' día'+(r.dias>1?'s':'')+'</span>'
+      +' · '+r.desde+(r.hasta&&r.hasta!==r.desde?' → '+r.hasta:'')
+      +'</div>';
+  }).join('');
+  showToast('📅 '+nomCorto+' — '+tipo+' '+mesNom+': '+res.dias+' días', colores.color);
+}
+
+function exportarNavExcel(){
+  var tipoFiltro = document.getElementById('navTipoFiltro').value;
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var personal = members.filter(function(m){ return m.escuadra===esc&&!m.esEspejo; });
+  personal.sort(function(a,b){ return (RANK_ORDER[a.rank]||99)-(RANK_ORDER[b.rank]||99); });
+  var anio = new Date().getFullYear();
+  var header = ['NRO','GRADO','APELLIDOS Y NOMBRES','CEDULA']
+    .concat(NAV_MESES_LARGO.map(function(m){ return m.toUpperCase(); }))
+    .concat(['TOTAL']);
+  var rows = [header];
+  personal.forEach(function(m, i){
+    var row = [i+1, m.rank, m.name, m.idNum||''];
+    var total = 0;
+    for(var mi=0;mi<12;mi++){
+      var d = navDiasEnMes(m.id, tipoFiltro, mi, anio).dias;
+      row.push(d||'');
+      total += d;
+    }
+    row.push(total||'');
+    rows.push(row);
+  });
+  var csv = rows.map(function(r){
+    return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(',');
+  }).join('\n');
+  var blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=tipoFiltro.toUpperCase()+'_'+esc.replace(' ','_')+'_'+anio+'.csv';
+  a.click(); showToast('📥 Excel descargado');
+}
+
+
 var NOVEDAD_COLORS = {
   'Servicio':    '#22c55e',
   'Guardia':     '#f97316',
