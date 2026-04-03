@@ -115,6 +115,11 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .bl-Guardia{border-left:3px solid var(--orange)}
 .bl-Incapacidad{border-left:3px solid var(--red)}
 .bl-Comision{border-left:3px solid var(--muted)}
+.bl-PermisoGUDMO{border-left:3px solid #6366f1}
+.bl-PermisoDEI{border-left:3px solid #3b82f6}
+.bl-ComisionRegion{border-left:3px solid #10b981}
+.bl-ComisionFuera{border-left:3px solid #f59e0b}
+.bl-ComisionErradicacion{border-left:3px solid #dc2626}
 .bl-Curso{border-left:3px solid var(--yellow)}
 .bl-Anexo{border-left:3px solid var(--pink)}
 .bl-Secretario{border-left:3px solid var(--teal)}
@@ -127,6 +132,11 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .p-Guardia{background:rgba(249,115,22,.13);color:var(--orange)}
 .p-Incapacidad{background:rgba(239,68,68,.13);color:var(--red)}
 .p-Comision{background:rgba(100,116,139,.13);color:var(--muted2)}
+.p-PermisoGUDMO{background:rgba(99,102,241,.13);color:#6366f1}
+.p-PermisoDEI{background:rgba(59,130,246,.13);color:#3b82f6}
+.p-ComisionRegion{background:rgba(16,185,129,.13);color:#10b981}
+.p-ComisionFuera{background:rgba(245,158,11,.13);color:#f59e0b}
+.p-ComisionErradicacion{background:rgba(220,38,38,.13);color:#dc2626}
 .p-Curso{background:rgba(240,192,64,.13);color:var(--yellow)}
 .p-Anexo{background:rgba(236,72,153,.13);color:var(--pink)}
 .p-Secretario{background:rgba(20,184,166,.13);color:var(--teal)}
@@ -155,6 +165,11 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .sel-Guardia{border-color:var(--orange);background:rgba(249,115,22,.1);color:var(--orange)}
 .sel-Incapacidad{border-color:var(--red);background:rgba(239,68,68,.1);color:var(--red)}
 .sel-Comision{border-color:var(--muted);background:rgba(100,116,139,.1);color:var(--muted2)}
+.sel-PermisoGUDMO{border-color:#6366f1;background:rgba(99,102,241,.1);color:#6366f1}
+.sel-PermisoDEI{border-color:#3b82f6;background:rgba(59,130,246,.1);color:#3b82f6}
+.sel-ComisionRegion{border-color:#10b981;background:rgba(16,185,129,.1);color:#10b981}
+.sel-ComisionFuera{border-color:#f59e0b;background:rgba(245,158,11,.1);color:#f59e0b}
+.sel-ComisionErradicacion{border-color:#dc2626;background:rgba(220,38,38,.1);color:#dc2626}
 .sel-Curso{border-color:var(--yellow);background:rgba(240,192,64,.1);color:var(--yellow)}
 .sel-Anexo{border-color:var(--pink);background:rgba(236,72,153,.1);color:var(--pink)}
 .sel-Secretario{border-color:var(--teal);background:rgba(20,184,166,.1);color:var(--teal)}
@@ -1008,13 +1023,25 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <!-- Filtros -->
   <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
     <select id="navTipoFiltro" onchange="renderNavMatriz()" style="flex:1;min-width:120px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px">
-      <option value="Permiso">Permiso</option>
-      <option value="Vacaciones">Vacaciones</option>
-      <option value="Franquicia">Franquicia</option>
-      <option value="Incapacidad">Incapacidad</option>
-      <option value="Curso">Curso / Ascenso</option>
-      <option value="Guardia">Guardia</option>
-      <option value="Anexo">Anexo</option>
+      <optgroup label="── Permisos ──">
+        <option value="Permiso">📝 Permiso (todos)</option>
+        <option value="PermisoGUDMO">🏛️ Permiso GUDMO</option>
+        <option value="PermisoDEI">🛡️ Permiso DEI</option>
+      </optgroup>
+      <optgroup label="── Comisiones ──">
+        <option value="ComisionRegion">🚗 Comisión Región</option>
+        <option value="ComisionFuera">✈️ Comisión Fuera Región</option>
+        <option value="ComisionErradicacion">🌿 Erradicación</option>
+        <option value="Comision">📌 Comisión (todas)</option>
+      </optgroup>
+      <optgroup label="── Otras ──">
+        <option value="Vacaciones">🏖️ Vacaciones</option>
+        <option value="Franquicia">🔄 Franquicia</option>
+        <option value="Incapacidad">🏥 Incapacidad</option>
+        <option value="Curso">🎓 Curso / Ascenso</option>
+        <option value="Guardia">🔒 Guardia</option>
+        <option value="Anexo">🔗 Anexo</option>
+      </optgroup>
     </select>
     <select id="navMesFiltro" onchange="renderNavMatriz()" style="flex:1;min-width:100px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px">
       <option value="todos">Todos los meses</option>
@@ -1107,6 +1134,16 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
           <div style="font-size:11px;font-weight:700">Permiso DEI</div>
           <div style="font-size:9px;color:var(--muted);margin-top:2px">Otorgado por el DEI</div>
         </div>
+      </div>
+    </div>
+
+    <!-- Grupo Comisión — aparece para ComisionRegion / ComisionFuera / ComisionErradicacion -->
+    <div class="fg" id="comisionDetalleGroup" style="display:none">
+      <label>📍 Detalle de la comisión</label>
+      <div style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:10px">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Lugar / Destino</div>
+        <input type="text" id="comisionLugar" placeholder="Ej: Municipio Pueblo Rico — Erradicación" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px;margin-bottom:8px">
+        <div id="comisionTipoLabel" style="font-size:9.5px;color:var(--muted2);padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.04);text-align:center"></div>
       </div>
     </div>
 
@@ -1245,7 +1282,12 @@ const STATUSES = [
   {key:'Franquicia', icon:'🔄', label:'Franquicia'},
   {key:'Guardia',    icon:'🔒', label:'Guardia'},
   {key:'Incapacidad',icon:'🏥', label:'Incapacidad'},
-  {key:'Comision',   icon:'📌', label:'Comisión'},
+  {key:'Comision',        icon:'📌', label:'Comisión'},
+  {key:'ComisionRegion',  icon:'🚗', label:'Com. Región'},
+  {key:'ComisionFuera',   icon:'✈️', label:'Com. Fuera'},
+  {key:'ComisionErradicacion', icon:'🌿', label:'Erradicación'},
+  {key:'PermisoGUDMO',    icon:'🏛️', label:'Perm. GUDMO'},
+  {key:'PermisoDEI',      icon:'🛡️', label:'Perm. DEI'},
   {key:'Curso',      icon:'🎓', label:'Curso/Ascenso'},
   {key:'Anexo',      icon:'🔗', label:'Anexo Dispositivo'},
   {key:'Secretario',  icon:'📋', label:'Secretario'},
@@ -1714,7 +1756,15 @@ function buildCard(m){
   if(m.status==='Permiso'&&m.tipoPermiso){
     var tpBg=m.tipoPermiso==='GUDMO'?'rgba(168,85,247,.15)':'rgba(200,146,42,.15)';
     var tpCol=m.tipoPermiso==='GUDMO'?'var(--purple)':'var(--gold2)';
-    badges+='<span style="font-size:9px;padding:1px 7px;border-radius:6px;font-weight:700;background:'+tpBg+';color:'+tpCol+'">'+( m.tipoPermiso==='GUDMO'?'🏛️ GUDMO':'🛡️ DEI')+'</span>';
+    badges+='<span style="font-size:9px;padding:1px 7px;border-radius:6px;font-weight:700;background:'+tpBg+';color:'+tpCol+'">'+( m.tipoPermiso==='GUDMO'?'🏛️ GUDMO':'🛡️ DEI')+'</span>'
+    // Badge de subclasificación para estados especiales
+    if(['ComisionRegion','ComisionFuera','ComisionErradicacion'].includes(m.status)){
+      var comLabel={'ComisionRegion':'🚗 Región','ComisionFuera':'✈️ Fuera','ComisionErradicacion':'🌿 Erradicación'}[m.status];
+      if(m.comisionLugar) comLabel+=' · '+m.comisionLugar;
+      badges+='<span style="font-size:9px;padding:1px 7px;border-radius:6px;font-weight:700;background:rgba(16,185,129,.13);color:#10b981">'+comLabel+'</span>';
+    }
+    if(m.status==='PermisoGUDMO') badges+='<span style="font-size:9px;padding:1px 7px;border-radius:6px;font-weight:700;background:rgba(99,102,241,.13);color:#6366f1">🏛️ GUDMO</span>';
+    if(m.status==='PermisoDEI')   badges+='<span style="font-size:9px;padding:1px 7px;border-radius:6px;font-weight:700;background:rgba(59,130,246,.13);color:#3b82f6">🛡️ DEI</span>';;
   }
   if(m.permisoHoras&&m.permisoHoras.fecha===today){
     badges+='<span style="font-size:9px;padding:2px 7px;border-radius:6px;font-weight:700;background:rgba(34,197,94,.15);color:var(--green)">⏱️ '+m.permisoHoras.salida+(m.permisoHoras.regreso?' → '+m.permisoHoras.regreso:'')+'</span>';
@@ -1867,6 +1917,11 @@ const STATUS_MAP={
   'guardia':'Guardia',
   'incapacidad':'Incapacidad','incap':'Incapacidad',
   'comision':'Comision','comisión':'Comision',
+  'comisionregion':'ComisionRegion','comision region':'ComisionRegion',
+  'comisionfuera':'ComisionFuera','comision fuera':'ComisionFuera',
+  'comisionerradicacion':'ComisionErradicacion','erradicacion':'ComisionErradicacion',
+  'permisogudmo':'PermisoGUDMO','permiso gudmo':'PermisoGUDMO',
+  'permisodei':'PermisoDEI','permiso dei':'PermisoDEI',
   'curso':'Curso','ascenso':'Curso',
   'anexo':'Anexo',
 };
@@ -2003,7 +2058,12 @@ function openEdit(idOrEl){
     if(g){g.style.border='2px solid var(--border)';g.style.background='transparent';}
     if(d){d.style.border='2px solid var(--border)';d.style.background='transparent';}
   }
+  // Restaurar lugar de comisión si estaba guardado
+  var clEl=document.getElementById('comisionLugar');
+  if(clEl) clEl.value=m.comisionLugar||'';
   buildStatusGrid();
+  // Activar grupos condicionales según estado actual
+  selectStatus(selStatus, document.querySelector('.so.sel-'+selStatus)||{classList:{add:function(){}}});
   document.getElementById('editModal').classList.add('open');
 }
 
@@ -2018,9 +2078,8 @@ function selectStatus(key,el){
   selStatus=key;
   document.querySelectorAll('.so').forEach(e=>e.className='so');
   el.classList.add('sel-'+key);
-  // Show tipo permiso only for Permiso
+  // Show tipo permiso — manejado al final según tipo
   const tpg=document.getElementById('tipoPermisoGroup');
-  if(tpg) tpg.style.display=key==='Permiso'?'block':'none';
   // Show permiso-horas toggle only for Servicio
   const pht=document.getElementById('permisoHorasToggle');
   const phg=document.getElementById('permisoHorasGroup');
@@ -2030,6 +2089,27 @@ function selectStatus(key,el){
   const adg=document.getElementById('anexoDestinoGroup');
   if(adg) adg.style.display=key==='Anexo'?'block':'none';
   if(key==='Anexo') resetAnexoDEISelector();
+  // Show comision detalle for any Comision type
+  const cdg=document.getElementById('comisionDetalleGroup');
+  const ctl=document.getElementById('comisionTipoLabel');
+  var esComision=['ComisionRegion','ComisionFuera','ComisionErradicacion'].includes(key);
+  if(cdg) cdg.style.display=esComision?'block':'none';
+  if(ctl && esComision){
+    var labels={
+      ComisionRegion:'🚗 Comisión dentro de la región',
+      ComisionFuera:'✈️ Comisión fuera de la región',
+      ComisionErradicacion:'🌿 Comisión de erradicación'
+    };
+    ctl.textContent=labels[key]||'';
+  }
+  // Show tipo permiso for Permiso, PermisoGUDMO, PermisoDEI
+  // PermisoGUDMO y PermisoDEI ya tienen su tipo implícito — ocultar el selector
+  if(tpg){
+    if(key==='Permiso') { tpg.style.display='block'; }
+    else if(key==='PermisoGUDMO'){ tpg.style.display='none'; selTipoPermiso('GUDMO'); }
+    else if(key==='PermisoDEI')  { tpg.style.display='none'; selTipoPermiso('DEI');   }
+    else { tpg.style.display='none'; }
+  }
 }
 
 function togglePermisoHoras(){
@@ -2257,6 +2337,10 @@ function saveEdit(){
   members[idx].fechaFin=document.getElementById('fechaFinInput').value||'';
   const fsiEl=document.getElementById('fechaSalidaInput');
   members[idx].fechaSalida=fsiEl?fsiEl.value||'':'';
+  // Guardar lugar de comisión si aplica
+  var esComisionKey=['ComisionRegion','ComisionFuera','ComisionErradicacion'].includes(selStatus);
+  var comLugarEl=document.getElementById('comisionLugar');
+  members[idx].comisionLugar = esComisionKey && comLugarEl ? (comLugarEl.value||'').trim() : '';
   sv('g9_members',members);
 
   // Historial
@@ -2273,6 +2357,7 @@ function saveEdit(){
       date:histDate,
       fechaSalida:members[idx].fechaSalida||'',
       fechaFin:members[idx].fechaFin||'',
+      comisionLugar:members[idx].comisionLugar||'',
       obs:histObsVal || (selStatus!==prevStatus?`Cambio de ${prevStatus} a ${selStatus}`:'')
     });
     sv('g9_hist',historial);
@@ -4681,33 +4766,45 @@ var NAV_MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oc
 var NAV_MESES_LARGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
 var NAV_COLORS = {
-  'Permiso':    {bg:'rgba(139,92,246,.15)', color:'#8b5cf6'},
-  'Vacaciones': {bg:'rgba(6,182,212,.15)',  color:'#06b6d4'},
-  'Franquicia': {bg:'rgba(168,85,247,.15)', color:'#a855f7'},
-  'Incapacidad':{bg:'rgba(239,68,68,.15)',  color:'#ef4444'},
-  'Curso':      {bg:'rgba(234,179,8,.15)',  color:'#eab308'},
-  'Guardia':    {bg:'rgba(249,115,22,.15)', color:'#f97316'},
-  'Anexo':      {bg:'rgba(20,184,166,.15)', color:'#14b8a6'},
+  'Permiso':              {bg:'rgba(139,92,246,.15)',  color:'#8b5cf6'},
+  'PermisoGUDMO':         {bg:'rgba(99,102,241,.15)',  color:'#6366f1'},
+  'PermisoDEI':           {bg:'rgba(59,130,246,.15)',  color:'#3b82f6'},
+  'Vacaciones':           {bg:'rgba(6,182,212,.15)',   color:'#06b6d4'},
+  'Franquicia':           {bg:'rgba(168,85,247,.15)',  color:'#a855f7'},
+  'Incapacidad':          {bg:'rgba(239,68,68,.15)',   color:'#ef4444'},
+  'Curso':                {bg:'rgba(234,179,8,.15)',   color:'#eab308'},
+  'Guardia':              {bg:'rgba(249,115,22,.15)',  color:'#f97316'},
+  'Anexo':                {bg:'rgba(20,184,166,.15)',  color:'#14b8a6'},
+  'Comision':             {bg:'rgba(100,116,139,.15)', color:'#94a3b8'},
+  'ComisionRegion':       {bg:'rgba(16,185,129,.15)',  color:'#10b981'},
+  'ComisionFuera':        {bg:'rgba(245,158,11,.15)',  color:'#f59e0b'},
+  'ComisionErradicacion': {bg:'rgba(220,38,38,.15)',   color:'#dc2626'},
 };
 
 // Calcula días de una novedad cruzando fechaSalida/fechaFin con un mes dado
 // Devuelve {dias, registros:[]} — registros son las entradas del historial o del miembro
+// "Permiso (todos)" agrupa Permiso + PermisoGUDMO + PermisoDEI
+// "Comision (todas)" agrupa Comision + ComisionRegion + ComisionFuera + ComisionErradicacion
 function navDiasEnMes(memberId, tipo, mesIdx, anio){
+  var TIPO_GRUPOS = {
+    'Permiso': ['Permiso','PermisoGUDMO','PermisoDEI'],
+    'Comision': ['Comision','ComisionRegion','ComisionFuera','ComisionErradicacion']
+  };
+  var tiposABuscar = TIPO_GRUPOS[tipo] || [tipo];
+
   var diasCalc = 0;
   var registros = [];
 
-  // 1. Desde historial: buscar entradas con fecha de inicio en ese mes
-  //    El historial guarda `date` (fecha de registro) y opcionalmente el miembro tiene fechaSalida/fechaFin
-  //    Buscamos entradas del historial con status === tipo y tratamos de calcular días
+  // 1. Desde historial: buscar entradas con status en el grupo de tipos
   var entrHist = historial.filter(function(h){
-    return h.memberId===memberId && h.status===tipo;
+    return h.memberId===memberId && tiposABuscar.includes(h.status);
   });
 
   // 2. Desde members: estado actual con fechaSalida y fechaFin
   // Usamos ayer como tope máximo: solo días ya transcurridos
   var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
   var m = members.find(function(x){ return x.id===memberId; });
-  if(m && m.status===tipo && m.fechaSalida){
+  if(m && tiposABuscar.includes(m.status) && m.fechaSalida){
     var sal = new Date(m.fechaSalida+'T00:00:00');
     var fin = m.fechaFin ? new Date(m.fechaFin+'T00:00:00') : ayer;
     var d = navDiasEnRango(sal, fin, mesIdx, anio);
@@ -4729,7 +4826,7 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
       // Si hay fechaFin la usamos; si no, usamos ayer como tope — nunca días futuros
       var fin2 = h.fechaFin ? new Date(h.fechaFin+'T00:00:00') : ayer;
       // No doble contar con el estado actual
-      if(m && m.status===tipo && m.fechaSalida===h.fechaSalida) return;
+      if(m && tiposABuscar.includes(m.status) && m.fechaSalida===h.fechaSalida) return;
       var d2 = navDiasEnRango(sal2, fin2, mesIdx, anio);
       if(d2>0){
         diasCalc += d2;
@@ -4934,10 +5031,15 @@ function exportarNavExcel(){
 
 
 var NOVEDAD_COLORS = {
-  'Servicio':    '#22c55e',
-  'Guardia':     '#f97316',
-  'Permiso':     '#8b5cf6',
-  'Vacaciones':  '#06b6d4',
+  'Servicio':              '#22c55e',
+  'Guardia':               '#f97316',
+  'Permiso':               '#8b5cf6',
+  'PermisoGUDMO':          '#6366f1',
+  'PermisoDEI':            '#3b82f6',
+  'ComisionRegion':        '#10b981',
+  'ComisionFuera':         '#f59e0b',
+  'ComisionErradicacion':  '#dc2626',
+  'Vacaciones':            '#06b6d4',
   'Franquicia':  '#eab308',
   'Incapacidad': '#ef4444',
   'Curso':       '#3b82f6',
