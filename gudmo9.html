@@ -124,6 +124,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .bl-Anexo{border-left:3px solid var(--pink)}
 .bl-Secretario{border-left:3px solid var(--teal)}
 .bl-Excusa{border-left:3px solid #a78bfa}
+.bl-Luto{border-left:3px solid #6b7280}
 
 .p-Servicio{background:rgba(34,197,94,.13);color:var(--green)}
 .p-Vacaciones{background:rgba(6,182,212,.13);color:var(--cyan)}
@@ -141,6 +142,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .p-Anexo{background:rgba(236,72,153,.13);color:var(--pink)}
 .p-Secretario{background:rgba(20,184,166,.13);color:var(--teal)}
 .p-Excusa{background:rgba(167,139,250,.13);color:#a78bfa}
+.p-Luto{background:rgba(107,114,128,.18);color:#d1d5db}
 
 /* ── MODAL ── */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:200;align-items:flex-end;justify-content:center}
@@ -174,6 +176,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .sel-Anexo{border-color:var(--pink);background:rgba(236,72,153,.1);color:var(--pink)}
 .sel-Secretario{border-color:var(--teal);background:rgba(20,184,166,.1);color:var(--teal)}
 .sel-Excusa{border-color:#a78bfa;background:rgba(167,139,250,.1);color:#a78bfa}
+.sel-Luto{border-color:#9ca3af;background:rgba(107,114,128,.12);color:#d1d5db}
 .btn-row{display:flex;gap:8px;margin-top:14px}
 .btn{flex:1;padding:11px;border-radius:9px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.8px;transition:all .2s}
 .btn-primary{background:var(--gold);color:#000}
@@ -265,6 +268,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <div class="sc"><div class="v" id="cs-Anexo" style="color:var(--pink)">0</div><div class="l">Anexo</div></div>
   <div class="sc"><div class="v" id="cs-Secretario" style="color:var(--teal)">0</div><div class="l">Secr.</div></div>
   <div class="sc"><div class="v" id="cs-Excusa" style="color:#a78bfa">0</div><div class="l">Excusa</div></div>
+  <div class="sc"><div class="v" id="cs-Luto" style="color:#9ca3af">0</div><div class="l">Luto</div></div>
 </div>
 
 <div id="reactionBanner"></div>
@@ -391,6 +395,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
     <button class="fb" style="color:var(--pink);border-color:var(--pink)" onclick="setFilter('Anexo',this)">Anexo</button>
     <button class="fb" style="color:var(--teal);border-color:var(--teal)" onclick="setFilter('Secretario',this)">Secr.</button>
     <button class="fb" style="color:#a78bfa;border-color:#a78bfa" onclick="setFilter('Excusa',this)">Excusa</button>
+    <button class="fb" style="color:#9ca3af;border-color:#9ca3af" onclick="setFilter('Luto',this)">Luto</button>
   </div>
   <div class="roster-list" id="rosterList"></div>
 </div>
@@ -424,6 +429,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <option value="Curso">Curso/Ascenso</option>
       <option value="Anexo">Anexo dispositivo</option>
       <option value="Comision">Comisión</option>
+      <option value="Luto">Licencia por Luto</option>
     </select>
   </div>
   <div id="histList"></div>
@@ -1040,6 +1046,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
         <option value="Incapacidad">🏥 Incapacidad</option>
         <option value="Curso">🎓 Curso / Ascenso</option>
         <option value="Guardia">🔒 Guardia</option>
+        <option value="Luto">🖤 Lic. Luto</option>
         <option value="Anexo">🔗 Anexo</option>
       </optgroup>
     </select>
@@ -1292,6 +1299,7 @@ const STATUSES = [
   {key:'Anexo',      icon:'🔗', label:'Anexo Dispositivo'},
   {key:'Secretario',  icon:'📋', label:'Secretario'},
   {key:'Excusa',      icon:'📄', label:'Excusa'},
+  {key:'Luto',        icon:'🖤', label:'Lic. Luto'},
 ];
 
 const CRITICAL_CARGOS = ['Operador 37','Operador 40','Op. Lanzadora','Cte. Escuadra','Líder Escuderos','SPI'];
@@ -1740,7 +1748,7 @@ function buildCard(m){
   var isCrit=CRITICAL_CARGOS.includes(m.cargo);
   var isOffDuty=m.status!=='Servicio'&&isCrit;
   var today=localDateStr();
-  var hasDates=(m.fechaSalida||m.fechaFin)&&['Permiso','Vacaciones','Franquicia','Curso','Incapacidad'].includes(m.status);
+  var hasDates=(m.fechaSalida||m.fechaFin)&&['Permiso','Vacaciones','Franquicia','Curso','Incapacidad','Luto'].includes(m.status);
 
   var badges='';
   if(curEscuadra==='all') badges+='<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(200,146,42,.15);color:var(--gold2)">'+m.escuadra+'</span>';
@@ -1794,7 +1802,7 @@ function buildCard(m){
 
 function updateStats(){
   var esc=escMembers();
-  var keys=['Servicio','Vacaciones','Permiso','Franquicia','Guardia','Incapacidad','Curso','Anexo','Secretario','Excusa'];
+  var keys=['Servicio','Vacaciones','Permiso','Franquicia','Guardia','Incapacidad','Curso','Anexo','Secretario','Excusa','Luto'];
   for(var ki=0;ki<keys.length;ki++){
     var el=document.getElementById('cs-'+keys[ki]);
     if(el){
@@ -1922,6 +1930,7 @@ const STATUS_MAP={
   'comisionerradicacion':'ComisionErradicacion','erradicacion':'ComisionErradicacion',
   'permisogudmo':'PermisoGUDMO','permiso gudmo':'PermisoGUDMO',
   'permisodei':'PermisoDEI','permiso dei':'PermisoDEI',
+  'luto':'Luto','licencia luto':'Luto','lic luto':'Luto',
   'curso':'Curso','ascenso':'Curso',
   'anexo':'Anexo',
 };
@@ -2465,7 +2474,7 @@ function buildParte(){
   const escLabelParte = curEscuadra==='all'?'GUDMO-9 COMPLETO':curEscuadra;
   const groups={
     Servicio:[],Vacaciones:[],Permiso:[],Franquicia:[],
-    Guardia:[],Incapacidad:[],Comision:[],Curso:[],Anexo:[],Secretario:[],Excusa:[]
+    Guardia:[],Incapacidad:[],Comision:[],Curso:[],Anexo:[],Secretario:[],Excusa:[],Luto:[]
   };
   sorted().forEach(m=>{ if(groups[m.status]) groups[m.status].push(m); });
 
@@ -2563,6 +2572,8 @@ ${lines(groups.Secretario)}
 
 📄 EXCUSA — Total: ${groups.Excusa.length}
 ${lines(groups.Excusa)}
+🖤 LIC. LUTO — Total: ${groups.Luto.length}
+${lines(groups.Luto)}
 
 ═══════════════════════════════════════
 Generado: ${now.toLocaleString('es-CO')}
@@ -4779,6 +4790,7 @@ var NAV_COLORS = {
   'ComisionRegion':       {bg:'rgba(16,185,129,.15)',  color:'#10b981'},
   'ComisionFuera':        {bg:'rgba(245,158,11,.15)',  color:'#f59e0b'},
   'ComisionErradicacion': {bg:'rgba(220,38,38,.15)',   color:'#dc2626'},
+  'Luto':                 {bg:'rgba(107,114,128,.18)',  color:'#9ca3af'},
 };
 
 // Calcula días de una novedad cruzando fechaSalida/fechaFin con un mes dado
@@ -5039,6 +5051,7 @@ var NOVEDAD_COLORS = {
   'ComisionRegion':        '#10b981',
   'ComisionFuera':         '#f59e0b',
   'ComisionErradicacion':  '#dc2626',
+  'Luto':                  '#6b7280',
   'Vacaciones':            '#06b6d4',
   'Franquicia':  '#eab308',
   'Incapacidad': '#ef4444',
