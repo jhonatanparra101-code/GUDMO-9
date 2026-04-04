@@ -1212,11 +1212,11 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
           <input type="date" id="fechaSalidaInput">
         </div>
         <div>
-          <div style="font-size:9px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.8px">Fecha regreso</div>
+          <div style="font-size:9px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.8px">Fecha presentación</div>
           <input type="date" id="fechaFinInput">
         </div>
       </div>
-      <div style="font-size:9px;color:var(--muted);margin-top:5px">⏰ El sistema avisará un día antes del regreso</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:5px">⚠️ Ponga el día que se <strong>presenta</strong> — el sistema avisa la noche anterior y cuenta los días anteriores a esa fecha</div>
     </div>
 
     <div class="fg" id="histDateGroup">
@@ -1254,7 +1254,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div>
-            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Fecha fin (opcional)</div>
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Fecha presentación (opcional)</div>
             <input type="date" id="proxEstadoFin" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:12px">
           </div>
           <div>
@@ -1665,12 +1665,12 @@ function checkReturnAlerts(){
   for(var i=0;i<returningToday.length;i++){
     var m=returningToday[i];
     var parts=m.name.split(' ');
-    bHTML+='<div class="ra-item">🟢 <strong>'+m.rank+' '+parts[0]+' '+(parts[2]||'')+'</strong> regresa HOY de <em>'+m.status+'</em></div>';
+    bHTML+='<div class="ra-item">🟢 <strong>'+m.rank+' '+parts[0]+' '+(parts[2]||'')+'</strong> se presenta HOY — viene de <em>'+m.status+'</em></div>';
   }
   for(var j=0;j<alerts.length;j++){
     var m2=alerts[j];
     var parts2=m2.name.split(' ');
-    bHTML+='<div class="ra-item">⏰ <strong>'+m2.rank+' '+parts2[0]+' '+(parts2[2]||'')+'</strong> regresa mañana de <em>'+m2.status+'</em></div>';
+    bHTML+='<div class="ra-item">⏰ <strong>'+m2.rank+' '+parts2[0]+' '+(parts2[2]||'')+'</strong> se presenta mañana — viene de <em>'+m2.status+'</em></div>';
   }
   // Próximos estados programados que aplican mañana
   var proxManana = members.filter(function(m){
@@ -1877,7 +1877,7 @@ function buildCard(m){
     badges+='<span style="font-size:9px;padding:2px 7px;border-radius:6px;font-weight:700;background:rgba(240,192,64,.12);color:var(--gold2);border:1px solid rgba(240,192,64,.3)">📅 →'+peSt.icon+' '+peSt.label+' '+fmtDate(m.proximoEstado.fecha)+'</span>';
   }
   if(hasDates){
-    badges+='<span style="font-size:9px;background:rgba(200,146,42,.15);color:var(--gold2);padding:1px 6px;border-radius:6px">📅 '+(m.fechaSalida?fmtDate(m.fechaSalida)+' → ':' ')+(m.fechaFin?fmtDate(m.fechaFin):'')+'</span>';
+    badges+='<span style="font-size:9px;background:rgba(200,146,42,.15);color:var(--gold2);padding:1px 6px;border-radius:6px">📅 '+(m.fechaSalida?fmtDate(m.fechaSalida)+' → ':' ')+(m.fechaFin?'Pres. '+fmtDate(m.fechaFin):'')+'</span>';
   }
 
   var arrows='';
@@ -4969,7 +4969,11 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
     var sal = new Date(m.fechaSalida+'T00:00:00');
     // Si la novedad aún no empezó no hay días que contar
     if(sal <= ayer){
-    var fin = m.fechaFin ? new Date(m.fechaFin+'T00:00:00') : ayer;
+    // fechaFin es la fecha de PRESENTACIÓN (el día que ya trabaja),
+    // así que el último día de novedad es fechaFin - 1.
+    // Si no hay fechaFin, usamos ayer como tope.
+    var finBase = m.fechaFin ? (function(){ var d=new Date(m.fechaFin+'T00:00:00'); d.setDate(d.getDate()-1); return d; })() : ayer;
+    var fin = finBase;
     var d = navDiasEnRango(sal, fin, mesIdx, anio);
     if(d>0){
       diasCalc += d;
@@ -4989,8 +4993,10 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
       var sal2 = new Date(h.fechaSalida+'T00:00:00');
       // Si la novedad aún no empezó (fechaSalida futura) no hay nada que contar
       if(sal2 > ayer) return;
-      // Si hay fechaFin la usamos; si no, usamos ayer como tope — nunca días futuros
-      var fin2 = h.fechaFin ? new Date(h.fechaFin+'T00:00:00') : ayer;
+      // fechaFin es fecha de presentación → último día de novedad es fechaFin-1
+      var fin2 = h.fechaFin
+        ? (function(){ var d=new Date(h.fechaFin+'T00:00:00'); d.setDate(d.getDate()-1); return d; })()
+        : ayer;
       // No doble contar con el estado actual
       if(m && tiposABuscar.includes(m.status) && m.fechaSalida===h.fechaSalida) return;
       var d2 = navDiasEnRango(sal2, fin2, mesIdx, anio);
