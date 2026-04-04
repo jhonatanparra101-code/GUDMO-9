@@ -737,12 +737,14 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
           <option value="Cartucho Gas CS 37mm">Cartucho Gas CS 37mm</option>
           <option value="Cartucho Gas CS 40mm">Cartucho Gas CS 40mm</option>
           <option value="Cartucho Impulsor">Cartucho Impulsor</option>
+          <option value="Cartucho Taser">Cartucho Taser</option>
+          <option value="Esferas O.C. Lanzadora">Esferas O.C. Lanzadora</option>
           <option value="Lanzador 37mm">Lanzador 37mm</option>
           <option value="Lanzador 40mm">Lanzador 40mm</option>
           <option value="Lanzadora">Lanzadora</option>
           <option value="Municion esferica">Municion esferica</option>
           <option value="Taser">Taser</option>
-          <option value="Escudo">Escudo</option>
+          <option value="Escudo Antimotin IIIA">Escudo Antimotin IIIA</option>
           <option value="Casco Antimotin">Casco Antimotin</option>
           <option value="Otro">Otro</option>
         </select>
@@ -839,6 +841,9 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
               <option value="Lanzador 40mm">🔫 Lanzador 40mm</option>
               <option value="Lanzadora">🔫 Lanzadora</option>
               <option value="Munición esférica">⚫ Munición esférica</option>
+              <option value="Cartucho Taser">Cartucho Taser</option>
+              <option value="Esferas O.C. Lanzadora">Esferas O.C. Lanzadora</option>
+              <option value="Escudo Antimotin IIIA">Escudo Antimotin IIIA</option>
             </select>
           </div>
           <div>
@@ -4214,7 +4219,7 @@ function munSubTab(tab, btn){
 }
 
 var munInvBorrador = [];
-var MUN_SIN_SERIE = ['Cartucho Gas CS 37mm','Cartucho Gas CS 40mm','Cartucho Impulsor','Municion esferica'];
+var MUN_SIN_SERIE = ['Cartucho Gas CS 37mm','Cartucho Gas CS 40mm','Cartucho Impulsor','Municion esferica','Esferas O.C. Lanzadora'];
 
 function munInvOnTipoChange(){
   var tipo = document.getElementById('munInvTipo').value;
