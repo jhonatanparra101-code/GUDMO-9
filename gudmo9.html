@@ -1309,35 +1309,37 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 <div class="toast" id="toast">✅</div>
 
 <!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-  // Firebase config — filled by user
-  window.__FB_INIT__ = async function(config){
-    try {
-      const app = initializeApp(config);
-      const db = getFirestore(app);
-      window.__FIRESTORE__ = db;
-      window.__FB_DOC__ = (path) => doc(db, path);
-      window.__FB_SET__ = async (path, data) => {
-        try { await setDoc(doc(db, path), data); return true; }
-        catch(e){ console.warn('FB write:', e); return false; }
-      };
-      window.__FB_GET__ = async (path) => {
-        try {
-          const snap = await getDoc(doc(db, path));
-          return snap.exists() ? snap.data() : null;
-        } catch(e){ console.warn('FB read:', e); return null; }
-      };
-      window.__FB_READY__ = true;
-      console.log('Firebase conectado');
-      if(window.__FB_CONNECTED_CB__) window.__FB_CONNECTED_CB__();
-    } catch(e){
-      console.warn('Firebase init error:', e);
-      window.__FB_READY__ = false;
-    }
-  };
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+window.__FB_INIT__ = async function(cfg){
+  try {
+    var app;
+    try { app = firebase.app(); }
+    catch(e){ app = firebase.initializeApp(cfg); }
+    var db = firebase.firestore();
+    window.__FB_SET__ = async function(path, data){
+      try {
+        var parts = path.split('/');
+        await db.collection(parts[0]).doc(parts[1]).set(data);
+        return true;
+      } catch(e){ console.warn('FB write:', e); return false; }
+    };
+    window.__FB_GET__ = async function(path){
+      try {
+        var parts = path.split('/');
+        var snap = await db.collection(parts[0]).doc(parts[1]).get();
+        return snap.exists ? snap.data() : null;
+      } catch(e){ console.warn('FB read:', e); return null; }
+    };
+    window.__FB_READY__ = true;
+    console.log('Firebase conectado');
+    if(window.__FB_CONNECTED_CB__) window.__FB_CONNECTED_CB__();
+  } catch(e){
+    console.warn('Firebase init error:', e);
+    window.__FB_READY__ = false;
+  }
+};
 </script>
 
 <script>
@@ -1576,14 +1578,17 @@ async function initFirebase(){
     appId: "1:951542097148:web:15791059eeaa986e33a379"
   };
   sv('g9_fbconfig', cfg);
+  window.__FB_CONNECTED_CB__ = async function(){
+    showCloudStatus('⟳ Sincronizando...','#3b82f6');
+    var loaded = await fbLoadAll();
+    if(loaded) render();
+    setInterval(fbSaveAll, 120000);
+  };
   if(window.__FB_INIT__){
-    window.__FB_CONNECTED_CB__ = async function(){
-      showCloudStatus('⟳ Sincronizando...','#3b82f6');
-      var loaded = await fbLoadAll();
-      if(loaded) render();
-      setInterval(fbSaveAll, 120000);
-    };
     await window.__FB_INIT__(cfg);
+  } else {
+    // SDK aún cargando — guardar config para cuando termine
+    window.__FB_PENDING_CFG__ = cfg;
   }
 }
 
