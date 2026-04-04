@@ -248,7 +248,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
     <div style="display:flex;align-items:center;gap:6px;margin-right:8px">
   <div id="cloudStatus" style="font-size:9px;color:var(--muted);text-align:center;cursor:pointer" 
     onclick="fbSaveAll().then(function(){showToast('☁️ Datos subidos')})" title="Sincronizar">☁️</div>
-  <button onclick="fbSaveAll().then(function(){showToast('✅ Subido a la nube','#22c55e')})" 
+  <button onclick="fbSaveAll().then(function(){showToast('✅ Datos subidos a la nube','#22c55e')})" 
     style="background:rgba(34,197,94,.15);border:1px solid var(--green);border-radius:6px;padding:3px 8px;color:var(--green);font-size:9px;cursor:pointer;font-weight:700;white-space:nowrap">
     📤 Subir
   </button>
@@ -286,7 +286,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <div class="cat-legend" id="catLegend"></div>
 </div>
 
-<div id="dataToolbar" style="display:none;background:rgba(239,68,68,.1);border-bottom:1px solid rgba(239,68,68,.3);padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<div id="dataToolbar" style="display:none;background:rgba(239,68,68,.1);border-bottom:1px solid rgba(239,68,68,.3);padding:8px 12px;gap:8px;align-items:center;flex-wrap:wrap">
   <div style="font-size:11px;color:var(--red);font-weight:700;flex:1">⚠️ Almacenamiento casi lleno</div>
   <button onclick="limpiarHistorialAntiguo()" style="background:rgba(240,192,64,.15);border:1px solid var(--yellow);border-radius:6px;padding:5px 10px;color:var(--yellow);font-size:11px;cursor:pointer;font-weight:700">🧹 Limpiar</button>
   <button onclick="exportarBackup()" style="background:rgba(34,197,94,.12);border:1px solid var(--green);border-radius:6px;padding:5px 10px;color:var(--green);font-size:11px;cursor:pointer;font-weight:700">💾 Backup</button>
@@ -706,97 +706,74 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 <div class="section" id="tab-municion">
   <div class="sh">🔴 Control de Munición</div>
 
-  <!-- Cabecera del servicio -->
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-    <div style="font-size:12px;font-weight:700;color:var(--gold2);margin-bottom:10px">📋 Datos del servicio</div>
+  <!-- Alerta contextual AML (se muestra/oculta según tipo seleccionado) -->
+  <div id="munAlerta" style="display:none;background:rgba(234,179,8,.10);border:1px solid rgba(234,179,8,.35);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--text);line-height:1.6"></div>
+
+  <!-- Nueva recepción -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+    <div style="font-size:12px;font-weight:700;color:var(--gold2);margin-bottom:10px">📥 Registrar recepción del almacén</div>
+
+    <!-- Fila 1: tipo + cantidad -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div>
-        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Fecha</div>
-        <input type="date" id="munFechaServicio" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
-      </div>
-      <div>
-        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Lugar / Operación</div>
-        <input type="text" id="munLugar" placeholder="Ej: Centro Pereira" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
-      </div>
-    </div>
-  </div>
-
-  <!-- Importador de texto AML -->
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:12px;font-weight:700;color:var(--gold2)">📋 Importar dotación desde texto</div>
-      <button onclick="munToggleImportador()" style="background:rgba(99,102,241,.15);border:1px solid #6366f1;border-radius:6px;padding:4px 10px;color:#6366f1;font-size:10px;cursor:pointer;font-weight:700">▼ Abrir</button>
-    </div>
-    <div id="munImportadorPanel" style="display:none">
-      <div style="font-size:9.5px;color:var(--muted2);margin-bottom:8px;line-height:1.6;background:rgba(99,102,241,.07);border-radius:6px;padding:8px">
-        Pegue el texto de la dotación tal como lo tiene. El sistema reconoce el formato:<br>
-        <span style="font-family:monospace;color:var(--text)">PT Apellido Nombre · CC 123456 · 04 Granadas CS · F397083</span>
-      </div>
-      <textarea id="munImportadorTxt" rows="8" placeholder="Pegue aquí el texto de la dotación completa..." style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:11px;font-family:monospace;resize:vertical;margin-bottom:8px"></textarea>
-      <button onclick="munParsearTexto()" style="width:100%;padding:9px;border-radius:7px;background:rgba(99,102,241,.2);border:1px solid #6366f1;color:#a5b4fc;font-size:12px;font-weight:700;cursor:pointer">🔍 Interpretar y cargar dotación</button>
-      <div id="munImportadorMsg" style="font-size:10px;margin-top:6px;color:var(--muted)"></div>
-    </div>
-  </div>
-
-  <!-- Constructor de dotación por persona -->
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-    <div style="font-size:12px;font-weight:700;color:var(--gold2);margin-bottom:10px">➕ Asignar dotación individual</div>
-
-    <!-- Persona -->
-    <div style="margin-bottom:8px">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Funcionario</div>
-      <select id="munPersonaSel" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
-        <option value="">— Seleccione —</option>
-      </select>
-    </div>
-
-    <!-- Ítem a agregar -->
-    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:6px;align-items:end">
-      <div>
-        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Material</div>
-        <select id="munItemTipo" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
-          <option value="">— Tipo —</option>
-          <option value="Granada CS 5231">💣 Granada CS 5231</option>
-          <option value="Granada CS GL 302">💣 Granada CS GL 302</option>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Tipo de material</div>
+        <select id="munTipo" onchange="munOnTipoChange()" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
+          <option value="">— Seleccione —</option>
+          <option value="Granada CS">💣 Granada de mano CS</option>
           <option value="Granada Humo">💨 Granada de humo</option>
-          <option value="Stun / Mini Bang">⚡ Stun / Mini Bang</option>
-          <option value="Cartucho Gas CS 37mm">🟡 Cartucho Gas CS 37mm</option>
-          <option value="Cartucho Gas CS 40mm">🟡 Cartucho Gas CS 40mm</option>
+          <option value="Stingball">⚡ Stingball / Mini Bang</option>
           <option value="Cartucho Impulsor">🔵 Cartucho impulsor</option>
           <option value="Cartucho Impacto">🟠 Cartucho impacto dirigido</option>
-          <option value="Supresor de fuego">🔴 Supresor de fuego</option>
-          <option value="Lanzador 37mm">🔫 Lanzador 37mm</option>
-          <option value="Lanzador 40mm">🔫 Lanzador 40mm</option>
-          <option value="Lanzadora">🔫 Lanzadora</option>
-          <option value="Munición esférica">⚫ Munición esférica</option>
+          <option value="Gas CS 37mm">🟡 Gas CS 37mm</option>
+          <option value="Gas CS 40mm">🟡 Gas CS 40mm</option>
+          <option value="Supresor Fuego">🔴 Supresor de fuego</option>
         </select>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px">
-        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Cant.</div>
-        <input type="number" id="munItemCant" min="1" value="1" style="width:56px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;font-weight:700;text-align:center">
+      <div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Cantidad recibida</div>
+        <input type="number" id="munCantidad" min="1" placeholder="Ej: 40" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;font-weight:700">
       </div>
     </div>
 
-    <!-- Series (opcional) -->
+    <!-- Fila 2: cargo + estado del material -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Distribuir entre cargo</div>
+        <select id="munCargo" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
+          <option value="SPI">SPI</option>
+          <option value="Escudero">Escuderos</option>
+          <option value="Operador 37">Operadores 37mm</option>
+          <option value="Operador 40">Operadores 40mm</option>
+          <option value="Op. Lanzadora">Operadores Lanzadora</option>
+          <option value="Cte. Escuadra">Comandantes Escuadra</option>
+          <option value="Líder Escuderos">Líder Escuderos</option>
+          <option value="todos_servicio">Todo el personal en servicio</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Estado del material</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div id="munEstadoApto" onclick="munSelEstado('apto')"
+            style="padding:8px 4px;border-radius:6px;border:2px solid var(--green);background:rgba(34,197,94,.15);cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--green)">
+            ✅ Apto
+          </div>
+          <div id="munEstadoDanado" onclick="munSelEstado('danado')"
+            style="padding:8px 4px;border-radius:6px;border:2px solid var(--border);background:transparent;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--muted)">
+            ⚠️ Dañado
+          </div>
+        </div>
+        <input type="hidden" id="munEstadoVal" value="apto">
+      </div>
+    </div>
+
+    <!-- Lugar del servicio (para informe) -->
     <div style="margin-bottom:8px">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Referencias / Series (una por línea, opcional)</div>
-      <textarea id="munItemSeries" rows="2" placeholder="Ej: F397083&#10;F398894&#10;CF3021607" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px;font-family:monospace;resize:vertical"></textarea>
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Lugar / Operación (opcional)</div>
+      <input type="text" id="munLugar" placeholder="Ej: Centro Pereira — Control disturbios" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
     </div>
 
-    <button onclick="munAgregarItem()" style="width:100%;padding:9px;border-radius:7px;background:rgba(200,146,42,.15);border:1px solid var(--gold);color:var(--gold2);font-size:12px;font-weight:700;cursor:pointer">➕ Agregar ítem a la dotación</button>
+    <button onclick="distribuirMunicion()" class="btn btn-primary" style="width:100%">⚡ Distribuir automáticamente</button>
   </div>
-
-  <!-- Dotación en construcción (borrador) -->
-  <div id="munBorradorContainer" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:700;color:var(--text)">📦 Dotación en construcción</div>
-      <button onclick="munGuardarServicio()" style="background:var(--gold);border:none;border-radius:6px;padding:6px 14px;color:#000;font-size:11px;font-weight:700;cursor:pointer">✅ Guardar servicio</button>
-    </div>
-    <div id="munBorrador"></div>
-  </div>
-
-  <!-- Alerta contextual AML -->
-  <div id="munAlerta" style="display:none;background:rgba(234,179,8,.10);border:1px solid rgba(234,179,8,.35);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--text);line-height:1.6"></div>
 
   <!-- Distribución activa -->
   <div id="munDistribucion"></div>
@@ -1461,13 +1438,9 @@ const sv = (k,v) => {
     var tx = db.transaction('kv','readwrite');
     tx.objectStore('kv').put(JSON.stringify(v), k);
   }).catch(function(){});
-  // Cloud sync para claves importantes — sube a los 800ms (debounce)
-  // Si hay múltiples sv() seguidos, solo sube una vez
-  if(['g9_members','g9_hist','g9_turnos','g9_bloque','g9_ciclo','g9_aseo'].includes(k)){
-    if(window._svSyncTimer) clearTimeout(window._svSyncTimer);
-    window._svSyncTimer = setTimeout(function(){
-      if(window.__FB_READY__) fbSaveAll().catch(function(){});
-    }, 800);
+  // Cloud sync for important keys
+  if(['g9_members','g9_hist','g9_turnos','g9_bloque'].includes(k)){
+    setTimeout(function(){ if(window.__FB_READY__) fbSaveAll(); }, 1000);
   }
   // Write to localStorage (fast, synchronous)
   try { 
@@ -1530,11 +1503,6 @@ async function fbSaveAll(){
     await window.__FB_SET__('gudmo9/bloque',     { data: JSON.stringify(bloqueData), ts });
     await window.__FB_SET__('gudmo9/ciclo',      { data: JSON.stringify(cicloConfig), ts });
     await window.__FB_SET__('gudmo9/aseo',       { data: JSON.stringify(aseoData), ts });
-    // Marcar timestamps locales para que este dispositivo no se pise a sí mismo
-    try{
-      localStorage.setItem('g9_members_ts', String(ts));
-      localStorage.setItem('g9_hist_ts',    String(ts));
-    }catch(e){}
     showCloudStatus('☁️ Sincronizado', '#22c55e');
   } catch(e){ showCloudStatus('⚠️ Sin conexión', '#f97316'); }
 }
@@ -1544,60 +1512,35 @@ async function fbLoadAll(){
   try {
     fbSyncing = true;
     showCloudStatus('⟳ Cargando...', '#3b82f6');
-    var cambio = false;
-
-    // ── members ────────────────────────────────────────────────
     var mSnap = await window.__FB_GET__('gudmo9/members');
     if(mSnap && mSnap.data){
       var cloudMembers = JSON.parse(mSnap.data);
-      // Firebase es SIEMPRE la fuente de verdad al sincronizar.
-      // Los datos locales son solo caché offline.
-      if(Array.isArray(cloudMembers) && cloudMembers.length > 0){
+      // Use cloud data if it's newer or local is empty
+      var localTs = parseInt(localStorage.getItem('g9_members_ts')||'0');
+      if(cloudMembers.length > 0 && (mSnap.ts > localTs || members.length === 0)){
         members = cloudMembers;
         sv('g9_members', members);
-        try{ localStorage.setItem('g9_members_ts', String(mSnap.ts||Date.now())); }catch(e){}
-        cambio = true;
+        localStorage.setItem('g9_members_ts', mSnap.ts);
       }
     }
-
-    // ── historial ──────────────────────────────────────────────
     var hSnap = await window.__FB_GET__('gudmo9/historial');
     if(hSnap && hSnap.data){
       var cloudHist = JSON.parse(hSnap.data);
-      if(Array.isArray(cloudHist)){
+      if(cloudHist.length > historial.length) {
         historial = cloudHist;
         sv('g9_hist', historial);
-        try{ localStorage.setItem('g9_hist_ts', String(hSnap.ts||Date.now())); }catch(e){}
-        cambio = true;
       }
     }
-
-    // ── turnos ─────────────────────────────────────────────────
     var tSnap = await window.__FB_GET__('gudmo9/turnos');
-    if(tSnap && tSnap.data){ turnos = JSON.parse(tSnap.data); sv('g9_turnos', turnos); cambio = true; }
-
-    // ── bloque ─────────────────────────────────────────────────
+    if(tSnap && tSnap.data) { turnos = JSON.parse(tSnap.data); sv('g9_turnos', turnos); }
     var bSnap = await window.__FB_GET__('gudmo9/bloque');
-    if(bSnap && bSnap.data){ bloqueData = JSON.parse(bSnap.data); sv('g9_bloque', bloqueData); cambio = true; }
-
-    // ── config ─────────────────────────────────────────────────
-    var cSnap = await window.__FB_GET__('gudmo9/config');
-    if(cSnap && cSnap.data){ config = JSON.parse(cSnap.data); sv('g9_config', config); }
-
-    // ── ciclo ──────────────────────────────────────────────────
-    var cicloSnap = await window.__FB_GET__('gudmo9/ciclo');
-    if(cicloSnap && cicloSnap.data){ cicloConfig = JSON.parse(cicloSnap.data); sv('g9_ciclo', cicloConfig); }
-
+    if(bSnap && bSnap.data) { bloqueData = JSON.parse(bSnap.data); sv('g9_bloque', bloqueData); }
     fbSyncing = false;
     showCloudStatus('☁️ Sincronizado', '#22c55e');
-
-    // Siempre re-renderizar cuando hay datos de la nube
-    if(cambio){ render(); renderDashboard(); applyProximosEstados(); checkReturnAlerts(); }
     return true;
   } catch(e){
     fbSyncing = false;
     showCloudStatus('⚠️ Sin conexión', '#f97316');
-    console.warn('fbLoadAll error:', e);
     return false;
   }
 }
@@ -1605,39 +1548,6 @@ async function fbLoadAll(){
 function showCloudStatus(msg, color){
   var el = document.getElementById('cloudStatus');
   if(el){ el.textContent = msg; el.style.color = color||'var(--muted)'; }
-}
-
-// Fuerza bajar desde Firebase e imponer sobre lo local
-// Usar cuando otro dispositivo tiene datos más nuevos
-async function fbCargarForzado(){
-  if(!window.__FB_READY__){
-    showToast('⚠️ Sin conexión a Firebase','#f97316'); return;
-  }
-  showToast('⬇️ Descargando desde la nube...','#3b82f6');
-  try {
-    var mSnap = await window.__FB_GET__('gudmo9/members');
-    if(mSnap && mSnap.data){
-      var cm = JSON.parse(mSnap.data);
-      if(Array.isArray(cm) && cm.length > 0){
-        members = cm; sv('g9_members', members);
-      }
-    }
-    var hSnap = await window.__FB_GET__('gudmo9/historial');
-    if(hSnap && hSnap.data){ historial = JSON.parse(hSnap.data); sv('g9_hist', historial); }
-    var tSnap = await window.__FB_GET__('gudmo9/turnos');
-    if(tSnap && tSnap.data){ turnos = JSON.parse(tSnap.data); sv('g9_turnos', turnos); }
-    var bSnap = await window.__FB_GET__('gudmo9/bloque');
-    if(bSnap && bSnap.data){ bloqueData = JSON.parse(bSnap.data); sv('g9_bloque', bloqueData); }
-    var cSnap = await window.__FB_GET__('gudmo9/config');
-    if(cSnap && cSnap.data){ config = JSON.parse(cSnap.data); sv('g9_config', config); }
-    var cicloSnap = await window.__FB_GET__('gudmo9/ciclo');
-    if(cicloSnap && cicloSnap.data){ cicloConfig = JSON.parse(cicloSnap.data); sv('g9_ciclo', cicloConfig); }
-    render(); renderDashboard(); checkReturnAlerts(); applyProximosEstados();
-    showToast('✅ Datos actualizados desde la nube','#22c55e');
-    showCloudStatus('☁️ Sincronizado','#22c55e');
-  } catch(e){
-    showToast('❌ Error al descargar: '+e.message,'#ef4444');
-  }
 }
 
 async function initFirebase(){
@@ -1655,11 +1565,53 @@ async function initFirebase(){
     window.__FB_CONNECTED_CB__ = async function(){
       showCloudStatus('⟳ Sincronizando...','#3b82f6');
       var loaded = await fbLoadAll();
-      if(loaded){ render(); renderDashboard(); applyProximosEstados(); checkReturnAlerts(); }
-      // Autosave cada 90 segundos
-      setInterval(fbSaveAll, 90000);
+      if(loaded) render();
+      setInterval(fbSaveAll, 120000);
     };
     await window.__FB_INIT__(cfg);
+  }
+}
+
+// Libera espacio en localStorage eliminando claves no esenciales
+function liberarEspacioLocal(){
+  const keep=['g9_members','g9_config','g9_hist','g9_turnos','g9_bloque','g9_aseo','g9_ciclo','g9_misiones','g9_municion','g9_fbconfig','g9_base_ver','g9_members_ts','g9_hist_ts'];
+  for(let i=localStorage.length-1;i>=0;i--){
+    const lk=localStorage.key(i);
+    if(lk && !keep.includes(lk)) localStorage.removeItem(lk);
+  }
+}
+
+// Fuerza bajar desde Firebase e imponer sobre lo local
+async function fbCargarForzado(){
+  if(!window.__FB_READY__){
+    showToast('⚠️ Sin conexión a Firebase','#f97316'); return;
+  }
+  showToast('⬇️ Descargando desde la nube...','#3b82f6');
+  try {
+    liberarEspacioLocal();
+    var mSnap = await window.__FB_GET__('gudmo9/members');
+    if(mSnap && mSnap.data){
+      var cm = JSON.parse(mSnap.data);
+      if(Array.isArray(cm) && cm.length > 0){ members = cm; sv('g9_members', members); }
+    }
+    var hSnap = await window.__FB_GET__('gudmo9/historial');
+    if(hSnap && hSnap.data){ historial = JSON.parse(hSnap.data); sv('g9_hist', historial); }
+    var tSnap = await window.__FB_GET__('gudmo9/turnos');
+    if(tSnap && tSnap.data){ turnos = JSON.parse(tSnap.data); sv('g9_turnos', turnos); }
+    var bSnap = await window.__FB_GET__('gudmo9/bloque');
+    if(bSnap && bSnap.data){ bloqueData = JSON.parse(bSnap.data); sv('g9_bloque', bloqueData); }
+    var cSnap = await window.__FB_GET__('gudmo9/config');
+    if(cSnap && cSnap.data){ config = JSON.parse(cSnap.data); sv('g9_config', config); }
+    var cicloSnap = await window.__FB_GET__('gudmo9/ciclo');
+    if(cicloSnap && cicloSnap.data){ cicloConfig = JSON.parse(cicloSnap.data); sv('g9_ciclo', cicloConfig); }
+    render(); renderDashboard();
+    if(typeof checkReturnAlerts==='function') checkReturnAlerts();
+    if(typeof applyProximosEstados==='function') applyProximosEstados();
+    checkAndShowStorageToolbar();
+    showToast('✅ Datos actualizados desde la nube','#22c55e');
+    showCloudStatus('☁️ Sincronizado','#22c55e');
+  } catch(e){
+    showToast('❌ Error al descargar: '+e.message,'#ef4444');
   }
 }
 
@@ -4132,338 +4084,6 @@ function munSelEstado(val){
   }
 }
 
-// ════════════════════════════════════════════════
-//  MUNICIÓN — dotación individual con series
-// ════════════════════════════════════════════════
-
-var munBorradorActual = {}; // { memberId: { memberName, memberRank, items:[{tipo,cant,series}] } }
-
-function munIniciarTab(){
-  // Poblar selector de personal
-  var sel = document.getElementById('munPersonaSel');
-  if(!sel) return;
-  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
-  var personal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
-  personal.sort(function(a,b){ return (RANK_ORDER[a.rank]||99)-(RANK_ORDER[b.rank]||99); });
-  sel.innerHTML = '<option value="">— Seleccione —</option>'
-    + personal.map(function(m){
-        return '<option value="'+m.id+'">'+m.rank+' '+m.name.split(' ').slice(0,2).join(' ')+'</option>';
-      }).join('');
-  // Fecha por defecto = hoy
-  var fd = document.getElementById('munFechaServicio');
-  if(fd && !fd.value) fd.value = localDateStr();
-  munRenderBorrador();
-}
-
-// ════════════════════════════════════════════════
-//  MUNICIÓN — Importador de texto
-// ════════════════════════════════════════════════
-
-function munToggleImportador(){
-  var p = document.getElementById('munImportadorPanel');
-  var b = p.previousElementSibling.querySelector('button');
-  if(!p) return;
-  var open = p.style.display!=='none';
-  p.style.display = open ? 'none' : 'block';
-  if(b) b.textContent = open ? '▼ Abrir' : '▲ Cerrar';
-}
-
-// Mapa de reconocimiento de materiales — normaliza texto libre a tipo canónico
-var MUN_ALIAS = [
-  { re:/granada.*cs.*5231|cs.*5231|gas.*cs.*52/i,       tipo:'Granada CS 5231' },
-  { re:/granada.*cs.*gl.*302|cs.*gl.*302|gl.*302/i,     tipo:'Granada CS GL 302' },
-  { re:/granada.*humo|humo/i,                            tipo:'Granada Humo' },
-  { re:/stun|mini.?bang|stungball/i,                     tipo:'Stun / Mini Bang' },
-  { re:/cartucho.*40mm|gas.*40mm|40\s*mm/i,              tipo:'Cartucho Gas CS 40mm' },
-  { re:/cartucho.*37mm|gas.*37mm|37\s*mm/i,              tipo:'Cartucho Gas CS 37mm' },
-  { re:/impulsor|impulsores/i,                            tipo:'Cartucho Impulsor' },
-  { re:/impacto/i,                                        tipo:'Cartucho Impacto' },
-  { re:/supresor/i,                                       tipo:'Supresor de fuego' },
-  { re:/lanzador.*40|lanzad.*40/i,                        tipo:'Lanzador 40mm' },
-  { re:/lanzador.*37|lanzad.*37/i,                        tipo:'Lanzador 37mm' },
-  { re:/lanzadora/i,                                      tipo:'Lanzadora' },
-  { re:/esf[eé]rica|esféric/i,                           tipo:'Munición esférica' },
-];
-
-var GRADO_RE = /^(IT|SI|PT|PP|IJ|IN|ST|TN|CT|MY|AG|PA)/i;
-var CC_RE    = /cc\s*(\d{5,12})/i;
-var SERIE_RE = /^[A-Z]{1,3}[-\s]?\d{3,9}$|^\d{6,12}$|^[A-Z]\d[-\s]?\d{4,}$/i;
-
-function munNormalizarGrado(g){
-  return g.toUpperCase();
-}
-
-function munParsearTexto(){
-  var txt   = (document.getElementById('munImportadorTxt').value||'').trim();
-  var msg   = document.getElementById('munImportadorMsg');
-  if(!txt){ msg.textContent='⚠️ Pegue texto primero'; msg.style.color='#f97316'; return; }
-
-  var lines  = txt.split(/
-?
-/).map(function(l){ return l.trim(); }).filter(Boolean);
-  var personas = []; // [{grado,nombre,cc,items:[{tipo,cant,series:[]}]}]
-  var cur = null;
-  var curItem = null;
-
-  for(var i=0; i<lines.length; i++){
-    var line = lines[i];
-
-    // ── ¿Es una línea de persona? Grado al inicio ──────────────────
-    var gradoM = line.match(/^(IT|SI|PT|PP|IJ|IN|ST|TN|CT|MY|AG|PA|SPI|Enfermero)\.?\s*/i);
-    if(gradoM){
-      var resto = line.slice(gradoM[0].length).trim();
-      var grado = gradoM[1].toUpperCase();
-      // Extraer CC si está en la misma línea
-      var ccM   = resto.match(CC_RE);
-      var cc    = ccM ? ccM[1] : '';
-      var nombre= ccM ? resto.slice(0,ccM.index).trim() : resto.trim();
-      // Limpiar "CC" sobrante del nombre
-      nombre = nombre.replace(/\s*cc\s*\d*/i,'').trim();
-      cur    = { grado:grado, nombre:nombre, cc:cc, items:[] };
-      curItem= null;
-      personas.push(cur);
-      continue;
-    }
-
-    // ── ¿Es línea de CC sola? ─────────────────────────────────────
-    if(!cur) continue;
-    var ccSola = line.match(/^cc\s*(\d{5,12})/i);
-    if(ccSola){ cur.cc = ccSola[1]; continue; }
-
-    // ── ¿Es línea de material? Número al inicio o palabra clave ───
-    var materialM = line.match(/^(\d+)\s+(.+)/);
-    var tipoEncontrado = null;
-    var cantEncontrada = 1;
-    var seriesEncontradas = [];
-
-    if(materialM){
-      cantEncontrada = parseInt(materialM[1]);
-      var textoMat   = materialM[2].trim();
-      for(var j=0;j<MUN_ALIAS.length;j++){
-        if(MUN_ALIAS[j].re.test(textoMat)){ tipoEncontrado=MUN_ALIAS[j].tipo; break; }
-      }
-      if(!tipoEncontrado){
-        // Verificar si es una serie suelta después de un item
-        if(SERIE_RE.test(line.replace(/\s+/g,''))){
-          if(curItem) curItem.series.push(line.replace(/\s+/g,''));
-          continue;
-        }
-        // Guardar como tipo libre
-        tipoEncontrado = textoMat;
-      }
-    } else {
-      // Sin número al inicio — puede ser material sin cantidad o serie
-      var esSerie = SERIE_RE.test(line.replace(/\s+/g,''));
-      if(esSerie){
-        if(curItem) curItem.series.push(line.replace(/\s+/g,''));
-        continue;
-      }
-      // Buscar en alias sin número
-      for(var j=0;j<MUN_ALIAS.length;j++){
-        if(MUN_ALIAS[j].re.test(line)){ tipoEncontrado=MUN_ALIAS[j].tipo; cantEncontrada=1; break; }
-      }
-      if(!tipoEncontrado) continue; // línea no reconocida
-    }
-
-    curItem = { tipo:tipoEncontrado, cant:cantEncontrada, series:seriesEncontradas };
-    cur.items.push(curItem);
-  }
-
-  if(!personas.length){
-    msg.textContent='❌ No se encontró ningún funcionario. Verifique que el grado esté al inicio de cada línea (PT, SI, IT...).';
-    msg.style.color='#ef4444'; return;
-  }
-
-  // ── Cruzar con members para obtener IDs ───────────────────────
-  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
-  var cargados = 0, noEncontrados = [];
-
-  personas.forEach(function(p){
-    // Buscar por CC primero, luego por nombre parcial
-    var m = null;
-    if(p.cc) m = members.find(function(x){ return (x.idNum||'').replace(/\D/g,'')===p.cc; });
-    if(!m){
-      var nombreBuscar = p.nombre.split(' ')[0].toLowerCase();
-      m = members.find(function(x){
-        return x.escuadra===esc && x.name.toLowerCase().includes(nombreBuscar);
-      });
-    }
-
-    var mid   = m ? m.id : ('imp_'+p.grado+'_'+p.nombre.replace(/\s+/g,'_'));
-    var mName = m ? m.name : p.nombre;
-    var mRank = m ? m.rank : p.grado;
-    var mCC   = m ? (m.idNum||p.cc) : p.cc;
-
-    if(!p.items.length) return;
-
-    munBorradorActual[mid] = {
-      memberId:   mid,
-      memberName: mName,
-      memberRank: mRank,
-      memberCC:   mCC,
-      cargo:      m ? (m.cargo||'') : '',
-      items:      p.items
-    };
-    if(m) cargados++; else noEncontrados.push(p.grado+' '+p.nombre);
-  });
-
-  munRenderBorrador();
-  var msgTxt = '✅ '+cargados+' funcionarios cargados.';
-  if(noEncontrados.length) msgTxt += ' ⚠️ No encontrados en nómina: '+noEncontrados.join(', ');
-  msg.textContent = msgTxt;
-  msg.style.color = noEncontrados.length ? '#f59e0b' : '#22c55e';
-  showToast('📋 Dotación importada: '+Object.keys(munBorradorActual).length+' personas', '#6366f1');
-}
-
-function munAgregarItem(){
-  var midSel = document.getElementById('munPersonaSel').value;
-  var tipo   = document.getElementById('munItemTipo').value;
-  var cant   = parseInt(document.getElementById('munItemCant').value)||1;
-  var series = (document.getElementById('munItemSeries').value||'').split('
-')
-                 .map(function(s){ return s.trim(); }).filter(Boolean);
-
-  if(!midSel){ showToast('⚠️ Seleccione el funcionario','#f97316'); return; }
-  if(!tipo)  { showToast('⚠️ Seleccione el tipo de material','#f97316'); return; }
-
-  var m = members.find(function(x){ return x.id===midSel; });
-  if(!m) return;
-
-  if(!munBorradorActual[midSel]){
-    munBorradorActual[midSel] = {
-      memberId: midSel,
-      memberName: m.name,
-      memberRank: m.rank,
-      memberCC: m.idNum||'',
-      cargo: m.cargo||'',
-      items: []
-    };
-  }
-  munBorradorActual[midSel].items.push({ tipo:tipo, cant:cant, series:series });
-
-  // Limpiar campos
-  document.getElementById('munItemTipo').value='';
-  document.getElementById('munItemCant').value='1';
-  document.getElementById('munItemSeries').value='';
-
-  munRenderBorrador();
-  showToast('✅ '+tipo+' agregado a '+m.rank+' '+m.name.split(' ')[0], '#22c55e');
-}
-
-function munRenderBorrador(){
-  var keys = Object.keys(munBorradorActual);
-  var container = document.getElementById('munBorradorContainer');
-  var bDiv = document.getElementById('munBorrador');
-  if(!container||!bDiv) return;
-
-  if(!keys.length){ container.style.display='none'; return; }
-  container.style.display='block';
-
-  var html2 = '';
-  keys.forEach(function(mid){
-    var p = munBorradorActual[mid];
-    html2 += '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">';
-    html2 += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
-    html2 += '<div style="font-size:11px;font-weight:700;color:var(--gold2)">'+p.memberRank+' '+p.memberName.split(' ').slice(0,2).join(' ')+'</div>';
-    html2 += '<button onclick="munEliminarPersonaBorrador(''+mid+'')" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer">✕</button>';
-    html2 += '</div>';
-    p.items.forEach(function(item, idx2){
-      html2 += '<div style="font-size:11px;color:var(--text);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:6px;align-items:start">';
-      html2 += '<span style="color:var(--gold2);font-weight:700;min-width:22px">'+item.cant+'×</span>';
-      html2 += '<div style="flex:1"><div>'+item.tipo+'</div>';
-      if(item.series.length){
-        html2 += '<div style="font-size:9.5px;color:var(--muted);font-family:monospace">'+item.series.join(' · ')+'</div>';
-      }
-      html2 += '</div>';
-      html2 += '<button onclick="munEliminarItemBorrador(''+mid+'','+idx2+')" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer">✕</button>';
-      html2 += '</div>';
-    });
-    html2 += '</div>';
-  });
-  bDiv.innerHTML = html2;
-}
-
-function munEliminarPersonaBorrador(mid){
-  delete munBorradorActual[mid];
-  munRenderBorrador();
-}
-
-function munEliminarItemBorrador(mid, idx2){
-  if(munBorradorActual[mid]){
-    munBorradorActual[mid].items.splice(idx2,1);
-    if(!munBorradorActual[mid].items.length) delete munBorradorActual[mid];
-  }
-  munRenderBorrador();
-}
-
-function munGuardarServicio(){
-  var keys = Object.keys(munBorradorActual);
-  if(!keys.length){ showToast('⚠️ Agregue al menos un ítem','#f97316'); return; }
-  var fecha = (document.getElementById('munFechaServicio').value)||localDateStr();
-  var lugar = (document.getElementById('munLugar').value||'').trim();
-
-  var dotaciones = keys.map(function(mid){ return munBorradorActual[mid]; });
-
-  var servicio = {
-    id: uid(),
-    fecha: fecha,
-    hora: new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
-    lugar: lugar,
-    escuadra: curEscuadra==='all'?'DEI 2':curEscuadra,
-    dotaciones: dotaciones,
-    cerrado: false,
-    tipo: 'dotacion_individual',
-    // compat con sistema anterior
-    cantidadTotal: dotaciones.reduce(function(s,p){ return s+p.items.reduce(function(s2,it){ return s2+it.cant; },0); },0),
-  };
-
-  municionData.unshift(servicio);
-  saveMunicion();
-  munBorradorActual = {};
-  document.getElementById('munLugar').value='';
-  document.getElementById('munFechaServicio').value='';
-  munRenderBorrador();
-  renderMunicion();
-  showToast('✅ Servicio guardado — '+dotaciones.length+' funcionarios', '#22c55e');
-}
-
-function munFormatDotacion(servicio){
-  // Genera el texto del listado para copiar/compartir
-  if(!servicio.dotaciones) return '';
-  var lines = ['📋 DOTACIÓN DE MATERIAL AML'];
-  lines.push('Fecha: '+fmtDate(servicio.fecha)+(servicio.lugar?' — '+servicio.lugar:''));
-  lines.push('');
-  servicio.dotaciones.forEach(function(p){
-    lines.push(p.memberRank+' '+p.memberName+(p.memberCC?' CC '+p.memberCC:''));
-    if(p.cargo) lines.push('Cargo: '+p.cargo);
-    p.items.forEach(function(item){
-      var linea = '  '+item.cant+' '+item.tipo;
-      if(item.series.length) linea += ' ('+item.series.join(', ')+')';
-      lines.push(linea);
-    });
-    lines.push('');
-  });
-  return lines.join('
-');
-}
-
-function munCopiarDotacion(id){
-  var s = municionData.find(function(x){ return x.id===id; });
-  if(!s) return;
-  var txt = munFormatDotacion(s);
-  if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(function(){ showToast('📋 Copiado'); }); }
-  else { var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('📋 Copiado'); }
-}
-
-function munCerrarServicio(id){
-  var s = municionData.find(function(x){ return x.id===id; });
-  if(!s) return;
-  if(!confirm('¿Marcar este servicio como cerrado?')) return;
-  s.cerrado = true;
-  saveMunicion();
-  renderMunicion();
-}
-
 function distribuirMunicion(){
   var tipo    = document.getElementById('munTipo').value;
   var cantidad= parseInt(document.getElementById('munCantidad').value)||0;
@@ -4525,7 +4145,6 @@ function distribuirMunicion(){
 }
 
 function renderMunicion(){
-  munIniciarTab();
   renderMunDistribucion();
   renderMunHistorial();
 }
@@ -6091,22 +5710,23 @@ function dashDrawAlertas(){
 //  INIT — Pre-cargar datos del Excel GUDMO-9
 // ════════════════════════════════════════════════
 async function initApp(){
-  // Recover from IndexedDB ONLY if localStorage truly has nothing
-  // Never load from embedded Excel at this point
+  // Recuperar de IndexedDB si localStorage no tiene datos O tiene array vacío
   try {
     var lsRaw = localStorage.getItem('g9_members');
-    if(!lsRaw) {
-      // Try IndexedDB
+    var lsParsed = null;
+    try { lsParsed = lsRaw ? JSON.parse(lsRaw) : null; } catch(e){}
+    var lsVacio = !lsParsed || !Array.isArray(lsParsed) || lsParsed.length === 0;
+    if(lsVacio) {
       var idbMembers = await ldAsync('g9_members',[]);
       if(idbMembers && idbMembers.length > 0){
         members = idbMembers;
         historial = await ldAsync('g9_hist',[]) || [];
+        // Liberar espacio e intentar restaurar en localStorage
+        liberarEspacioLocal();
         try { localStorage.setItem('g9_members', JSON.stringify(members)); } catch(e){}
         try { localStorage.setItem('g9_hist', JSON.stringify(historial)); } catch(e){}
       }
     } else {
-      // localStorage has data — use it (already loaded in _storedM above)
-      // Just make sure IDB is in sync
       sv('g9_members', members);
       sv('g9_hist', historial);
     }
