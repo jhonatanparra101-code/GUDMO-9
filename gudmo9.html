@@ -1686,8 +1686,11 @@ function applyProximosEstados(){
 
   members.forEach(function(m){
     // ── A) Presentaciones automáticas ─────────────────────────────
-    // Si fechaFin === hoy Y ya pasó la hora de formación → pasar a Servicio
-    if(m.fechaFin === today && m.status !== 'Servicio' && yaEsHoraFormacion){
+    // Si fechaFin === hoy → respetar la hora de presentación del miembro (o la global)
+    if(m.fechaFin === today && m.status !== 'Servicio'){
+      var horaPresM = m.horaPresentacion || (config.horaFormacion||'06:00');
+      var minPresM  = parseInt(horaPresM.split(':')[0])*60 + parseInt((horaPresM.split(':')[1])||0);
+      if(horaActual < minPresM) return; // aún no es hora de presentarse
       var prevSt = m.status;
       historial.push({
         id: uid(), memberId: m.id, memberName: m.name, memberRank: m.rank,
