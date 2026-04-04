@@ -725,29 +725,36 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <button onclick="document.getElementById('munInvModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">x</button>
     </div>
     <div id="munInvFormItems"></div>
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-bottom:8px;background:var(--card);padding:10px;border-radius:8px;border:1px solid var(--border)">
-      <select id="munInvTipo" style="background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:11px">
-        <option value="">Tipo de material</option>
-        <option value="Granada CS 5231">Granada CS 5231</option>
-        <option value="Granada Humo">Granada Humo</option>
-        <option value="Granada Gas CS GL 302">Granada Gas CS GL 302</option>
-        <option value="Stun Mini Bang">Stun Mini Bang</option>
-        <option value="Supresor de fuego">Supresor de fuego</option>
-        <option value="Cartucho Gas CS 37mm">Cartucho Gas CS 37mm</option>
-        <option value="Cartucho Gas CS 40mm">Cartucho Gas CS 40mm</option>
-        <option value="Cartucho Impulsor">Cartucho Impulsor</option>
-        <option value="Lanzador 37mm">Lanzador 37mm</option>
-        <option value="Lanzador 40mm">Lanzador 40mm</option>
-        <option value="Lanzadora">Lanzadora</option>
-        <option value="Municion esferica">Municion esferica</option>
-        <option value="Taser">Taser</option>
-        <option value="Escudo">Escudo</option>
-        <option value="Casco Antimotin">Casco Antimotin</option>
-        <option value="Otro">Otro</option>
-      </select>
-      <input type="number" id="munInvCant" min="1" value="1" style="background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;font-weight:700;text-align:center">
+    <div style="background:var(--card);padding:10px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px">
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-bottom:8px">
+        <select id="munInvTipo" onchange="munInvOnTipoChange()" style="background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:11px">
+          <option value="">Tipo de material</option>
+          <option value="Granada CS 5231">Granada CS 5231</option>
+          <option value="Granada Humo">Granada Humo</option>
+          <option value="Granada Gas CS GL 302">Granada Gas CS GL 302</option>
+          <option value="Stun Mini Bang">Stun Mini Bang</option>
+          <option value="Supresor de fuego">Supresor de fuego</option>
+          <option value="Cartucho Gas CS 37mm">Cartucho Gas CS 37mm</option>
+          <option value="Cartucho Gas CS 40mm">Cartucho Gas CS 40mm</option>
+          <option value="Cartucho Impulsor">Cartucho Impulsor</option>
+          <option value="Lanzador 37mm">Lanzador 37mm</option>
+          <option value="Lanzador 40mm">Lanzador 40mm</option>
+          <option value="Lanzadora">Lanzadora</option>
+          <option value="Municion esferica">Municion esferica</option>
+          <option value="Taser">Taser</option>
+          <option value="Escudo">Escudo</option>
+          <option value="Casco Antimotin">Casco Antimotin</option>
+          <option value="Otro">Otro</option>
+        </select>
+        <input type="number" id="munInvCant" min="1" value="1" style="background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;font-weight:700;text-align:center">
+      </div>
+      <div id="munInvSeriesWrap" style="display:none;margin-bottom:6px">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:3px">Series / Numeros de control (una por linea)</div>
+        <textarea id="munInvSeries" rows="4" placeholder="Ej:&#10;CF3021607&#10;CF3021608&#10;CF3021609" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:11px;font-family:monospace;resize:none"></textarea>
+        <div style="font-size:9px;color:var(--muted);margin-top:2px">La cantidad se calculara automaticamente desde las series ingresadas</div>
+      </div>
     </div>
-    <button onclick="munInvAgregarLinea()" style="width:100%;padding:7px;border-radius:6px;border:1px solid var(--blue);background:rgba(59,130,246,.12);color:var(--blue);font-size:11px;cursor:pointer;font-weight:700;margin-bottom:12px">Agregar tipo</button>
+    <button onclick="munInvAgregarLinea()" style="width:100%;padding:7px;border-radius:6px;border:1px solid var(--blue);background:rgba(59,130,246,.12);color:var(--blue);font-size:11px;cursor:pointer;font-weight:700;margin-bottom:12px">+ Agregar a la lista</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <div>
         <div style="font-size:9px;color:var(--muted);margin-bottom:3px">Fecha recepcion</div>
@@ -4207,26 +4214,61 @@ function munSubTab(tab, btn){
 }
 
 var munInvBorrador = [];
+var MUN_SIN_SERIE = ['Cartucho Gas CS 37mm','Cartucho Gas CS 40mm','Cartucho Impulsor','Municion esferica'];
+
+function munInvOnTipoChange(){
+  var tipo = document.getElementById('munInvTipo').value;
+  var wrap = document.getElementById('munInvSeriesWrap');
+  if(!wrap) return;
+  if(tipo && MUN_SIN_SERIE.indexOf(tipo)===-1){
+    wrap.style.display='block';
+  } else {
+    wrap.style.display='none';
+    document.getElementById('munInvSeries').value='';
+  }
+}
+
 function munInvAbrirAgregar(){
   munInvBorrador = [];
   document.getElementById('munInvFecha').value = localDateStr();
   document.getElementById('munInvFuente').value = '';
   document.getElementById('munInvTipo').value = '';
   document.getElementById('munInvCant').value = '1';
+  document.getElementById('munInvSeries').value = '';
+  document.getElementById('munInvSeriesWrap').style.display = 'none';
   renderInvFormItems();
   document.getElementById('munInvModal').style.display = 'flex';
 }
+
 function munInvAgregarLinea(){
   var tipo = document.getElementById('munInvTipo').value;
-  var cant = parseInt(document.getElementById('munInvCant').value)||0;
-  if(!tipo){ showToast('Seleccione el tipo','#f97316'); return; }
-  if(cant<1){ showToast('Ingrese la cantidad','#f97316'); return; }
+  var seriesTxt = (document.getElementById('munInvSeries').value||'').trim();
+  var tieneSeries = tipo && MUN_SIN_SERIE.indexOf(tipo)===-1;
+  var series = [];
+  var cant;
+  if(tieneSeries && seriesTxt){
+    series = seriesTxt.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+    cant = series.length;
+    if(cant===0){ showToast('Ingrese al menos una serie','#f97316'); return; }
+  } else {
+    cant = parseInt(document.getElementById('munInvCant').value)||0;
+    if(!tipo){ showToast('Seleccione el tipo','#f97316'); return; }
+    if(cant<1){ showToast('Ingrese la cantidad','#f97316'); return; }
+  }
   var ex = munInvBorrador.find(function(x){ return x.tipo===tipo; });
-  if(ex){ ex.cantidad+=cant; } else { munInvBorrador.push({tipo:tipo,cantidad:cant}); }
+  if(ex){
+    ex.cantidad += cant;
+    ex.series = (ex.series||[]).concat(series);
+  } else {
+    munInvBorrador.push({tipo:tipo, cantidad:cant, series:series});
+  }
   document.getElementById('munInvTipo').value='';
   document.getElementById('munInvCant').value='1';
+  document.getElementById('munInvSeries').value='';
+  document.getElementById('munInvSeriesWrap').style.display='none';
   renderInvFormItems();
 }
+
 function renderInvFormItems(){
   var el = document.getElementById('munInvFormItems');
   if(!el) return;
@@ -4236,10 +4278,14 @@ function renderInvFormItems(){
   }
   el.innerHTML='<div style="margin-bottom:10px">'
     +munInvBorrador.map(function(it,i){
-      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+      var serInfo = it.series && it.series.length
+        ? '<div style="font-size:9.5px;color:var(--muted);font-family:monospace;margin-top:2px">'+it.series.join(' · ')+'</div>'
+        : '';
+      return '<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+        +'<div style="display:flex;align-items:center;gap:8px">'
         +'<div style="flex:1;font-size:12px"><b style="color:var(--gold2)">'+it.cantidad+'x</b> '+it.tipo+'</div>'
         +'<button onclick="munInvBorrador.splice('+i+',1);renderInvFormItems()" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer">x</button>'
-        +'</div>';
+        +'</div>'+serInfo+'</div>';
     }).join('')+'</div>';
 }
 function munInvGuardar(){
@@ -4299,23 +4345,27 @@ function renderInvResumen(){
     +tipos.map(function(tipo){
       var s=info.stock[tipo]||0,a=info.asignado[tipo]||0,d=info.disponible[tipo]||0;
       var color=d===0?'var(--red)':d<s*0.3?'var(--orange)':'var(--green)';
-      return '<div style="display:grid;grid-template-columns:1fr 44px 44px 44px 52px;gap:4px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center">'
+      var allSeries = [];
+      if(inventarioDEI.movimientos) inventarioDEI.movimientos.forEach(function(mv){ mv.items.forEach(function(it){ if(it.tipo===tipo && it.series) allSeries=allSeries.concat(it.series); }); });
+      var serLine = allSeries.length ? '<div style="font-size:9px;color:var(--muted);font-family:monospace;padding:0 10px 5px">'+allSeries.join(' · ')+'</div>' : '';
+      return '<div style="border-bottom:1px solid rgba(255,255,255,.04)">'
+        +'<div style="display:grid;grid-template-columns:1fr 44px 44px 44px 52px;gap:4px;padding:7px 10px;align-items:center">'
         +'<div style="font-size:11px;font-weight:600">'+tipo+'</div>'
         +'<div style="text-align:center;font-size:13px;font-weight:700;color:var(--muted2)">'+s+'</div>'
         +'<div style="text-align:center;font-size:13px;font-weight:700;color:var(--red)">'+a+'</div>'
         +'<div style="text-align:center;font-size:13px;font-weight:700;color:'+color+'">'+d+'</div>'
         +'<button onclick="munInvEditarStock(this)" data-tipo="'+tipo+'" style="background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted2);font-size:10px;cursor:pointer;padding:3px 5px">Editar</button>'
-        +'</div>';
+        +'</div>'+serLine+'</div>';
     }).join('')+'</div>';
   var hist='';
   if(inventarioDEI.movimientos && inventarioDEI.movimientos.length){
     hist='<div style="font-size:11px;font-weight:700;color:var(--muted2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">Historial entradas</div>'
     +inventarioDEI.movimientos.slice(0,8).map(function(mv){
       var total=mv.items.reduce(function(s,it){ return s+it.cantidad; },0);
-      return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--card);border:1px solid var(--border);border-radius:7px;margin-bottom:4px">'
-        +'<div style="flex:1"><div style="font-size:11px;font-weight:600">'+mv.fecha+(mv.fuente?' - '+mv.fuente:'')+'</div>'
-        +'<div style="font-size:10px;color:var(--muted)">'+mv.items.map(function(it){ return it.cantidad+'x '+it.tipo; }).join(', ')+'</div></div>'
-        +'<div style="font-size:16px;font-weight:900;color:var(--green)">+'+total+'</div>'
+      return '<div style="padding:8px 10px;background:var(--card);border:1px solid var(--border);border-radius:7px;margin-bottom:4px">'
+        +'<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:11px;font-weight:600">'+mv.fecha+(mv.fuente?' - '+mv.fuente:'')+'</div>'
+        +'<div style="font-size:16px;font-weight:900;color:var(--green)">+'+total+'</div></div>'
+        +'<div style="font-size:10px;color:var(--muted);margin-top:2px">'+mv.items.map(function(it){ return it.cantidad+'x '+it.tipo+(it.series&&it.series.length?' ('+it.series.join(', ')+')':''); }).join(' | ')+'</div>'
         +'</div>';
     }).join('');
   }
