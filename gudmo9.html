@@ -1374,60 +1374,112 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 
 <div class="toast" id="toast">✅</div>
 
-<!-- Firebase: REST API directa, sin SDKs externos -->
+<!-- Firebase: REST API con compresion para evitar limite de tamano -->
 <script>
+// Compresor LZ simple — reduce JSON entre 60-80%
+var LZ = (function(){
+  function compress(s){
+    var d={},o='',r='',c,i=256,w='';
+    for(var a=0;a<256;a++) d[String.fromCharCode(a)]=a;
+    for(var n=0;n<s.length;n++){
+      c=s[n]; var wc=w+c;
+      if(d[wc]!==undefined){w=wc;}
+      else{
+        o+=String.fromCharCode(d[w]);
+        d[wc]=i++;w=c;
+      }
+    }
+    if(w) o+=String.fromCharCode(d[w]);
+    // encode as base64
+    var b='';
+    for(var j=0;j<o.length;j++) b+=('0000'+o.charCodeAt(j).toString(16)).slice(-4);
+    return b;
+  }
+  function decompress(b){
+    var o='';
+    for(var i=0;i<b.length;i+=4) o+=String.fromCharCode(parseInt(b.substr(i,4),16));
+    var d={},r='',w='',c,i2=256,entry='';
+    for(var a=0;a<256;a++) d[a]=String.fromCharCode(a);
+    w=String.fromCharCode(o.charCodeAt(0)); r=w;
+    for(var n=1;n<o.length;n++){
+      var k=o.charCodeAt(n);
+      entry=(d[k]!==undefined)?d[k]:(w+w[0]);
+      r+=entry;
+      d[i2++]=w+entry[0];
+      w=entry;
+    }
+    return r;
+  }
+  return {compress:compress, decompress:decompress};
+})();
+
 window.__FB_INIT__ = async function(cfg){
   try {
     var projectId = cfg.projectId;
     var apiKey    = cfg.apiKey;
     var BASE = 'https://firestore.googleapis.com/v1/projects/' + projectId + '/databases/(default)/documents';
 
-    function toFS(obj){
-      var fields={};
-      Object.keys(obj).forEach(function(k){
-        var v=obj[k];
-        if(v===null||v===undefined){ fields[k]={nullValue:null}; }
-        else if(typeof v==='boolean'){ fields[k]={booleanValue:v}; }
-        else if(typeof v==='number'){ fields[k]=Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v}; }
-        else { fields[k]={stringValue:String(v)}; }
-      });
-      return {fields:fields};
-    }
-    function fromFS(doc){
-      if(!doc||!doc.fields) return null;
-      var out={};
-      Object.keys(doc.fields).forEach(function(k){
-        var fv=doc.fields[k];
-        if('stringValue' in fv) out[k]=fv.stringValue;
-        else if('integerValue' in fv) out[k]=parseInt(fv.integerValue);
-        else if('doubleValue' in fv) out[k]=fv.doubleValue;
-        else if('booleanValue' in fv) out[k]=fv.booleanValue;
-        else out[k]=null;
-      });
-      return out;
-    }
-
     window.__FB_SET__ = async function(path, data){
       try {
-        var parts=path.split('/');
-        var url=BASE+'/'+parts[0]+'/'+parts[1]+'?key='+apiKey;
-        var resp=await fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(toFS(data))});
-        if(!resp.ok){ console.warn('FB write HTTP',resp.status); return false; }
+        var parts = path.split('/');
+        var url = BASE+'/'+parts[0]+'/'+parts[1]+'?key='+apiKey;
+        // Comprimir el valor del campo 'data' si existe y es string grande
+        var payload = {};
+        Object.keys(data).forEach(function(k){
+          var v = data[k];
+          if(k==='data' && typeof v==='string' && v.length>1000){
+            payload[k] = {stringValue: 'LZ:'+LZ.compress(v)};
+          } else if(typeof v==='number'){
+            payload[k] = Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};
+          } else {
+            payload[k] = {stringValue: String(v)};
+          }
+        });
+        var resp = await fetch(url,{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({fields:payload})
+        });
+        if(!resp.ok){
+          var errText = await resp.text();
+          console.warn('FB write HTTP '+resp.status+':', errText.substring(0,200));
+          return false;
+        }
         return true;
       } catch(e){ console.warn('FB write:',e); return false; }
     };
+
     window.__FB_GET__ = async function(path){
       try {
-        var parts=path.split('/');
-        var url=BASE+'/'+parts[0]+'/'+parts[1]+'?key='+apiKey;
-        var resp=await fetch(url);
+        var parts = path.split('/');
+        var url = BASE+'/'+parts[0]+'/'+parts[1]+'?key='+apiKey;
+        var resp = await fetch(url);
         if(resp.status===404) return null;
         if(!resp.ok) return null;
-        return fromFS(await resp.json());
+        var doc = await resp.json();
+        if(!doc||!doc.fields) return null;
+        var out={};
+        Object.keys(doc.fields).forEach(function(k){
+          var fv=doc.fields[k];
+          var val=null;
+          if('stringValue' in fv){
+            val=fv.stringValue;
+            // Descomprimir si aplica
+            if(typeof val==='string' && val.substring(0,3)==='LZ:'){
+              try{ val=LZ.decompress(val.substring(3)); }
+              catch(e){ console.warn('LZ decompress error',k,e); }
+            }
+          } else if('integerValue' in fv){ val=parseInt(fv.integerValue); }
+          else if('doubleValue' in fv){ val=fv.doubleValue; }
+          else if('booleanValue' in fv){ val=fv.booleanValue; }
+          out[k]=val;
+        });
+        return out;
       } catch(e){ console.warn('FB read:',e); return null; }
     };
+
     window.__FB_READY__ = true;
-    console.log('Firebase conectado (REST)');
+    console.log('Firebase conectado (REST+LZ)');
     if(window.__FB_CONNECTED_CB__) window.__FB_CONNECTED_CB__();
   } catch(e){
     console.warn('Firebase init error:',e);
