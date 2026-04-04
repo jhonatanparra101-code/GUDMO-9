@@ -1388,10 +1388,12 @@ const RANK_CATS = {
 };
 
 function countByCategory(list){
-  const r={OF:0,NE:0,PT:0,PP:0};
-  list.forEach(m=>{
-    for(const [k,cat] of Object.entries(RANK_CATS)){
-      if(cat.ranks.includes(m.rank)){ r[k]++; break; }
+  var r={OF:0,NE:0,PT:0,PP:0};
+  list.forEach(function(m){
+    var keys = Object.keys(RANK_CATS);
+    for(var ki=0; ki<keys.length; ki++){
+      var k = keys[ki];
+      if(RANK_CATS[k].ranks.includes(m.rank)){ r[k]++; break; }
     }
   });
   return r;
@@ -1481,8 +1483,9 @@ function ldAsync(k,d){
 }
 
 function checkAndShowStorageToolbar(){
-  const {pct} = checkStorageUsage();
-  const tb = document.getElementById('dataToolbar');
+  var _stg = checkStorageUsage();
+  var pct = _stg.pct;
+  var tb = document.getElementById('dataToolbar');
   if(tb) tb.style.display = pct>70 ? 'flex' : 'none';
 }
 
@@ -3989,12 +3992,13 @@ function eliminarComision(dei,idx){
 //  STORAGE MANAGEMENT
 // ════════════════════════════════════════════════
 function updateStorageInfo(){
-  const el = document.getElementById('storageInfo');
+  var el = document.getElementById('storageInfo');
   if(!el) return;
-  const {bytes, pct} = checkStorageUsage();
-  const kb = Math.round(bytes/1024);
-  el.innerHTML = `Uso actual: <strong style="color:${pct>80?'var(--red)':pct>50?'var(--orange)':'var(--green)'}">${kb} KB (${pct}%)</strong> · 
-    Miembros: ${members.length} · Historial: ${historial.length} registros`;
+  var _stg2 = checkStorageUsage();
+  var bytes = _stg2.bytes, pct = _stg2.pct;
+  var kb = Math.round(bytes/1024);
+  var col = pct>80?'var(--red)':pct>50?'var(--orange)':'var(--green)';
+  el.innerHTML = 'Uso actual: <strong style="color:'+col+'">'+kb+' KB ('+pct+'%)</strong> · Miembros: '+members.length+' · Historial: '+historial.length+' registros';
 }
 
 function limpiarHistorialAntiguo(){
