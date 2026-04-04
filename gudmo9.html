@@ -699,12 +699,66 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 
 <!-- MUNICIÓN -->
 <div class="section" id="tab-municion">
-  <div class="sh">🔴 Control de Munición</div>
-  <button onclick="munNuevoServicio()" class="btn btn-primary" style="width:100%;margin-bottom:12px">➕ Nuevo servicio / dotación</button>
-  <div id="munDistribucion"></div>
-  <div style="margin-top:14px">
-    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">📋 Servicios anteriores</div>
-    <div id="munHistorial"></div>
+  <div style="display:flex;background:var(--panel);border-bottom:1px solid var(--border);margin:-10px -12px 12px -12px">
+    <button onclick="munSubTab('servicios',this)" id="munTabSvc" style="flex:1;padding:9px 6px;font-size:11px;font-weight:700;color:var(--gold2);background:none;border:none;border-bottom:2px solid var(--gold);cursor:pointer;text-transform:uppercase;letter-spacing:.6px">Servicios</button>
+    <button onclick="munSubTab('inventario',this)" id="munTabInv" style="flex:1;padding:9px 6px;font-size:11px;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;text-transform:uppercase;letter-spacing:.6px">Inventario DEI</button>
+  </div>
+  <div id="munPanelSvc">
+    <button onclick="munNuevoServicio()" class="btn btn-primary" style="width:100%;margin-bottom:12px">Nuevo servicio / dotacion</button>
+    <div id="munDistribucion"></div>
+    <div style="margin-top:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Servicios anteriores</div>
+      <div id="munHistorial"></div>
+    </div>
+  </div>
+  <div id="munPanelInv" style="display:none">
+    <button onclick="munInvAbrirAgregar()" class="btn btn-primary" style="width:100%;margin-bottom:12px">Registrar dotacion recibida</button>
+    <div id="munInvResumen"></div>
+  </div>
+</div>
+
+<!-- MODAL INVENTARIO DEI -->
+<div id="munInvModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;align-items:flex-end;justify-content:center">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:520px;padding:18px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;color:var(--gold2)">Registrar dotacion recibida</div>
+      <button onclick="document.getElementById('munInvModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">x</button>
+    </div>
+    <div id="munInvFormItems"></div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-bottom:8px;background:var(--card);padding:10px;border-radius:8px;border:1px solid var(--border)">
+      <select id="munInvTipo" style="background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:11px">
+        <option value="">Tipo de material</option>
+        <option value="Granada CS 5231">Granada CS 5231</option>
+        <option value="Granada Humo">Granada Humo</option>
+        <option value="Granada Gas CS GL 302">Granada Gas CS GL 302</option>
+        <option value="Stun Mini Bang">Stun Mini Bang</option>
+        <option value="Supresor de fuego">Supresor de fuego</option>
+        <option value="Cartucho Gas CS 37mm">Cartucho Gas CS 37mm</option>
+        <option value="Cartucho Gas CS 40mm">Cartucho Gas CS 40mm</option>
+        <option value="Cartucho Impulsor">Cartucho Impulsor</option>
+        <option value="Lanzador 37mm">Lanzador 37mm</option>
+        <option value="Lanzador 40mm">Lanzador 40mm</option>
+        <option value="Lanzadora">Lanzadora</option>
+        <option value="Municion esferica">Municion esferica</option>
+        <option value="Taser">Taser</option>
+        <option value="Escudo">Escudo</option>
+        <option value="Casco Antimotin">Casco Antimotin</option>
+        <option value="Otro">Otro</option>
+      </select>
+      <input type="number" id="munInvCant" min="1" value="1" style="background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px;font-weight:700;text-align:center">
+    </div>
+    <button onclick="munInvAgregarLinea()" style="width:100%;padding:7px;border-radius:6px;border:1px solid var(--blue);background:rgba(59,130,246,.12);color:var(--blue);font-size:11px;cursor:pointer;font-weight:700;margin-bottom:12px">Agregar tipo</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div>
+        <div style="font-size:9px;color:var(--muted);margin-bottom:3px">Fecha recepcion</div>
+        <input type="date" id="munInvFecha" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
+      </div>
+      <div>
+        <div style="font-size:9px;color:var(--muted);margin-bottom:3px">Recibido de</div>
+        <input type="text" id="munInvFuente" placeholder="Almacen / Unidad..." style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:12px">
+      </div>
+    </div>
+    <button onclick="munInvGuardar()" style="width:100%;padding:12px;border-radius:9px;border:none;background:var(--gold);color:#000;font-size:13px;font-weight:700;cursor:pointer">Guardar dotacion</button>
   </div>
 </div>
 
@@ -713,7 +767,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <div style="background:var(--panel);border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:520px;padding:18px;max-height:92vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div style="font-size:14px;font-weight:700;color:var(--red)">🔴 Nuevo servicio de munición</div>
-      <button onclick="document.getElementById('munServicioModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+      <button onclick="document.getElementById('munServicioModal').style.display='none';window._munEditandoId=null;" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">x</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
       <div>
@@ -1350,9 +1404,9 @@ window.__G9_BASE_VERSION__ = 3;
 </script>
 
 <script>
-// ════════════════════════════════════════════════
+//
 //  CONSTANTS
-// ════════════════════════════════════════════════
+//
 const STATUSES = [
   {key:'Servicio',   icon:'✅', label:'En Servicio'},
   {key:'Vacaciones', icon:'🏖️', label:'Vacaciones'},
@@ -1377,7 +1431,7 @@ const CRITICAL_CARGOS = ['Operador 37','Operador 40','Op. Lanzadora','Cte. Escua
 const CRITICAL_MIN_ESCUDEROS = 6;
 const RANK_ORDER = {MY:1,CT:2,TN:3,ST:4,TE:4,IJ:5,IN:6,IT:7,SI:8,PT:9,PP:10,AG:10,PA:9};
 
-// ── Fecha local (evita desfase UTC) ──
+//
 function localDateStr(d){
   const dt = d||new Date();
   return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
@@ -1419,12 +1473,12 @@ function catLine(counts, onlyService=false){
     .join(' | ');
 }
 
-// ════════════════════════════════════════════════
+//
 //  STORAGE
-// ════════════════════════════════════════════════
-// ════════════════════════════════════════════════
+//
+//
 //  STORAGE — IndexedDB (sin límite de 5MB)
-// ════════════════════════════════════════════════
+//
 const DB_NAME = 'gudmo9db', DB_VER = 1, STORE = 'kv';
 let _db = null;
 
@@ -1503,9 +1557,9 @@ function checkAndShowStorageToolbar(){
   if(tb) tb.style.display = pct>70 ? 'flex' : 'none';
 }
 
-// ════════════════════════════════════════════════
+//
 //  FIREBASE CLOUD SYNC
-// ════════════════════════════════════════════════
+//
 var fbConfig = ld('g9_fbconfig', null);
 var fbSyncing = false;
 
@@ -1713,16 +1767,16 @@ let curFilter= 'all';
 let editingId= null;
 let selStatus= null;
 
-// ════════════════════════════════════════════════
+//
 //  CLOCK
-// ════════════════════════════════════════════════
+//
 const DAYS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MONTHS_L=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
-// ════════════════════════════════════════════════
+//
 //  ESTADOS PROGRAMADOS — aplica cambios automáticos
-// ════════════════════════════════════════════════
+//
 function applyProximosEstados(){
   if(!Array.isArray(members)) return;
   var today    = localDateStr();
@@ -1735,7 +1789,7 @@ function applyProximosEstados(){
   var presentados = [];
 
   members.forEach(function(m){
-    // ── A) Presentaciones automáticas ─────────────────────────────
+    //
     // Si fechaFin === hoy → respetar la hora de presentación del miembro (o la global)
     if(m.fechaFin === today && m.status !== 'Servicio'){
       var horaPresM = m.horaPresentacion || (config.horaFormacion||'06:00');
@@ -1753,7 +1807,7 @@ function applyProximosEstados(){
       presentados.push(m.rank+' '+m.name.split(' ')[0]);
     }
 
-    // ── B) Próximos estados programados ───────────────────────────
+    //
     if(!m.proximoEstado || !m.proximoEstado.fecha) return;
     if(m.proximoEstado.fecha > today) return;
     // Si el estado programado es para hoy, esperar la hora de presentación específica
@@ -1869,9 +1923,9 @@ try { applyProximosEstados(); } catch(e){ }
 try { setInterval(checkAndShowStorageToolbar, 30000); } catch(e){}
 try { renderCiclo(); } catch(e){ }
 
-// ════════════════════════════════════════════════
+//
 //  TABS
-// ════════════════════════════════════════════════
+//
 function showTab(id,btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -1895,9 +1949,9 @@ function showTab(id,btn){
   if(id==='add'){ loadConfig(); updateStorageInfo(); }
 }
 
-// ════════════════════════════════════════════════
+//
 //  REACTION BANNER
-// ════════════════════════════════════════════════
+//
 function buildReactionBanner(){
   var banner=document.getElementById('reactionBanner');
   if(!banner) return;
@@ -1932,9 +1986,9 @@ function buildReactionBanner(){
     +'</div>';
 }
 
-// ════════════════════════════════════════════════
+//
 //  RENDER ROSTER
-// ════════════════════════════════════════════════
+//
 function setEscuadra(esc, btn){
   curEscuadra = esc;
   document.querySelectorAll('.esc-btn').forEach(b=>b.classList.remove('active-esc'));
@@ -2078,9 +2132,9 @@ function updateStats(){
     +'<div class="cl-item cl-pp"><strong>'+c.PP+'/'+t.PP+'</strong> P.P.</div>';
 }
 
-// ════════════════════════════════════════════════
+//
 //  FILTER
-// ════════════════════════════════════════════════
+//
 function setFilter(f,btn){
   curFilter=f;
   document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active-f'));
@@ -2131,9 +2185,9 @@ function moveCard(btn){
   setTimeout(()=>{ const el=document.querySelector(`.mc[data-id="${id}"]`); if(el) el.scrollIntoView({block:'nearest',behavior:'smooth'}); },60);
 }
 
-// ════════════════════════════════════════════════
+//
 //  ADD MEMBER
-// ════════════════════════════════════════════════
+//
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2); }
 
 function addMember(){
@@ -2159,9 +2213,9 @@ function addMember(){
   showToast('✅ Funcionario agregado');
 }
 
-// ════════════════════════════════════════════════
+//
 //  EXCEL IMPORT
-// ════════════════════════════════════════════════
+//
 const RANK_KEYS=['MY','CT','TN','ST','IJ','SI','IN','IT','PT','AG','PA'];
 const STATUS_MAP={
   'servicio':'Servicio','en servicio':'Servicio',
@@ -2245,9 +2299,9 @@ iz.addEventListener('drop',e=>{
   if(f){ document.getElementById('fileInput').files=e.dataTransfer.files; handleFile({target:{files:e.dataTransfer.files,value:''}}); }
 });
 
-// ════════════════════════════════════════════════
+//
 //  EDIT MODAL
-// ════════════════════════════════════════════════
+//
 function openEdit(idOrEl){
   var id=typeof idOrEl==="string"?idOrEl:idOrEl;
   const m=members.find(x=>x.id===id);
@@ -2688,9 +2742,9 @@ function deleteMember(){
 
 document.getElementById('editModal').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
 
-// ════════════════════════════════════════════════
+//
 //  HISTORIAL
-// ════════════════════════════════════════════════
+//
 function populateHistSelects(){
   const sel=document.getElementById('histPersona');
   const cur=sel.value;
@@ -2763,9 +2817,9 @@ function fmtDate(d){
   return `${day}/${m}/${y}`;
 }
 
-// ════════════════════════════════════════════════
+//
 //  PARTE
-// ════════════════════════════════════════════════
+//
 function buildParte(){
   const now=new Date();
   const fecha=`${DAYS[now.getDay()]} ${now.getDate()} de ${MONTHS_L[now.getMonth()]} de ${now.getFullYear()}`;
@@ -2901,9 +2955,9 @@ function shareParte(){
   else copyParte();
 }
 
-// ════════════════════════════════════════════════
+//
 //  CONFIG
-// ════════════════════════════════════════════════
+//
 function loadConfig(){
   document.getElementById('cfgCmdt').value=config.cmdt||'';
   document.getElementById('cfgSup').value=config.sup||'';
@@ -2918,7 +2972,9 @@ function saveConfig(){
   var hfEl=document.getElementById('cfgHoraFormacion');
   if(hfEl) config.horaFormacion=hfEl.value||'06:00';
   sv('g9_config',config);
-  showToast('✅ Configuración guardada');
+  sv('g9_municion',municionData);
+  if(typeof inventarioDEI!=='undefined') sv('g9_inventario',inventarioDEI);
+  showToast('Configuracion guardada');
 }
 function resetAll(){
   if(!confirm('¿BORRAR TODOS los datos del GUDMO-9? Esta acción no tiene reversa.')) return;
@@ -2928,9 +2984,9 @@ function resetAll(){
   showToast('🗑️ Datos eliminados','#ef4444');
 }
 
-// ════════════════════════════════════════════════
+//
 //  TOAST
-// ════════════════════════════════════════════════
+//
 function showToast(msg,bg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.style.background=bg||'var(--green)';
@@ -2940,9 +2996,9 @@ function showToast(msg,bg){
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  TURNOS ROTATIVOS
-// ════════════════════════════════════════════════
+//
 
 function renderTurnos(){
   var container = document.getElementById('turnosList');
@@ -3299,9 +3355,9 @@ function editTurnoMembers(tId){
   showToast('💡 Elimine y recree el turno para cambiar miembros','#3b82f6');
 }
 
-// ════════════════════════════════════════════════
+//
 //  REPORTES
-// ════════════════════════════════════════════════
+//
 function populateTurnoSelect(){
   const sel = document.getElementById('repTurno');
   const cur = sel.value;
@@ -3421,9 +3477,9 @@ function exportReporteExcel(){
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  ZONAS DE ASEO
-// ════════════════════════════════════════════════
+//
 const ZONAS_ASEO = [
   'Guardia','Auditorio','Patio','Escaleras','Parqueadero',
   'Casino Patrulleros','Subida Tanquetas','Entrada','Zona Lavado',
@@ -3575,9 +3631,9 @@ function exportAseoExcel(){
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  MISIONES
-// ════════════════════════════════════════════════
+//
 
 function saveMisiones(){ sv('g9_misiones', misionesData); }
 
@@ -3619,7 +3675,7 @@ function renderMisiones(){
   const content = document.getElementById('misionContent');
   let out = '';
 
-  // ── ANTIMOTINES ──
+  //
   if(am){
     const escPersonal = escMembers().filter(m=>m.status==='Servicio');
     const selected = misionesData.antimotines.personal;
@@ -3654,7 +3710,7 @@ function renderMisiones(){
     </div>`;
   }
 
-  // ── VERDE ──
+  //
   if(vd){
     const grupos = misionesData.verde.grupos;
     const enServicio = escMembers().filter(m=>m.status==='Servicio');
@@ -3759,9 +3815,9 @@ function quitarDeGrupo(gi,memberId){
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  CICLO LABORAL 25/5
-// ════════════════════════════════════════════════
+//
 
 function saveCiclo(){ sv('g9_ciclo', cicloConfig); }
 
@@ -3811,9 +3867,9 @@ function configurarCiclo(){
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  BLOQUE DE BÚSQUEDA
-// ════════════════════════════════════════════════
+//
 // Structure per DEI:
 // { activo: bool, fechaInicio: 'YYYY-MM-DD', diasAjuste: 0,
 //   pausas: [{inicio,fin}],  // permiso periods
@@ -4035,9 +4091,9 @@ function eliminarComision(dei,idx){
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  STORAGE MANAGEMENT
-// ════════════════════════════════════════════════
+//
 function updateStorageInfo(){
   var el = document.getElementById('storageInfo');
   if(!el) return;
@@ -4078,9 +4134,9 @@ function exportarBackup(){
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  CONTROL DE MUNICIÓN
-// ════════════════════════════════════════════════
+//
 let municionData = ld('g9_municion', []); 
 // [{id, fecha, tipo, cantidadTotal, cargo, escuadra, estado, lugar
 //   asignaciones:[{memberId,memberName,memberRank,cargo,cantidad,devuelto}],
@@ -4088,7 +4144,225 @@ let municionData = ld('g9_municion', []);
 
 function saveMunicion(){ sv('g9_municion', municionData); }
 
-// ── Borrador del servicio en curso ──
+var inventarioDEI = ld('g9_inventario', {stock:{}, movimientos:[]});
+function saveInventario(){ sv('g9_inventario', inventarioDEI); }
+
+function munAccion(btn){
+  var action = btn.getAttribute('data-action');
+  var sid    = btn.getAttribute('data-sid');
+  if(action==='informe')  munAbrirInforme(sid);
+  if(action==='cerrar')   cerrarServicioMunicion(sid);
+  if(action==='eliminar') eliminarServicioMunicion(sid);
+  if(action==='editar')   munEditarServicio(sid);
+}
+
+function munSubTab(tab, btn){
+  document.getElementById('munPanelSvc').style.display = tab==='servicios' ? 'block' : 'none';
+  document.getElementById('munPanelInv').style.display = tab==='inventario' ? 'block' : 'none';
+  var ids = ['munTabSvc','munTabInv'];
+  ids.forEach(function(id){
+    var el = document.getElementById(id);
+    if(el){ el.style.color='var(--muted)'; el.style.borderBottomColor='transparent'; }
+  });
+  if(btn){ btn.style.color='var(--gold2)'; btn.style.borderBottomColor='var(--gold)'; }
+  if(tab==='inventario') renderInvResumen();
+}
+
+var munInvBorrador = [];
+function munInvAbrirAgregar(){
+  munInvBorrador = [];
+  document.getElementById('munInvFecha').value = localDateStr();
+  document.getElementById('munInvFuente').value = '';
+  document.getElementById('munInvTipo').value = '';
+  document.getElementById('munInvCant').value = '1';
+  renderInvFormItems();
+  document.getElementById('munInvModal').style.display = 'flex';
+}
+function munInvAgregarLinea(){
+  var tipo = document.getElementById('munInvTipo').value;
+  var cant = parseInt(document.getElementById('munInvCant').value)||0;
+  if(!tipo){ showToast('Seleccione el tipo','#f97316'); return; }
+  if(cant<1){ showToast('Ingrese la cantidad','#f97316'); return; }
+  var ex = munInvBorrador.find(function(x){ return x.tipo===tipo; });
+  if(ex){ ex.cantidad+=cant; } else { munInvBorrador.push({tipo:tipo,cantidad:cant}); }
+  document.getElementById('munInvTipo').value='';
+  document.getElementById('munInvCant').value='1';
+  renderInvFormItems();
+}
+function renderInvFormItems(){
+  var el = document.getElementById('munInvFormItems');
+  if(!el) return;
+  if(!munInvBorrador.length){
+    el.innerHTML='<div style="font-size:11px;color:var(--muted);padding:6px 0 10px">Sin items aun</div>';
+    return;
+  }
+  el.innerHTML='<div style="margin-bottom:10px">'
+    +munInvBorrador.map(function(it,i){
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">'
+        +'<div style="flex:1;font-size:12px"><b style="color:var(--gold2)">'+it.cantidad+'x</b> '+it.tipo+'</div>'
+        +'<button onclick="munInvBorrador.splice('+i+',1);renderInvFormItems()" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer">x</button>'
+        +'</div>';
+    }).join('')+'</div>';
+}
+function munInvGuardar(){
+  if(!munInvBorrador.length){ showToast('Agregue al menos un tipo','#f97316'); return; }
+  var fecha  = document.getElementById('munInvFecha').value || localDateStr();
+  var fuente = (document.getElementById('munInvFuente').value||'').trim();
+  munInvBorrador.forEach(function(it){
+    inventarioDEI.stock[it.tipo] = (inventarioDEI.stock[it.tipo]||0) + it.cantidad;
+  });
+  inventarioDEI.movimientos.unshift({id:uid(),tipo:'entrada',fecha:fecha,fuente:fuente,items:munInvBorrador.slice()});
+  saveInventario();
+  document.getElementById('munInvModal').style.display='none';
+  renderInvResumen();
+  showToast('Dotacion registrada','#22c55e');
+}
+function invGetStockDisponible(){
+  var asignado={};
+  municionData.filter(function(s){ return !s.cerrado; }).forEach(function(s){
+    if(s.asignaciones && s.asignaciones[0] && s.asignaciones[0].items){
+      s.asignaciones.forEach(function(p){
+        p.items.forEach(function(it){
+          var g=it.cantidad-(it.devuelto||0);
+          asignado[it.tipo]=(asignado[it.tipo]||0)+g;
+        });
+      });
+    } else {
+      var tipo=s.tipo||'';
+      var g=(s.cantidadTotal||0)-(s.asignaciones||[]).reduce(function(sum,a){ return sum+(a.devuelto||0); },0);
+      if(tipo) asignado[tipo]=(asignado[tipo]||0)+g;
+    }
+  });
+  var disponible={};
+  Object.keys(inventarioDEI.stock).forEach(function(k){
+    disponible[k]=Math.max(0,(inventarioDEI.stock[k]||0)-(asignado[k]||0));
+  });
+  return {stock:inventarioDEI.stock,asignado:asignado,disponible:disponible};
+}
+function renderInvResumen(){
+  var el=document.getElementById('munInvResumen');
+  if(!el) return;
+  var info=invGetStockDisponible();
+  var tipos=Object.keys(info.stock);
+  if(!tipos.length){
+    el.innerHTML='<div class="empty" style="padding:30px"><div class="ei">📦</div><p>Sin inventario.<br>Registre la dotacion recibida.</p></div>';
+    return;
+  }
+  var ts=0,ta=0,td=0;
+  tipos.forEach(function(k){ ts+=(info.stock[k]||0); ta+=(info.asignado[k]||0); td+=(info.disponible[k]||0); });
+  var kpi='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">'
+    +'<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--gold2)">'+ts+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">Stock total</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--red)">'+ta+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">Asignado</div></div>'
+    +'<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center"><div style="font-size:22px;font-weight:900;color:var(--green)">'+td+'</div><div style="font-size:9px;color:var(--muted);text-transform:uppercase">Disponible</div></div>'
+    +'</div>';
+  var tabla='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px">'
+    +'<div style="display:grid;grid-template-columns:1fr 44px 44px 44px 52px;gap:4px;padding:7px 10px;border-bottom:1px solid var(--border);font-size:9px;color:var(--muted);text-transform:uppercase">'
+    +'<div>Material</div><div style="text-align:center">Stock</div><div style="text-align:center">Asig</div><div style="text-align:center">Disp</div><div></div></div>'
+    +tipos.map(function(tipo){
+      var s=info.stock[tipo]||0,a=info.asignado[tipo]||0,d=info.disponible[tipo]||0;
+      var color=d===0?'var(--red)':d<s*0.3?'var(--orange)':'var(--green)';
+      return '<div style="display:grid;grid-template-columns:1fr 44px 44px 44px 52px;gap:4px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center">'
+        +'<div style="font-size:11px;font-weight:600">'+tipo+'</div>'
+        +'<div style="text-align:center;font-size:13px;font-weight:700;color:var(--muted2)">'+s+'</div>'
+        +'<div style="text-align:center;font-size:13px;font-weight:700;color:var(--red)">'+a+'</div>'
+        +'<div style="text-align:center;font-size:13px;font-weight:700;color:'+color+'">'+d+'</div>'
+        +'<button onclick="munInvEditarStock(this)" data-tipo="'+tipo+'" style="background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted2);font-size:10px;cursor:pointer;padding:3px 5px">Editar</button>'
+        +'</div>';
+    }).join('')+'</div>';
+  var hist='';
+  if(inventarioDEI.movimientos && inventarioDEI.movimientos.length){
+    hist='<div style="font-size:11px;font-weight:700;color:var(--muted2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px">Historial entradas</div>'
+    +inventarioDEI.movimientos.slice(0,8).map(function(mv){
+      var total=mv.items.reduce(function(s,it){ return s+it.cantidad; },0);
+      return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--card);border:1px solid var(--border);border-radius:7px;margin-bottom:4px">'
+        +'<div style="flex:1"><div style="font-size:11px;font-weight:600">'+mv.fecha+(mv.fuente?' - '+mv.fuente:'')+'</div>'
+        +'<div style="font-size:10px;color:var(--muted)">'+mv.items.map(function(it){ return it.cantidad+'x '+it.tipo; }).join(', ')+'</div></div>'
+        +'<div style="font-size:16px;font-weight:900;color:var(--green)">+'+total+'</div>'
+        +'</div>';
+    }).join('');
+  }
+  el.innerHTML=kpi+tabla+hist;
+}
+function munInvEditarStock(btn){
+  var tipo = btn.getAttribute('data-tipo');
+  var actual = inventarioDEI.stock[tipo]||0;
+  var nuevo = prompt('Stock actual de '+tipo+': '+actual+'. Nuevo valor total:', actual);
+  if(nuevo===null) return;
+  var val = parseInt(nuevo);
+  if(isNaN(val)||val<0){ showToast('Valor no valido','#f97316'); return; }
+  inventarioDEI.stock[tipo]=val;
+  saveInventario();
+  renderInvResumen();
+  showToast('Stock actualizado','#22c55e');
+}
+function munEditarServicio(id){
+  var s = municionData.find(function(x){ return x.id===id; });
+  if(!s) return;
+  munBorradorPersonas = JSON.parse(JSON.stringify(s.asignaciones||[]));
+  munBorradorItems = [];
+  document.getElementById('munSvcFecha').value = s.fecha||localDateStr();
+  document.getElementById('munSvcLugar').value = s.lugar||'';
+  document.getElementById('munSvcEsc').value   = s.escuadra||'DEI 2';
+  var sel = document.getElementById('munSvcMiembro');
+  sel.innerHTML = '<option value="">Seleccione</option>';
+  members.slice().sort(function(a,b){ return (a.rank+a.name).localeCompare(b.rank+b.name); }).forEach(function(m){
+    var op=document.createElement('option'); op.value=m.id;
+    op.textContent=m.rank+' '+m.name+(m.idNum?' ('+m.idNum+')':'');
+    sel.appendChild(op);
+  });
+  munLimpiarFormPersona();
+  munRenderBorradorPersonas();
+  munRenderBorradorItems();
+  document.getElementById('munServicioModal').style.display='flex';
+  window._munEditandoId = id;
+}
+function munGuardarServicio(){
+  if(window._munEditandoId){
+    munGuardarEdicion(window._munEditandoId);
+    return;
+  }
+  if(!munBorradorPersonas.length){ showToast('Agregue al menos una persona','#f97316'); return; }
+  var fecha = document.getElementById('munSvcFecha').value || localDateStr();
+  var lugar = (document.getElementById('munSvcLugar').value||'').trim();
+  var esc   = document.getElementById('munSvcEsc').value || 'DEI 2';
+  var cantidadTotal = munBorradorPersonas.reduce(function(s,p){
+    return s + p.items.reduce(function(s2,it){ return s2+it.cantidad; },0);
+  },0);
+  var servicio = {
+    id:uid(), fecha:fecha,
+    hora:new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
+    lugar:lugar, escuadra:esc,
+    cantidadTotal:cantidadTotal,
+    tipo:'Multi-material', cargo:'',
+    asignaciones:munBorradorPersonas.slice(),
+    cerrado:false
+  };
+  municionData.unshift(servicio);
+  saveMunicion();
+  document.getElementById('munServicioModal').style.display='none';
+  renderMunicion();
+  showToast('Servicio guardado - '+munBorradorPersonas.length+' funcionarios','#22c55e');
+}
+function munGuardarEdicion(id){
+  if(!munBorradorPersonas.length){ showToast('Agregue al menos una persona','#f97316'); return; }
+  var idx = municionData.findIndex(function(x){ return x.id===id; });
+  if(idx===-1) return;
+  var s = municionData[idx];
+  s.fecha = document.getElementById('munSvcFecha').value || s.fecha;
+  s.lugar = (document.getElementById('munSvcLugar').value||'').trim();
+  s.escuadra = document.getElementById('munSvcEsc').value || s.escuadra;
+  s.asignaciones = munBorradorPersonas.slice();
+  s.cantidadTotal = munBorradorPersonas.reduce(function(sum,p){
+    return sum+p.items.reduce(function(s2,it){ return s2+it.cantidad; },0);
+  },0);
+  saveMunicion();
+  document.getElementById('munServicioModal').style.display='none';
+  window._munEditandoId = null;
+  renderMunicion();
+  showToast('Servicio actualizado','#22c55e');
+}
+
+//
 var munBorradorPersonas = [];
 var munBorradorItems    = [];
 
@@ -4212,29 +4486,7 @@ function munRenderBorradorPersonas(){
   }).join('');
 }
 
-function munGuardarServicio(){
-  if(!munBorradorPersonas.length){ showToast('⚠️ Agregue al menos una persona','#f97316'); return; }
-  var fecha = document.getElementById('munSvcFecha').value || localDateStr();
-  var lugar = (document.getElementById('munSvcLugar').value||'').trim();
-  var esc   = document.getElementById('munSvcEsc').value || 'DEI 2';
-  var cantidadTotal = munBorradorPersonas.reduce(function(s,p){
-    return s + p.items.reduce(function(s2,it){ return s2+it.cantidad; },0);
-  },0);
-  var servicio = {
-    id: uid(), fecha: fecha,
-    hora: new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),
-    lugar: lugar, escuadra: esc,
-    cantidadTotal: cantidadTotal,
-    tipo: 'Multi-material', cargo: '',
-    asignaciones: munBorradorPersonas.slice(),
-    cerrado: false
-  };
-  municionData.unshift(servicio);
-  saveMunicion();
-  document.getElementById('munServicioModal').style.display = 'none';
-  renderMunicion();
-  showToast('✅ Servicio guardado — '+munBorradorPersonas.length+' funcionarios','#22c55e');
-}
+// munGuardarServicio moved above
 
 // Alertas contextuales por tipo de material — discretas, útiles para la decisión
 var MUN_ALERTAS = {
@@ -4501,9 +4753,10 @@ function renderMunDistribucion(){
       +'<div style="height:100%;width:'+pct+'%;background:var(--green);border-radius:3px"></div></div>'
       +buildAsignacionList(s)
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
-      +'<button onclick="munAbrirInforme(\'+s.id+\'" style="flex:1;padding:8px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:11px;cursor:pointer">📋 Informe</button>'
-      +'<button onclick="cerrarServicioMunicion(\'+s.id+\'" class="btn btn-primary" style="flex:2;font-size:11px">✅ Cerrar</button>'
-      +'<button onclick="eliminarServicioMunicion(\'+s.id+\'" class="btn btn-danger" style="flex:none;padding:8px 12px;font-size:11px">🗑️</button>'
+      +'<button onclick="munAccion(this)" data-action="informe" data-sid="'+s.id+'" style="flex:1;padding:8px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:11px;cursor:pointer">Informe</button>'
+      +'<button onclick="munAccion(this)" data-action="editar" data-sid="'+s.id+'" style="flex:none;padding:8px 12px;border-radius:7px;border:1px solid var(--gold);background:rgba(200,146,42,.1);color:var(--gold2);font-size:11px;cursor:pointer">Editar</button>'
+      +'<button onclick="munAccion(this)" data-action="cerrar" data-sid="'+s.id+'" class="btn btn-primary" style="flex:2;font-size:11px">Cerrar</button>'
+      +'<button onclick="munAccion(this)" data-action="eliminar" data-sid="'+s.id+'" class="btn btn-danger" style="flex:none;padding:8px 12px;font-size:11px">Borrar</button>'
       +'</div></div>';
   }).join('');
 }
@@ -4563,15 +4816,15 @@ function renderMunHistorial(){
       +'<div style="font-size:13px;font-weight:700;color:'+(gastado>0?'var(--red)':'var(--green)')+'">'+t.dev+'/'+t.uds+'</div>'
       +'<div style="font-size:9px;color:var(--muted)">'+(gastado>0?gastado+' gastados':'Completo')+'</div>'
       +'</div>'
-      +'<button onclick="munAbrirInforme(\'+s.id+\'" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:10px;cursor:pointer;white-space:nowrap">📋</button>'
+      +'<button onclick="munAccion(this)" data-action="informe" data-sid="'+s.id+'" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted2);font-size:10px;cursor:pointer;white-space:nowrap">Informe</button>'
       +'</div></div>';
   }).join('');
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  PERMISO MASIVO
-// ════════════════════════════════════════════════
+//
 var pmTipoSel = 'GUDMO';
 
 function pmSelAll(checked){
@@ -4691,9 +4944,9 @@ function aplicarPermisoMasivo(){
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  GENERADOR DE PINes
-// ════════════════════════════════════════════════
+//
 var pinTipoActual = '';
 var pinConfig = ld('g9_pinconfig', {superior:'mi Teniente', uniforme:'#5 Armamento corto, pistola'});
 
@@ -4914,9 +5167,9 @@ function compartirPin(){
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  PLANILLA MANUAL
-// ════════════════════════════════════════════════
+//
 var planillaData = ld('g9_planillas', []);
 
 var ACTIVIDADES = [
@@ -5050,9 +5303,9 @@ function eliminarPlanilla(id){
   showToast('🗑️ Planilla eliminada');
 }
 
-// ════════════════════════════════════════════════
+//
 //  CONTROL DE GUARDIAS
-// ════════════════════════════════════════════════
+//
 var guardiaData = ld('g9_guardia', [{"memberId": "m0041", "nombre": "BETANCUR GUERRA FRANCISCO JAVIER", "grado": "IT", "mes": "enero", "ano": 2026, "dias": 6}, {"memberId": "m0046", "nombre": "ARCE OCAMPO DUVERNEY", "grado": "SI", "mes": "enero", "ano": 2026, "dias": 18}, {"memberId": "m0047", "nombre": "GARZON OCHOA ESTEFANY", "grado": "SI", "mes": "marzo", "ano": 2026, "dias": 5}, {"memberId": "m0050", "nombre": "CARDONA MARULANDA JHON BAYRON", "grado": "SI", "mes": "enero", "ano": 2026, "dias": 1}, {"memberId": "m0049", "nombre": "QUESADA JHON MAURICIO", "grado": "SI", "mes": "febrero", "ano": 2026, "dias": 28}, {"memberId": "m0049", "nombre": "QUESADA JHON MAURICIO", "grado": "SI", "mes": "marzo", "ano": 2026, "dias": 7}, {"memberId": "m0063", "nombre": "RODRIGUEZ MIRANDA JEISON", "grado": "SI", "mes": "marzo", "ano": 2026, "dias": 11}, {"memberId": "m0048", "nombre": "RAMOS RAMIREZ EDUARDO ANDRES", "grado": "SI", "mes": "marzo", "ano": 2026, "dias": 14}, {"memberId": "m0054", "nombre": "ESQUIVEL HERRERA GIAN CARLO", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 5}, {"memberId": "m0073", "nombre": "ARANGO LONDOÑO ALVARO JAVIER", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 26}, {"memberId": "m0051", "nombre": "AVILA BAQUERO JUAN DAVID", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 1}, {"memberId": "m0075", "nombre": "BETANCUR ANGEL JAIME", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 1}, {"memberId": "m0075", "nombre": "BETANCUR ANGEL JAIME", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 5}, {"memberId": "m0066", "nombre": "CANO MOLINA YEISON", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 6}, {"memberId": "m0066", "nombre": "CANO MOLINA YEISON", "grado": "PT", "mes": "febrero", "ano": 2026, "dias": 20}, {"memberId": "m0066", "nombre": "CANO MOLINA YEISON", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 5}, {"memberId": "m0052", "nombre": "CORTES PEÑA JHOAN", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 18}, {"memberId": "m0069", "nombre": "DIAZ BELLO DIEGO ARMANDO", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 7}, {"memberId": "m0069", "nombre": "DIAZ BELLO DIEGO ARMANDO", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 2}, {"memberId": "m0053", "nombre": "DURAN COY BRANDON ROBERTO", "grado": "PT", "mes": "febrero", "ano": 2026, "dias": 2}, {"memberId": "m0055", "nombre": "GARCIA MARULANDA CESAR AUGUSTO", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 6}, {"memberId": "m0056", "nombre": "GOMEZ ORDOÑEZ OSCAR EDUARDO", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 6}, {"memberId": "m0056", "nombre": "GOMEZ ORDOÑEZ OSCAR EDUARDO", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 1}, {"memberId": "m0057", "nombre": "LOPEZ ACEVEDO MICHAEL STEVEN", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 18}, {"memberId": "m0058", "nombre": "LOPEZ VARGAS JOHAN SEBASTIAN", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 1}, {"memberId": "m0072", "nombre": "MUR VELASCO LUIS ALBERTO", "grado": "PT", "mes": "febrero", "ano": 2026, "dias": 4}, {"memberId": "m0072", "nombre": "MUR VELASCO LUIS ALBERTO", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 9}, {"memberId": "m0059", "nombre": "OBANDO ARISTIZABAL JHON WILMER", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 1}, {"memberId": "m0068", "nombre": "OSSA ROJAS JOSE FERNANDO", "grado": "PT", "mes": "enero", "ano": 2026, "dias": 7}, {"memberId": "m0068", "nombre": "OSSA ROJAS JOSE FERNANDO", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 2}, {"memberId": "m0060", "nombre": "PARRA ORTIZ DAVID", "grado": "PT", "mes": "febrero", "ano": 2026, "dias": 26}, {"memberId": "m0060", "nombre": "PARRA ORTIZ DAVID", "grado": "PT", "mes": "marzo", "ano": 2026, "dias": 5}, {"memberId": "m0061", "nombre": "PINZON GIRALDO MIGUEL ANGEL", "grado": "PT", "mes": "febrero", "ano": 2026, "dias": 5}, {"memberId": "m0062", "nombre": "GARCIA PEDROZO JEAN CARLOS", "grado": "PP", "mes": "marzo", "ano": 2026, "dias": 10}, {"memberId": "m0074", "nombre": "RUIZ PESTANA CAMILO", "grado": "PP", "mes": "marzo", "ano": 2026, "dias": 17}]);
 
 function saveGuardia(){ sv('g9_guardia', guardiaData); }
@@ -5259,9 +5512,9 @@ function exportarGuardiaExcel(){
 }
 
 
-// ════════════════════════════════════════════════
+//
 //  NOVEDADES ADMINISTRATIVAS — Matriz automática
-// ════════════════════════════════════════════════
+//
 
 var NAV_MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 var NAV_MESES_LARGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -5394,7 +5647,7 @@ function renderNavMatriz(){
   var anio = new Date().getFullYear();
   var colores = NAV_COLORS[tipoFiltro]||{bg:'rgba(99,102,241,.15)',color:'#6366f1'};
 
-  // ── STATS ──────────────────────────────────────
+  //
   var statsEl = document.getElementById('navStats');
   var totalDiasAnio = 0;
   var conNovedad = 0;
@@ -5419,7 +5672,7 @@ function renderNavMatriz(){
     +'<div style="font-size:22px;font-weight:900;color:var(--gold2)">'+promedio+'</div>'
     +'<div style="font-size:9px;color:var(--muted)">Días promedio</div></div>';
 
-  // ── TABLA ──────────────────────────────────────
+  //
   var tablaEl = document.getElementById('navTabla');
 
   if(mesFiltro==='todos'){
@@ -5636,7 +5889,7 @@ function dashKpi(label, value, sub, color, icon){
     +'</div>';
 }
 
-// ── SEMÁFORO INTERACTIVO ──────────────────────────────────────────
+//
 var _dashSemaforoAbierto = false;
 function dashToggleSemaforoDetalle(){
   _dashSemaforoAbierto = !_dashSemaforoAbierto;
@@ -5742,7 +5995,7 @@ function dashDrawCargoDetalle(enServicio, personal){
   el.innerHTML = html;
 }
 
-// ── DONUT INTERACTIVO ─────────────────────────────────────────────
+//
 var _dashDonutSegmentos = [];
 var _dashDonutActivo = null;
 var _dashPersonalRef = [];
@@ -5942,9 +6195,9 @@ function dashDrawAlertas(){
   el.innerHTML=html2;
 }
 
-// ════════════════════════════════════════════════
+//
 //  INIT — Pre-cargar datos del Excel GUDMO-9
-// ════════════════════════════════════════════════
+//
 async function initApp(){
   // Recuperar de IndexedDB si localStorage no tiene datos O tiene array vacío
   try {
