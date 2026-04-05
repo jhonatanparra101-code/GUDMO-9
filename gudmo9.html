@@ -6201,64 +6201,73 @@ function renderFormacionTactica(){
   var spis = getCargoAll('SPI');
   function spiSlot(i){ return muneco('SPI','SPI', spis[i]||null, 44); }
 
-  var cte1  = getCargo('Cte. DEI');
-  var cte2  = getCargo('Cte. Escuadra');
-  var cte3  = getCargo('Líder Escuderos');
-  var op37  = getCargo('Operador 37');
-  var op40  = getCargo('Operador 40');
-  var opLanz= getCargo('Op. Lanzadora');
-  var taser = getCargo('Op. Taser');
-  var enfer = getCargo('Enfermero');
-  var rfa1  = getCargoAll('Líder Operadores')[0]||null;
-  var rfa2  = getCargoAll('Líder Operadores')[1]||null;
+  var cte1   = getCargo('Cte. DEI');
+  var cte2   = getCargo('Cte. Escuadra');
+  var cte3   = getCargo('Lider Escuderos');
+  var ops37  = getCargoAll('Operador 37');    // hasta 2
+  var ops40  = getCargoAll('Operador 40');    // hasta 2
+  var opLanzs= getCargoAll('Op. Lanzadora'); // hasta 2
+  var taser  = getCargo('Op. Taser');
+  var enfer  = getCargo('Enfermero');
+  var rfa1   = getCargoAll('Lider Operadores')[0]||null;
+  var rfa2   = getCargoAll('Lider Operadores')[1]||null;
 
-  var fila = 'display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-bottom:8px;flex-wrap:wrap;';
+  var fila = 'display:flex;align-items:flex-end;justify-content:center;gap:3px;margin-bottom:8px;flex-wrap:nowrap;overflow-x:auto;';
 
-  var html2 = '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:10px 6px;overflow-x:auto">';
+  var html2 = '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:10px 4px;overflow-x:auto">';
 
-  // Título
-  html2 += '<div style="text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+esc+' — Dispositivo Negro</div>';
+  // Titulo
+  html2 += '<div style="text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+esc+' - Dispositivo Negro</div>';
 
-  // FILA 1: Operadores AML + Cte DEI al centro
+  // FILA 1: O O O [CTE DEI] O O O
+  // Posiciones: Op37 Op37_2 OpLanz | CTE DEI | Op40 Op40_2 OpLanz2
   html2 += '<div style="'+fila+'">';
-  html2 += muneco('Operador 37','OP37', op37, 48);
-  html2 += muneco('Op. Lanzadora','LANZ', opLanz, 48);
-  html2 += '<div style="min-width:8px"></div>';
+  html2 += muneco('Operador 37','OP-37', ops37[0]||null, 44);
+  html2 += muneco('Operador 37','OP-37', ops37[1]||null, 44);
+  html2 += muneco('Op. Lanzadora','LANZ', opLanzs[0]||null, 44);
+  html2 += '<div style="min-width:6px"></div>';
   html2 += muneco('Cte. DEI','CTE DEI', cte1, 52);
-  html2 += '<div style="min-width:8px"></div>';
-  html2 += muneco('Operador 40','OP40', op40, 48);
-  html2 += muneco('Op. Taser','TASER', taser, 48);
+  html2 += '<div style="min-width:6px"></div>';
+  html2 += muneco('Operador 40','OP-40', ops40[0]||null, 44);
+  html2 += muneco('Operador 40','OP-40', ops40[1]||null, 44);
+  html2 += muneco('Op. Lanzadora','LANZ', opLanzs[1]||null, 44);
   html2 += '</div>';
 
-  // FILA 2: RFA + Cte Escuadra + RFA
+  // FILA 2: R-FA · [CTE ESC 2] · R-FA
   html2 += '<div style="'+fila+'">';
-  html2 += muneco('Líder Operadores','R-FA', rfa1, 52);
-  html2 += '<div style="min-width:20px"></div>';
-  html2 += muneco('Cte. Escuadra','CTE ESC', cte2, 56);
-  html2 += '<div style="min-width:20px"></div>';
-  html2 += muneco('Líder Operadores','R-FA', rfa2, 52);
+  html2 += muneco('Lider Operadores','R-FA', rfa1, 52);
+  html2 += '<div style="min-width:24px"></div>';
+  html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 56);
+  html2 += '<div style="min-width:24px"></div>';
+  html2 += muneco('Lider Operadores','R-FA', rfa2, 52);
   html2 += '</div>';
 
-  // FILA 3: SPI SPI TASER (ya usado arriba) SPI SPI + Enfermero
+  // FILA 3: S S T S S  (SPI SPI TASER SPI SPI)
   html2 += '<div style="'+fila+'">';
   html2 += spiSlot(0);
   html2 += spiSlot(1);
-  html2 += '<div style="min-width:12px"></div>';
-  html2 += muneco('Líder Escuderos','L.ESC', cte3, 52);
-  html2 += '<div style="min-width:12px"></div>';
+  html2 += '<div style="min-width:6px"></div>';
+  html2 += muneco('Op. Taser','TASER', taser, 48);
+  html2 += '<div style="min-width:6px"></div>';
   html2 += spiSlot(2);
-  html2 += muneco('Enfermero','ENF', enfer, 44);
+  html2 += spiSlot(3);
   html2 += '</div>';
 
-  // FILA 4: Escuderos
-  html2 += '<div style="'+fila+'margin-top:4px">';
+  // FILA 4: [CTE ESC 3] + 10 Escuderos
+  html2 += '<div style="'+fila+'margin-top:4px;align-items:flex-end">';
+  html2 += muneco('Lider Escuderos','L-ESC', cte3, 48);
+  html2 += '<div style="min-width:4px"></div>';
   for(var i=0; i<10; i++) html2 += escuderoSlot(i);
   html2 += '</div>';
 
-  // Leyenda
-  var totalOk = [cte1,cte2,cte3,op37,op40,opLanz,taser,enfer,rfa1].filter(Boolean).length
-    + Math.min(spis.length,3) + Math.min(escuderos.length,10);
-  var totalReq = 9+3+10;
+  // Contador correcto:
+  // F1: 7 posiciones, F2: 3, F3: 5, F4: 11 = 26 total
+  var cubiertosF1 = [ops37[0],ops37[1],opLanzs[0],cte1,ops40[0],ops40[1],opLanzs[1]].filter(Boolean).length;
+  var cubiertosF2 = [rfa1,cte2,rfa2].filter(Boolean).length;
+  var cubiertosF3 = [spis[0],spis[1],taser,spis[2],spis[3]].filter(Boolean).length;
+  var cubiertosF4 = [cte3].filter(Boolean).length + Math.min(escuderos.length, 10);
+  var totalOk = cubiertosF1 + cubiertosF2 + cubiertosF3 + cubiertosF4;
+  var totalReq = 26;
   html2 += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)">'
     +'<div style="display:flex;gap:10px">'
     +'<span style="font-size:9px;color:#22c55e">● Cubierto</span>'
