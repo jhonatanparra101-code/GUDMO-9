@@ -1574,58 +1574,74 @@ function checkAndShowStorageToolbar(){
 var fbConfig = ld('g9_fbconfig', null);
 var fbSyncing = false;
 
+// ── Helper: parsea respuesta de Supabase ──
+function sbX(s){
+  if(!s) return null;
+  if(Array.isArray(s)) return s;
+  if(typeof s==='object' && s.data){
+    try{ return JSON.parse(s.data); } catch(e){ return s.data; }
+  }
+  return s;
+}
+
+// ── SUBIR todo a Supabase ──
 async function fbSaveAll(){
   if(!window.__FB_READY__) return;
+  // Guardar siempre local primero
+  sv('g9_municion', municionData);
+  if(typeof inventarioDEI!=='undefined') sv('g9_inventario', inventarioDEI);
+  if(typeof planillaData!=='undefined') sv('g9_planillas', planillaData);
   try {
     var ts = Date.now();
-    await window.__FB_SET__('gudmo9/members',   { data: JSON.stringify(members), ts });
-    await window.__FB_SET__('gudmo9/historial',  { data: JSON.stringify(historial), ts });
-    await window.__FB_SET__('gudmo9/config',     { data: JSON.stringify(config), ts });
-    await window.__FB_SET__('gudmo9/turnos',     { data: JSON.stringify(turnos), ts });
-    await window.__FB_SET__('gudmo9/bloque',     { data: JSON.stringify(bloqueData), ts });
-    await window.__FB_SET__('gudmo9/ciclo',      { data: JSON.stringify(cicloConfig), ts });
-    await window.__FB_SET__('gudmo9/aseo',       { data: JSON.stringify(aseoData), ts });
-    await window.__FB_SET__('gudmo9/municion',   { data: JSON.stringify(municionData), ts });
-    if(typeof inventarioDEI!=='undefined') await window.__FB_SET__('gudmo9/inventario', { data: JSON.stringify(inventarioDEI), ts });
-    showCloudStatus('☁️ Sincronizado', '#22c55e');
-  } catch(e){ showCloudStatus('⚠️ Sin conexion', '#f97316'); }
+    var writes = [
+      window.__FB_SET__('gudmo9/members',   { data: JSON.stringify(members),    ts: ts }),
+      window.__FB_SET__('gudmo9/historial', { data: JSON.stringify(historial),  ts: ts }),
+      window.__FB_SET__('gudmo9/config',    { data: JSON.stringify(config),     ts: ts }),
+      window.__FB_SET__('gudmo9/turnos',    { data: JSON.stringify(turnos),     ts: ts }),
+      window.__FB_SET__('gudmo9/bloque',    { data: JSON.stringify(bloqueData), ts: ts }),
+      window.__FB_SET__('gudmo9/ciclo',     { data: JSON.stringify(cicloConfig),ts: ts }),
+      window.__FB_SET__('gudmo9/aseo',      { data: JSON.stringify(aseoData),   ts: ts }),
+      window.__FB_SET__('gudmo9/municion',  { data: JSON.stringify(municionData),ts: ts }),
+      window.__FB_SET__('gudmo9/misiones',  { data: JSON.stringify(typeof misionesData!=='undefined'?misionesData:{}), ts: ts }),
+      window.__FB_SET__('gudmo9/planillas', { data: JSON.stringify(typeof planillaData!=='undefined'?planillaData:[]), ts: ts }),
+    ];
+    if(typeof inventarioDEI!=='undefined'){
+      writes.push(window.__FB_SET__('gudmo9/inventario', { data: JSON.stringify(inventarioDEI), ts: ts }));
+    }
+    var results = await Promise.all(writes);
+    var failed = results.filter(function(r){ return !r; }).length;
+    if(failed > 0){ showCloudStatus('⚠️ Sync parcial ('+failed+' errores)', '#f97316'); }
+    else { showCloudStatus('☁️ Sincronizado', '#22c55e'); }
+  } catch(e){
+    console.warn('fbSaveAll:', e);
+    showCloudStatus('⚠️ Sin conexion', '#f97316');
+  }
 }
 
 async function fbLoadAll(){
-  if(!window.__FB_READY__ || !fbConfig) return false;
+  if(!window.__FB_READY__) return false;
   try {
     fbSyncing = true;
     showCloudStatus('⟳ Cargando...', '#3b82f6');
-    // sbParse: extrae el array/objeto del snap de Supabase
-    function sbParse(snap){ if(!snap) return null; if(Array.isArray(snap)) return snap; if(snap.data){ try{ return JSON.parse(snap.data); }catch(e){ return snap.data; } } return snap; }
-    var mSnap = await window.__FB_GET__('gudmo9/members');
-    var cloudMembers = sbParse(mSnap);
-    if(cloudMembers && Array.isArray(cloudMembers) && cloudMembers.length > 0){
-      members = cloudMembers; sv('g9_members', members);
-    }
-    var hSnap = await window.__FB_GET__('gudmo9/historial');
-    var cloudHist = sbParse(hSnap);
-    if(cloudHist && Array.isArray(cloudHist) && cloudHist.length > historial.length){
-      historial = cloudHist; sv('g9_hist', historial);
-    }
-    var tSnap = await window.__FB_GET__('gudmo9/turnos');
-    var cloudTurnos = sbParse(tSnap);
-    if(cloudTurnos) { turnos = cloudTurnos; sv('g9_turnos', turnos); }
-    var bSnap = await window.__FB_GET__('gudmo9/bloque');
-    var cloudBloque = sbParse(bSnap);
-    if(cloudBloque) { bloqueData = cloudBloque; sv('g9_bloque', bloqueData); }
-    var munSnap = await window.__FB_GET__('gudmo9/municion');
-    var cloudMun = sbParse(munSnap);
-    if(cloudMun) { municionData = Array.isArray(cloudMun)?cloudMun:municionData; sv('g9_municion', municionData); }
-    var invSnap = await window.__FB_GET__('gudmo9/inventario');
-    var cloudInv = sbParse(invSnap);
-    if(cloudInv && typeof inventarioDEI!=='undefined') { inventarioDEI = cloudInv; sv('g9_inventario', inventarioDEI); }
+    var r;
+    r=sbX(await window.__FB_GET__('gudmo9/members'));    if(r&&Array.isArray(r)&&r.length>0){members=r;sv('g9_members',members);}
+    r=sbX(await window.__FB_GET__('gudmo9/historial'));  if(r&&Array.isArray(r)&&r.length>=historial.length){historial=r;sv('g9_hist',historial);}
+    r=sbX(await window.__FB_GET__('gudmo9/config'));     if(r&&r.cmdt!==undefined){config=r;sv('g9_config',config);}
+    r=sbX(await window.__FB_GET__('gudmo9/turnos'));     if(r&&Array.isArray(r)){turnos=r;sv('g9_turnos',turnos);}
+    r=sbX(await window.__FB_GET__('gudmo9/bloque'));     if(r&&typeof r==='object'){bloqueData=r;sv('g9_bloque',bloqueData);}
+    r=sbX(await window.__FB_GET__('gudmo9/ciclo'));      if(r&&r.diasTrabajo!==undefined){cicloConfig=r;sv('g9_ciclo',cicloConfig);}
+    r=sbX(await window.__FB_GET__('gudmo9/aseo'));       if(r&&Array.isArray(r)){aseoData=r;sv('g9_aseo',aseoData);}
+    r=sbX(await window.__FB_GET__('gudmo9/municion'));   if(r&&Array.isArray(r)){municionData=r;sv('g9_municion',municionData);}
+    r=sbX(await window.__FB_GET__('gudmo9/inventario')); if(r&&typeof inventarioDEI!=='undefined'){inventarioDEI=r;sv('g9_inventario',inventarioDEI);}
+    r=sbX(await window.__FB_GET__('gudmo9/misiones'));   if(r&&typeof misionesData!=='undefined'&&typeof r==='object'){misionesData=r;sv('g9_misiones',misionesData);}
+    r=sbX(await window.__FB_GET__('gudmo9/planillas'));  if(r&&Array.isArray(r)&&typeof planillaData!=='undefined'){planillaData=r;sv('g9_planillas',planillaData);}
     fbSyncing = false;
     showCloudStatus('☁️ Sincronizado', '#22c55e');
     return true;
   } catch(e){
+    console.warn('fbLoadAll:', e);
     fbSyncing = false;
-    showCloudStatus('⚠️ Sin conexión', '#f97316');
+    showCloudStatus('⚠️ Sin conexion', '#f97316');
     return false;
   }
 }
@@ -1664,59 +1680,49 @@ function liberarEspacioLocal(){
   }
 }
 
-// Un solo botón inteligente: sube primero, luego baja para confirmar
+// Sincronizar: sube todo, luego baja para confirmar coherencia
 async function fbSincronizar(){
   if(!window.__FB_READY__){
-    showToast('⚠️ Sin conexión a Firebase','#f97316'); return;
+    showToast('Sin conexion a Supabase','#f97316'); return;
   }
   showCloudStatus('⟳ Sincronizando...','#6366f1');
-  showToast('☁️ Sincronizando...','#6366f1');
+  showToast('Sincronizando...','#6366f1');
   try {
-    // 1. Subir datos locales
     await fbSaveAll();
-    // 2. Bajar para asegurar coherencia
-    liberarEspacioLocal();
-    function sbP(s){ if(!s) return null; if(Array.isArray(s)) return s; if(s.data){ try{ return JSON.parse(s.data); }catch(e){ return null; } } return s; }
-    var cm=sbP(await window.__FB_GET__('gudmo9/members')); if(cm&&Array.isArray(cm)&&cm.length>0){members=cm;sv('g9_members',members);}
-    var ch=sbP(await window.__FB_GET__('gudmo9/historial')); if(ch&&Array.isArray(ch)){historial=ch;sv('g9_hist',historial);}
-    var cc=sbP(await window.__FB_GET__('gudmo9/config')); if(cc&&cc.cmdt){config=cc;sv('g9_config',config);}
-    var cmun=sbP(await window.__FB_GET__('gudmo9/municion')); if(cmun&&Array.isArray(cmun)){municionData=cmun;sv('g9_municion',municionData);}
-    var cinv=sbP(await window.__FB_GET__('gudmo9/inventario')); if(cinv&&typeof inventarioDEI!=='undefined'){inventarioDEI=cinv;sv('g9_inventario',inventarioDEI);}
+    var loaded = await fbLoadAll();
     render(); renderDashboard();
     if(typeof checkReturnAlerts==='function') checkReturnAlerts();
     if(typeof applyProximosEstados==='function') applyProximosEstados();
+    if(typeof renderMunicion==='function') renderMunicion();
     checkAndShowStorageToolbar();
-    showToast('✅ Sincronizado','#22c55e');
+    showToast('✅ Todo sincronizado','#22c55e');
     showCloudStatus('☁️ Sincronizado','#22c55e');
   } catch(e){
-    showToast('❌ Error: '+e.message,'#ef4444');
+    showToast('Error: '+e.message,'#ef4444');
     showCloudStatus('⚠️ Error','#f97316');
   }
 }
 
-// Fuerza bajar desde Firebase e imponer sobre lo local
+// Fuerza bajar desde Supabase e imponer sobre lo local
 async function fbCargarForzado(){
   if(!window.__FB_READY__){
-    showToast('⚠️ Sin conexión a Firebase','#f97316'); return;
+    showToast('Sin conexion a Supabase','#f97316'); return;
   }
-  showToast('⬇️ Descargando desde la nube...','#3b82f6');
+  showToast('Descargando desde la nube...','#3b82f6');
   try {
-    liberarEspacioLocal();
-    function sbQ(s){ if(!s) return null; if(Array.isArray(s)) return s; if(s&&s.data){ try{return JSON.parse(s.data);}catch(e){return null;} } return s; }
-    var cm2=sbQ(await window.__FB_GET__('gudmo9/members')); if(cm2&&Array.isArray(cm2)&&cm2.length>0){members=cm2;sv('g9_members',members);}
-    var ch2=sbQ(await window.__FB_GET__('gudmo9/historial')); if(ch2&&Array.isArray(ch2)){historial=ch2;sv('g9_hist',historial);}
-    var ct2=sbQ(await window.__FB_GET__('gudmo9/turnos')); if(ct2){turnos=ct2;sv('g9_turnos',turnos);}
-    var cb2=sbQ(await window.__FB_GET__('gudmo9/bloque')); if(cb2){bloqueData=cb2;sv('g9_bloque',bloqueData);}
-    var cc2=sbQ(await window.__FB_GET__('gudmo9/config')); if(cc2&&cc2.cmdt){config=cc2;sv('g9_config',config);}
-    var cic2=sbQ(await window.__FB_GET__('gudmo9/ciclo')); if(cic2){cicloConfig=cic2;sv('g9_ciclo',cicloConfig);}
-    render(); renderDashboard();
-    if(typeof checkReturnAlerts==='function') checkReturnAlerts();
-    if(typeof applyProximosEstados==='function') applyProximosEstados();
-    checkAndShowStorageToolbar();
-    showToast('✅ Datos actualizados desde la nube','#22c55e');
-    showCloudStatus('☁️ Sincronizado','#22c55e');
+    var loaded = await fbLoadAll();
+    if(loaded){
+      render(); renderDashboard();
+      if(typeof checkReturnAlerts==='function') checkReturnAlerts();
+      if(typeof applyProximosEstados==='function') applyProximosEstados();
+      if(typeof renderMunicion==='function') renderMunicion();
+      checkAndShowStorageToolbar();
+      showToast('✅ Datos actualizados desde la nube','#22c55e');
+    } else {
+      showToast('No se pudo descargar — revisa conexion','#ef4444');
+    }
   } catch(e){
-    showToast('❌ Error al descargar: '+e.message,'#ef4444');
+    showToast('Error: '+e.message,'#ef4444');
   }
 }
 
