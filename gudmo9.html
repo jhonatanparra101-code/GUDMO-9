@@ -827,24 +827,10 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
         <div style="display:grid;grid-template-columns:2fr 1fr;gap:6px;margin-bottom:6px">
           <div>
             <div style="font-size:9px;color:var(--muted);margin-bottom:3px">Tipo de material</div>
-            <select id="munItemTipo" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:11px">
+            <select id="munItemTipo" onchange="munSvcOnTipoChange()" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:11px">
               <option value="">— Tipo —</option>
-              <option value="Granada CS 5231">💣 Granada CS 5231</option>
-              <option value="Granada Humo">💨 Granada Humo</option>
-              <option value="Granada Gas CS GL 302">💣 Granada Gas CS GL 302</option>
-              <option value="Stun / Mini Bang">⚡ Stun / Mini Bang</option>
-              <option value="Supresor de fuego">🔴 Supresor de fuego</option>
-              <option value="Cartucho Gas CS 37mm">🟡 Cartucho Gas CS 37mm</option>
-              <option value="Cartucho Gas CS 40mm">🟡 Cartucho Gas CS 40mm</option>
-              <option value="Cartucho Impulsor">🔵 Cartucho impulsor</option>
-              <option value="Lanzador 37mm">🔫 Lanzador 37mm</option>
-              <option value="Lanzador 40mm">🔫 Lanzador 40mm</option>
-              <option value="Lanzadora">🔫 Lanzadora</option>
-              <option value="Munición esférica">⚫ Munición esférica</option>
-              <option value="Cartucho Taser">Cartucho Taser</option>
-              <option value="Esferas O.C. Lanzadora">Esferas O.C. Lanzadora</option>
-              <option value="Escudo Antimotin IIIA">Escudo Antimotin IIIA</option>
             </select>
+            <div id="munItemStockInfo" style="font-size:9px;margin-top:3px;color:var(--muted)"></div>
           </div>
           <div>
             <div style="font-size:9px;color:var(--muted);margin-bottom:3px">Cantidad</div>
@@ -4427,22 +4413,85 @@ var munBorradorItems    = [];
 function munNuevoServicio(){
   munBorradorPersonas = [];
   munBorradorItems    = [];
+  window._munEditandoId = null;
   document.getElementById('munSvcFecha').value  = localDateStr();
   document.getElementById('munSvcLugar').value  = '';
   document.getElementById('munSvcEsc').value    = curEscuadra==='all'?'DEI 2':curEscuadra;
   munLimpiarFormPersona();
+  // Poblar miembros
   var sel = document.getElementById('munSvcMiembro');
   sel.innerHTML = '<option value="">— Seleccione o escriba manualmente —</option>';
-  var lista = members.slice().sort(function(a,b){ return (a.rank+a.name).localeCompare(b.rank+b.name); });
-  lista.forEach(function(m){
+  members.slice().sort(function(a,b){ return (a.rank+a.name).localeCompare(b.rank+b.name); }).forEach(function(m){
     var op = document.createElement('option');
     op.value = m.id;
     op.textContent = m.rank+' '+m.name+(m.idNum?' ('+m.idNum+')':'');
     sel.appendChild(op);
   });
+  // Poblar tipos de material desde inventarioDEI
+  munSvcPoblarTipos();
   munRenderBorradorPersonas();
   munRenderBorradorItems();
   document.getElementById('munServicioModal').style.display = 'flex';
+}
+
+function munSvcPoblarTipos(){
+  var sel = document.getElementById('munItemTipo');
+  if(!sel) return;
+  var info = (typeof invGetStockDisponible==='function') ? invGetStockDisponible() : null;
+  sel.innerHTML = '<option value="">— Tipo —</option>';
+  if(info && Object.keys(info.stock).length > 0){
+    // Primero los que tienen stock disponible
+    var tipos = Object.keys(info.stock).sort();
+    tipos.forEach(function(tipo){
+      var disp = info.disponible[tipo]||0;
+      var stock = info.stock[tipo]||0;
+      var op = document.createElement('option');
+      op.value = tipo;
+      op.textContent = tipo + ' [' + disp + ' disp / ' + stock + ' total]';
+      if(disp === 0) op.style.color = '#ef4444';
+      sel.appendChild(op);
+    });
+  } else {
+    // Sin inventario registrado — mostrar lista fija
+    var fijos = ['Granada CS 5231','Granada Humo','Granada Gas CS GL 302','Stun Mini Bang',
+      'Supresor de fuego','Cartucho Gas CS 37mm','Cartucho Gas CS 40mm','Cartucho Impulsor',
+      'Cartucho Taser','Esferas O.C. Lanzadora','Lanzador 37mm','Lanzador 40mm','Lanzadora',
+      'Municion esferica','Taser','Escudo Antimotin IIIA','Casco Antimotin'];
+    fijos.forEach(function(t){
+      var op = document.createElement('option');
+      op.value = t; op.textContent = t;
+      sel.appendChild(op);
+    });
+  }
+}
+
+function munSvcOnTipoChange(){
+  var tipo = document.getElementById('munItemTipo').value;
+  var infoEl = document.getElementById('munItemStockInfo');
+  if(!infoEl) return;
+  if(!tipo){ infoEl.textContent=''; return; }
+  var info = (typeof invGetStockDisponible==='function') ? invGetStockDisponible() : null;
+  if(info && info.stock[tipo] !== undefined){
+    var disp = info.disponible[tipo]||0;
+    var asig = info.asignado[tipo]||0;
+    var stk  = info.stock[tipo]||0;
+    // Buscar series disponibles
+    var series = [];
+    if(inventarioDEI && inventarioDEI.movimientos){
+      inventarioDEI.movimientos.forEach(function(mv){
+        mv.items.forEach(function(it){ if(it.tipo===tipo && it.series) series=series.concat(it.series); });
+      });
+    }
+    infoEl.style.color = disp===0?'var(--red)':disp<3?'var(--orange)':'var(--green)';
+    infoEl.innerHTML = 'Stock: '+stk+' | En servicio: '+asig+' | <b>Disponible: '+disp+'</b>'
+      + (series.length?' | Series: '+series.join(', '):'');
+    // Pre-llenar cantidad máxima sugerida
+    var cantEl = document.getElementById('munItemCant');
+    if(cantEl && disp > 0) cantEl.value = '1';
+  } else {
+    infoEl.textContent = 'Sin registro en inventario DEI';
+    infoEl.style.color = 'var(--muted)';
+  }
 }
 
 function munSvcOnMiembroChange(){
@@ -4471,13 +4520,24 @@ function munAgregarItem(){
   var tipo  = document.getElementById('munItemTipo').value;
   var cant  = parseInt(document.getElementById('munItemCant').value)||0;
   var serTxt= (document.getElementById('munItemSeries').value||'').trim();
-  if(!tipo){ showToast('⚠️ Seleccione el tipo de material','#f97316'); return; }
-  if(cant<1){ showToast('⚠️ Ingrese la cantidad','#f97316'); return; }
+  if(!tipo){ showToast('Seleccione el tipo de material','#f97316'); return; }
+  if(cant<1){ showToast('Ingrese la cantidad','#f97316'); return; }
+  // Validar contra inventario disponible
+  var info = (typeof invGetStockDisponible==='function') ? invGetStockDisponible() : null;
+  if(info && info.stock[tipo] !== undefined){
+    // Cuanto ya hay en el borrador actual para este tipo
+    var yaEnBorrador = munBorradorItems.reduce(function(s,it){ return s+(it.tipo===tipo?it.cantidad:0); },0);
+    var dispReal = (info.disponible[tipo]||0) - yaEnBorrador;
+    if(cant > dispReal){
+      showToast('Solo hay '+dispReal+' unidades disponibles de '+tipo,'#ef4444'); return;
+    }
+  }
   var series = serTxt ? serTxt.split('\n').map(function(s){ return s.trim(); }).filter(Boolean) : [];
   munBorradorItems.push({tipo:tipo, cantidad:cant, series:series, devuelto:0});
   document.getElementById('munItemTipo').value   = '';
   document.getElementById('munItemCant').value   = '1';
   document.getElementById('munItemSeries').value = '';
+  document.getElementById('munItemStockInfo').textContent = '';
   munRenderBorradorItems();
 }
 
