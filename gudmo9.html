@@ -1809,7 +1809,7 @@ function applyProximosEstados(){
   members.forEach(function(m){
     //
     // Si fechaFin === hoy → respetar la hora de presentación del miembro (o la global)
-    if(m.fechaFin === today && m.status !== 'Servicio'){
+    if(m.fechaFin && m.fechaFin <= today && m.status !== 'Servicio'){
       var horaPresM = m.horaPresentacion || (config.horaFormacion||'06:00');
       var minPresM  = parseInt(horaPresM.split(':')[0])*60 + parseInt((horaPresM.split(':')[1])||0);
       if(horaActual < minPresM) return; // aún no es hora de presentarse
