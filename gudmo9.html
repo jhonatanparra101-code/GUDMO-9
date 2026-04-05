@@ -324,24 +324,19 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <!-- KPI Row interactivo -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px" id="dashKpis"></div>
 
-  <!-- Semáforo operacional — GRANDE y clickeable -->
-  <div id="dashSemaforo" style="border-radius:14px;padding:16px;margin-bottom:14px;cursor:pointer" onclick="dashToggleSemaforoDetalle()"></div>
-
-  <!-- Panel de detalle cargos (oculto por defecto, emerge al tocar el semáforo) -->
-  <div id="dashSemaforoDetalle" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;animation:fadeSlide .2s ease">
-    <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px">👥 Personal en servicio por cargo</div>
-    <div id="dashCargoDetalle"></div>
+  <!-- FORMACION TACTICA DEI — siempre visible -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px">🪖 Dispositivo Negro — Formacion</div>
+      <div id="dashSemaforo" style="border-radius:20px;padding:3px 10px;cursor:pointer;font-size:10px;font-weight:700" onclick="dashToggleSemaforoDetalle()"></div>
+    </div>
+    <div id="dashFormacion"></div>
   </div>
 
-  <!-- FORMACION TACTICA DEI -->
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer" onclick="dashToggleFormacion()">
-      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px">🪖 Formacion Tactica DEI</div>
-      <div id="formacionChevron" style="font-size:12px;color:var(--muted)">▸</div>
-    </div>
-    <div id="dashFormacionPanel" style="display:none">
-      <div id="dashFormacion"></div>
-    </div>
+  <!-- Panel de detalle cargos (oculto por defecto) -->
+  <div id="dashSemaforoDetalle" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;animation:fadeSlide .2s ease">
+    <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px">👥 Personal en servicio por cargo</div>
+    <div id="dashCargoDetalle"></div>
   </div>
 
   <!-- Novedades interactiva — toque para ver quiénes son -->
@@ -6003,7 +5998,7 @@ function renderDashboard(){
 
   // Semáforo
   dashDrawSemaforo(enServicio, personal);
-  if(_formacionAbierta) renderFormacionTactica();
+  renderFormacionTactica();
 
   // Donut
   dashDrawDonut(personal);
@@ -6061,28 +6056,9 @@ function dashDrawSemaforo(enServicio, personal){
     title='NO OPERACIONAL'; subtitle=problemas+' cargos críticos sin cubrir';
   }
 
-  el.style.cssText='border-radius:14px;padding:16px;margin-bottom:14px;cursor:pointer;background:'+bg+';border:2px solid '+color;
-
-  // Chips de cargos faltantes
-  var chips = missingCargos.map(function(c){
-    return '<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:9px;padding:3px 9px;border-radius:20px;margin:2px 2px 0 0;display:inline-block">⚠️ '+c+'</span>';
-  }).join('');
-  if(escFaltan>0) chips+='<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:9px;padding:3px 9px;border-radius:20px;margin:2px 2px 0 0;display:inline-block">⚠️ Escuderos: '+escuderos+'/'+CRITICAL_MIN_ESCUDEROS+'</span>';
-
-  el.innerHTML =
-    '<div style="display:flex;align-items:center;gap:14px">'
-    +'<div style="font-size:46px;line-height:1">'+icon+'</div>'
-    +'<div style="flex:1">'
-    +'<div style="font-size:20px;font-weight:900;color:'+color+';letter-spacing:2px;line-height:1.1">'+title+'</div>'
-    +'<div style="font-size:11px;color:var(--muted2);margin-top:3px">'+subtitle+'</div>'
-    +(chips?'<div style="margin-top:7px">'+chips+'</div>':'')
-    +'</div>'
-    +'<div style="text-align:center;flex-shrink:0">'
-    +'<div style="font-size:38px;font-weight:900;color:'+color+';line-height:1">'+enServicio.length+'</div>'
-    +'<div style="font-size:9px;color:var(--muted)">en servicio</div>'
-    +'</div>'
-    +'</div>'
-    +'<div style="font-size:9px;color:var(--muted);text-align:center;margin-top:8px;opacity:.6">toque para ver detalle ▾</div>';
+  el.style.cssText='border-radius:20px;padding:3px 10px;cursor:pointer;background:'+bg+';border:1px solid '+color+';font-size:10px;font-weight:700;color:'+color+';display:inline-block';
+  var missingShort = missingCargos.slice(0,2).map(function(c){ return c.replace('Operador ','Op.').replace('Lider ','L.'); }).join(', ');
+  el.textContent = icon+' '+title+(missingShort?' — '+missingShort:'');
 
   // Renderizar detalle de cargos para cuando se expanda
   dashDrawCargoDetalle(enServicio, personal);
