@@ -333,6 +333,17 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
     <div id="dashCargoDetalle"></div>
   </div>
 
+  <!-- FORMACION TACTICA DEI -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer" onclick="dashToggleFormacion()">
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px">🪖 Formacion Tactica DEI</div>
+      <div id="formacionChevron" style="font-size:12px;color:var(--muted)">▸</div>
+    </div>
+    <div id="dashFormacionPanel" style="display:none">
+      <div id="dashFormacion"></div>
+    </div>
+  </div>
+
   <!-- Novedades interactiva — toque para ver quiénes son -->
   <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
     <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">📊 Novedades — toque una categoría</div>
@@ -5992,6 +6003,7 @@ function renderDashboard(){
 
   // Semáforo
   dashDrawSemaforo(enServicio, personal);
+  if(_formacionAbierta) renderFormacionTactica();
 
   // Donut
   dashDrawDonut(personal);
@@ -6115,9 +6127,150 @@ function dashDrawCargoDetalle(enServicio, personal){
       +'</div>'
       +'</div>';
   }).join('');
-  html += '<div style="font-size:9px;color:var(--muted);margin-top:8px">★ cargo crítico</div>';
+  html += '<div style="font-size:9px;color:var(--muted);margin-top:8px">★ cargo critico</div>';
   el.innerHTML = html;
 }
+
+// ── FORMACION TACTICA DEI ──
+var _formacionAbierta = false;
+function dashToggleFormacion(){
+  _formacionAbierta = !_formacionAbierta;
+  var p = document.getElementById('dashFormacionPanel');
+  var c = document.getElementById('formacionChevron');
+  if(p) p.style.display = _formacionAbierta ? 'block' : 'none';
+  if(c) c.textContent = _formacionAbierta ? '▾' : '▸';
+  if(_formacionAbierta) renderFormacionTactica();
+}
+
+function renderFormacionTactica(){
+  var el = document.getElementById('dashFormacion');
+  if(!el) return;
+  var esc = (typeof curEscuadra!=='undefined' && curEscuadra!=='all') ? curEscuadra : 'DEI 2';
+  var personal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
+  var enSvc = personal.filter(function(m){ return m.status==='Servicio'; });
+
+  // Buscar quien tiene cada cargo en servicio
+  function getCargo(cargo){
+    return enSvc.find(function(m){ return m.cargo===cargo; }) || null;
+  }
+  function getCargoAll(cargo){
+    return enSvc.filter(function(m){ return m.cargo===cargo; });
+  }
+
+  // Muñequito SVG — verde=cubierto, rojo=falta
+  function muneco(cargo, label, m, w){
+    var ok = m !== null;
+    var color = ok ? '#22c55e' : '#ef4444';
+    var bgc   = ok ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.12)';
+    var bdc   = ok ? 'rgba(34,197,94,.4)'  : 'rgba(239,68,68,.4)';
+    var nombre = ok ? (m.name.split(' ')[0]+' '+( m.name.split(' ')[2]||m.name.split(' ')[1]||'')).substring(0,10) : '---';
+    var rankTxt = ok ? m.rank : '';
+    w = w||52;
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:'+w+'px">'
+      +'<div style="background:'+bgc+';border:1.5px solid '+bdc+';border-radius:8px;padding:4px 3px;width:'+w+'px;box-sizing:border-box">'
+      // Muñeco SVG
+      +'<svg width="100%" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg">'
+      // Cabeza
+      +'<circle cx="18" cy="9" r="7" fill="'+color+'" opacity=".9"/>'
+      // Cuerpo
+      +'<rect x="11" y="17" width="14" height="14" rx="3" fill="'+color+'" opacity=".8"/>'
+      // Brazos
+      +'<rect x="3" y="18" width="8" height="4" rx="2" fill="'+color+'" opacity=".7"/>'
+      +'<rect x="25" y="18" width="8" height="4" rx="2" fill="'+color+'" opacity=".7"/>'
+      // Piernas
+      +'<rect x="12" y="31" width="5" height="11" rx="2" fill="'+color+'" opacity=".7"/>'
+      +'<rect x="19" y="31" width="5" height="11" rx="2" fill="'+color+'" opacity=".7"/>'
+      +(ok?'':'<line x1="4" y1="4" x2="32" y2="40" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="2 2"/>')
+      +'</svg>'
+      +'<div style="font-size:7.5px;font-weight:700;color:'+color+';text-align:center;line-height:1.2;margin-top:1px">'+rankTxt+'</div>'
+      +'<div style="font-size:7px;color:'+(ok?'var(--text)':'var(--muted)')+';text-align:center;line-height:1.2;max-width:'+w+'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nombre+'</div>'
+      +'</div>'
+      +'<div style="font-size:7px;color:var(--muted);text-align:center;font-weight:600;letter-spacing:.3px">'+label+'</div>'
+      +'</div>';
+  }
+
+  // Escuderos — necesitamos hasta 10
+  var escuderos = getCargoAll('Escudero');
+  var MIN_ESC = 6;
+  function escuderoSlot(i){
+    var m = escuderos[i] || null;
+    return muneco('Escudero','E'+(i+1), m, 40);
+  }
+
+  // SPI
+  var spis = getCargoAll('SPI');
+  function spiSlot(i){ return muneco('SPI','SPI', spis[i]||null, 44); }
+
+  var cte1  = getCargo('Cte. DEI');
+  var cte2  = getCargo('Cte. Escuadra');
+  var cte3  = getCargo('Líder Escuderos');
+  var op37  = getCargo('Operador 37');
+  var op40  = getCargo('Operador 40');
+  var opLanz= getCargo('Op. Lanzadora');
+  var taser = getCargo('Op. Taser');
+  var enfer = getCargo('Enfermero');
+  var rfa1  = getCargoAll('Líder Operadores')[0]||null;
+  var rfa2  = getCargoAll('Líder Operadores')[1]||null;
+
+  var fila = 'display:flex;align-items:flex-end;justify-content:center;gap:4px;margin-bottom:8px;flex-wrap:wrap;';
+
+  var html2 = '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:10px 6px;overflow-x:auto">';
+
+  // Título
+  html2 += '<div style="text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+esc+' — Dispositivo Negro</div>';
+
+  // FILA 1: Operadores AML + Cte DEI al centro
+  html2 += '<div style="'+fila+'">';
+  html2 += muneco('Operador 37','OP37', op37, 48);
+  html2 += muneco('Op. Lanzadora','LANZ', opLanz, 48);
+  html2 += '<div style="min-width:8px"></div>';
+  html2 += muneco('Cte. DEI','CTE DEI', cte1, 52);
+  html2 += '<div style="min-width:8px"></div>';
+  html2 += muneco('Operador 40','OP40', op40, 48);
+  html2 += muneco('Op. Taser','TASER', taser, 48);
+  html2 += '</div>';
+
+  // FILA 2: RFA + Cte Escuadra + RFA
+  html2 += '<div style="'+fila+'">';
+  html2 += muneco('Líder Operadores','R-FA', rfa1, 52);
+  html2 += '<div style="min-width:20px"></div>';
+  html2 += muneco('Cte. Escuadra','CTE ESC', cte2, 56);
+  html2 += '<div style="min-width:20px"></div>';
+  html2 += muneco('Líder Operadores','R-FA', rfa2, 52);
+  html2 += '</div>';
+
+  // FILA 3: SPI SPI TASER (ya usado arriba) SPI SPI + Enfermero
+  html2 += '<div style="'+fila+'">';
+  html2 += spiSlot(0);
+  html2 += spiSlot(1);
+  html2 += '<div style="min-width:12px"></div>';
+  html2 += muneco('Líder Escuderos','L.ESC', cte3, 52);
+  html2 += '<div style="min-width:12px"></div>';
+  html2 += spiSlot(2);
+  html2 += muneco('Enfermero','ENF', enfer, 44);
+  html2 += '</div>';
+
+  // FILA 4: Escuderos
+  html2 += '<div style="'+fila+'margin-top:4px">';
+  for(var i=0; i<10; i++) html2 += escuderoSlot(i);
+  html2 += '</div>';
+
+  // Leyenda
+  var totalOk = [cte1,cte2,cte3,op37,op40,opLanz,taser,enfer,rfa1].filter(Boolean).length
+    + Math.min(spis.length,3) + Math.min(escuderos.length,10);
+  var totalReq = 9+3+10;
+  html2 += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)">'
+    +'<div style="display:flex;gap:10px">'
+    +'<span style="font-size:9px;color:#22c55e">● Cubierto</span>'
+    +'<span style="font-size:9px;color:#ef4444">● Falta</span>'
+    +'</div>'
+    +'<div style="font-size:9px;color:var(--muted)">'+totalOk+'/'+totalReq+' posiciones</div>'
+    +'</div>';
+
+  html2 += '</div>';
+  el.innerHTML = html2;
+}
+
 
 //
 var _dashDonutSegmentos = [];
