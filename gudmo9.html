@@ -1374,118 +1374,51 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 
 <div class="toast" id="toast">✅</div>
 
-<!-- Firebase: REST API con compresion para evitar limite de tamano -->
+<!-- Supabase — almacenamiento en nube confiable -->
 <script>
-// Compresor LZ simple — reduce JSON entre 60-80%
-var LZ = (function(){
-  function compress(s){
-    var d={},o='',r='',c,i=256,w='';
-    for(var a=0;a<256;a++) d[String.fromCharCode(a)]=a;
-    for(var n=0;n<s.length;n++){
-      c=s[n]; var wc=w+c;
-      if(d[wc]!==undefined){w=wc;}
-      else{
-        o+=String.fromCharCode(d[w]);
-        d[wc]=i++;w=c;
-      }
-    }
-    if(w) o+=String.fromCharCode(d[w]);
-    // encode as base64
-    var b='';
-    for(var j=0;j<o.length;j++) b+=('0000'+o.charCodeAt(j).toString(16)).slice(-4);
-    return b;
-  }
-  function decompress(b){
-    var o='';
-    for(var i=0;i<b.length;i+=4) o+=String.fromCharCode(parseInt(b.substr(i,4),16));
-    var d={},r='',w='',c,i2=256,entry='';
-    for(var a=0;a<256;a++) d[a]=String.fromCharCode(a);
-    w=String.fromCharCode(o.charCodeAt(0)); r=w;
-    for(var n=1;n<o.length;n++){
-      var k=o.charCodeAt(n);
-      entry=(d[k]!==undefined)?d[k]:(w+w[0]);
-      r+=entry;
-      d[i2++]=w+entry[0];
-      w=entry;
-    }
-    return r;
-  }
-  return {compress:compress, decompress:decompress};
+(function(){
+  var URL  = "https://mptfylmatnvlaztrqcax.supabase.co";
+  var KEY  = "sb_publishable_qKMworw6YVacmgAh8E98wg_zDfr7W6E";
+  var API  = URL + "/rest/v1/gudmo9";
+  var HDR  = {
+    "Content-Type":  "application/json",
+    "apikey":        KEY,
+    "Authorization": "Bearer " + KEY,
+    "Prefer":        "resolution=merge-duplicates"
+  };
+
+  window.__FB_SET__ = async function(path, data){
+    try {
+      var key = path.replace('/','_');
+      var val = typeof data.data === 'string' ? data.data : JSON.stringify(data);
+      var resp = await fetch(API, {
+        method: "POST",
+        headers: HDR,
+        body: JSON.stringify({ key: key, data: val, updated_at: new Date().toISOString() })
+      });
+      if(!resp.ok){ var e=await resp.text(); console.warn('SB write '+resp.status,e.substring(0,100)); return false; }
+      return true;
+    } catch(e){ console.warn('SB write:', e); return false; }
+  };
+
+  window.__FB_GET__ = async function(path){
+    try {
+      var key = path.replace('/','_');
+      var resp = await fetch(API + "?key=eq." + encodeURIComponent(key) + "&select=data", {
+        headers: { "apikey": KEY, "Authorization": "Bearer " + KEY }
+      });
+      if(!resp.ok) return null;
+      var rows = await resp.json();
+      if(!rows || !rows.length || !rows[0].data) return null;
+      var raw = rows[0].data;
+      try { return JSON.parse(raw); } catch(e){ return {data: raw}; }
+    } catch(e){ console.warn('SB read:', e); return null; }
+  };
+
+  window.__FB_READY__ = true;
+  console.log('Supabase conectado');
+  if(window.__FB_CONNECTED_CB__) window.__FB_CONNECTED_CB__();
 })();
-
-window.__FB_INIT__ = async function(cfg){
-  try {
-    var projectId = cfg.projectId;
-    var apiKey    = cfg.apiKey;
-    var BASE = 'https://firestore.googleapis.com/v1/projects/' + projectId + '/databases/(default)/documents';
-
-    window.__FB_SET__ = async function(path, data){
-      try {
-        var parts = path.split('/');
-        var url = BASE+'/'+parts[0]+'/'+parts[1]+'?key='+apiKey;
-        // Comprimir el valor del campo 'data' si existe y es string grande
-        var payload = {};
-        Object.keys(data).forEach(function(k){
-          var v = data[k];
-          if(k==='data' && typeof v==='string' && v.length>1000){
-            payload[k] = {stringValue: 'LZ:'+LZ.compress(v)};
-          } else if(typeof v==='number'){
-            payload[k] = Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};
-          } else {
-            payload[k] = {stringValue: String(v)};
-          }
-        });
-        var resp = await fetch(url,{
-          method:'PATCH',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({fields:payload})
-        });
-        if(!resp.ok){
-          var errText = await resp.text();
-          console.warn('FB write HTTP '+resp.status+':', errText.substring(0,200));
-          return false;
-        }
-        return true;
-      } catch(e){ console.warn('FB write:',e); return false; }
-    };
-
-    window.__FB_GET__ = async function(path){
-      try {
-        var parts = path.split('/');
-        var url = BASE+'/'+parts[0]+'/'+parts[1]+'?key='+apiKey;
-        var resp = await fetch(url);
-        if(resp.status===404) return null;
-        if(!resp.ok) return null;
-        var doc = await resp.json();
-        if(!doc||!doc.fields) return null;
-        var out={};
-        Object.keys(doc.fields).forEach(function(k){
-          var fv=doc.fields[k];
-          var val=null;
-          if('stringValue' in fv){
-            val=fv.stringValue;
-            // Descomprimir si aplica
-            if(typeof val==='string' && val.substring(0,3)==='LZ:'){
-              try{ val=LZ.decompress(val.substring(3)); }
-              catch(e){ console.warn('LZ decompress error',k,e); }
-            }
-          } else if('integerValue' in fv){ val=parseInt(fv.integerValue); }
-          else if('doubleValue' in fv){ val=fv.doubleValue; }
-          else if('booleanValue' in fv){ val=fv.booleanValue; }
-          out[k]=val;
-        });
-        return out;
-      } catch(e){ console.warn('FB read:',e); return null; }
-    };
-
-    window.__FB_READY__ = true;
-    console.log('Firebase conectado (REST+LZ)');
-    if(window.__FB_CONNECTED_CB__) window.__FB_CONNECTED_CB__();
-  } catch(e){
-    console.warn('Firebase init error:',e);
-    window.__FB_READY__ = false;
-  }
-};
 </script>
 
 <script>
@@ -1677,33 +1610,30 @@ async function fbLoadAll(){
   try {
     fbSyncing = true;
     showCloudStatus('⟳ Cargando...', '#3b82f6');
+    // sbParse: extrae el array/objeto del snap de Supabase
+    function sbParse(snap){ if(!snap) return null; if(Array.isArray(snap)) return snap; if(snap.data){ try{ return JSON.parse(snap.data); }catch(e){ return snap.data; } } return snap; }
     var mSnap = await window.__FB_GET__('gudmo9/members');
-    if(mSnap && mSnap.data){
-      var cloudMembers = JSON.parse(mSnap.data);
-      // Use cloud data if it's newer or local is empty
-      var localTs = parseInt(localStorage.getItem('g9_members_ts')||'0');
-      if(cloudMembers.length > 0 && (mSnap.ts > localTs || members.length === 0)){
-        members = cloudMembers;
-        sv('g9_members', members);
-        localStorage.setItem('g9_members_ts', mSnap.ts);
-      }
+    var cloudMembers = sbParse(mSnap);
+    if(cloudMembers && Array.isArray(cloudMembers) && cloudMembers.length > 0){
+      members = cloudMembers; sv('g9_members', members);
     }
     var hSnap = await window.__FB_GET__('gudmo9/historial');
-    if(hSnap && hSnap.data){
-      var cloudHist = JSON.parse(hSnap.data);
-      if(cloudHist.length > historial.length) {
-        historial = cloudHist;
-        sv('g9_hist', historial);
-      }
+    var cloudHist = sbParse(hSnap);
+    if(cloudHist && Array.isArray(cloudHist) && cloudHist.length > historial.length){
+      historial = cloudHist; sv('g9_hist', historial);
     }
     var tSnap = await window.__FB_GET__('gudmo9/turnos');
-    if(tSnap && tSnap.data) { turnos = JSON.parse(tSnap.data); sv('g9_turnos', turnos); }
+    var cloudTurnos = sbParse(tSnap);
+    if(cloudTurnos) { turnos = cloudTurnos; sv('g9_turnos', turnos); }
     var bSnap = await window.__FB_GET__('gudmo9/bloque');
-    if(bSnap && bSnap.data) { bloqueData = JSON.parse(bSnap.data); sv('g9_bloque', bloqueData); }
+    var cloudBloque = sbParse(bSnap);
+    if(cloudBloque) { bloqueData = cloudBloque; sv('g9_bloque', bloqueData); }
     var munSnap = await window.__FB_GET__('gudmo9/municion');
-    if(munSnap && munSnap.data) { municionData = JSON.parse(munSnap.data); sv('g9_municion', municionData); }
+    var cloudMun = sbParse(munSnap);
+    if(cloudMun) { municionData = Array.isArray(cloudMun)?cloudMun:municionData; sv('g9_municion', municionData); }
     var invSnap = await window.__FB_GET__('gudmo9/inventario');
-    if(invSnap && invSnap.data && typeof inventarioDEI!=='undefined') { inventarioDEI = JSON.parse(invSnap.data); sv('g9_inventario', inventarioDEI); }
+    var cloudInv = sbParse(invSnap);
+    if(cloudInv && typeof inventarioDEI!=='undefined') { inventarioDEI = cloudInv; sv('g9_inventario', inventarioDEI); }
     fbSyncing = false;
     showCloudStatus('☁️ Sincronizado', '#22c55e');
     return true;
@@ -1720,27 +1650,22 @@ function showCloudStatus(msg, color){
 }
 
 async function initFirebase(){
-  // Firebase config pre-configurado para GUDMO-9
-  var cfg = {
-    apiKey: "AIzaSyBqBBTN0PAaFfGJbfzmCyMbbQB5dsY-_v8",
-    authDomain: "gudmo-9.firebaseapp.com",
-    projectId: "gudmo-9",
-    storageBucket: "gudmo-9.firebasestorage.app",
-    messagingSenderId: "951542097148",
-    appId: "1:951542097148:web:15791059eeaa986e33a379"
-  };
-  sv('g9_fbconfig', cfg);
+  // Supabase ya está listo — conectar directamente
   window.__FB_CONNECTED_CB__ = async function(){
     showCloudStatus('⟳ Sincronizando...','#3b82f6');
     var loaded = await fbLoadAll();
     if(loaded) render();
     setInterval(fbSaveAll, 120000);
   };
-  if(window.__FB_INIT__){
-    await window.__FB_INIT__(cfg);
+  if(window.__FB_READY__){
+    window.__FB_CONNECTED_CB__();
   } else {
-    // SDK aún cargando — guardar config para cuando termine
-    window.__FB_PENDING_CFG__ = cfg;
+    // Darle 500ms por si el script aún está ejecutándose
+    setTimeout(function(){
+      if(window.__FB_READY__ && window.__FB_CONNECTED_CB__){
+        window.__FB_CONNECTED_CB__();
+      }
+    }, 500);
   }
 }
 
@@ -1765,16 +1690,12 @@ async function fbSincronizar(){
     await fbSaveAll();
     // 2. Bajar para asegurar coherencia
     liberarEspacioLocal();
-    var mSnap = await window.__FB_GET__('gudmo9/members');
-    if(mSnap && mSnap.data){ var cm=JSON.parse(mSnap.data); if(Array.isArray(cm)&&cm.length>0){members=cm;sv('g9_members',members);}}
-    var hSnap = await window.__FB_GET__('gudmo9/historial');
-    if(hSnap && hSnap.data){ historial=JSON.parse(hSnap.data); sv('g9_hist',historial); }
-    var cSnap = await window.__FB_GET__('gudmo9/config');
-    if(cSnap && cSnap.data){ config=JSON.parse(cSnap.data); sv('g9_config',config); }
-    var munSnap2 = await window.__FB_GET__('gudmo9/municion');
-    if(munSnap2 && munSnap2.data){ municionData=JSON.parse(munSnap2.data); sv('g9_municion',municionData); }
-    var invSnap2 = await window.__FB_GET__('gudmo9/inventario');
-    if(invSnap2 && invSnap2.data && typeof inventarioDEI!=='undefined'){ inventarioDEI=JSON.parse(invSnap2.data); sv('g9_inventario',inventarioDEI); }
+    function sbP(s){ if(!s) return null; if(Array.isArray(s)) return s; if(s.data){ try{ return JSON.parse(s.data); }catch(e){ return null; } } return s; }
+    var cm=sbP(await window.__FB_GET__('gudmo9/members')); if(cm&&Array.isArray(cm)&&cm.length>0){members=cm;sv('g9_members',members);}
+    var ch=sbP(await window.__FB_GET__('gudmo9/historial')); if(ch&&Array.isArray(ch)){historial=ch;sv('g9_hist',historial);}
+    var cc=sbP(await window.__FB_GET__('gudmo9/config')); if(cc&&cc.cmdt){config=cc;sv('g9_config',config);}
+    var cmun=sbP(await window.__FB_GET__('gudmo9/municion')); if(cmun&&Array.isArray(cmun)){municionData=cmun;sv('g9_municion',municionData);}
+    var cinv=sbP(await window.__FB_GET__('gudmo9/inventario')); if(cinv&&typeof inventarioDEI!=='undefined'){inventarioDEI=cinv;sv('g9_inventario',inventarioDEI);}
     render(); renderDashboard();
     if(typeof checkReturnAlerts==='function') checkReturnAlerts();
     if(typeof applyProximosEstados==='function') applyProximosEstados();
@@ -1795,21 +1716,13 @@ async function fbCargarForzado(){
   showToast('⬇️ Descargando desde la nube...','#3b82f6');
   try {
     liberarEspacioLocal();
-    var mSnap = await window.__FB_GET__('gudmo9/members');
-    if(mSnap && mSnap.data){
-      var cm = JSON.parse(mSnap.data);
-      if(Array.isArray(cm) && cm.length > 0){ members = cm; sv('g9_members', members); }
-    }
-    var hSnap = await window.__FB_GET__('gudmo9/historial');
-    if(hSnap && hSnap.data){ historial = JSON.parse(hSnap.data); sv('g9_hist', historial); }
-    var tSnap = await window.__FB_GET__('gudmo9/turnos');
-    if(tSnap && tSnap.data){ turnos = JSON.parse(tSnap.data); sv('g9_turnos', turnos); }
-    var bSnap = await window.__FB_GET__('gudmo9/bloque');
-    if(bSnap && bSnap.data){ bloqueData = JSON.parse(bSnap.data); sv('g9_bloque', bloqueData); }
-    var cSnap = await window.__FB_GET__('gudmo9/config');
-    if(cSnap && cSnap.data){ config = JSON.parse(cSnap.data); sv('g9_config', config); }
-    var cicloSnap = await window.__FB_GET__('gudmo9/ciclo');
-    if(cicloSnap && cicloSnap.data){ cicloConfig = JSON.parse(cicloSnap.data); sv('g9_ciclo', cicloConfig); }
+    function sbQ(s){ if(!s) return null; if(Array.isArray(s)) return s; if(s&&s.data){ try{return JSON.parse(s.data);}catch(e){return null;} } return s; }
+    var cm2=sbQ(await window.__FB_GET__('gudmo9/members')); if(cm2&&Array.isArray(cm2)&&cm2.length>0){members=cm2;sv('g9_members',members);}
+    var ch2=sbQ(await window.__FB_GET__('gudmo9/historial')); if(ch2&&Array.isArray(ch2)){historial=ch2;sv('g9_hist',historial);}
+    var ct2=sbQ(await window.__FB_GET__('gudmo9/turnos')); if(ct2){turnos=ct2;sv('g9_turnos',turnos);}
+    var cb2=sbQ(await window.__FB_GET__('gudmo9/bloque')); if(cb2){bloqueData=cb2;sv('g9_bloque',bloqueData);}
+    var cc2=sbQ(await window.__FB_GET__('gudmo9/config')); if(cc2&&cc2.cmdt){config=cc2;sv('g9_config',config);}
+    var cic2=sbQ(await window.__FB_GET__('gudmo9/ciclo')); if(cic2){cicloConfig=cic2;sv('g9_ciclo',cicloConfig);}
     render(); renderDashboard();
     if(typeof checkReturnAlerts==='function') checkReturnAlerts();
     if(typeof applyProximosEstados==='function') applyProximosEstados();
