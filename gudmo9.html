@@ -1530,9 +1530,21 @@ const sv = (k,v) => {
     var tx = db.transaction('kv','readwrite');
     tx.objectStore('kv').put(JSON.stringify(v), k);
   }).catch(function(){});
-  // Cloud sync for important keys
-  if(['g9_members','g9_hist','g9_turnos','g9_bloque'].includes(k)){
-    setTimeout(function(){ if(window.__FB_READY__) fbSaveAll(); }, 1000);
+  // Cloud sync inmediato para claves críticas
+  if(['g9_members','g9_hist','g9_turnos','g9_bloque','g9_config'].includes(k)){
+    setTimeout(function(){
+      if(window.__FB_READY__){
+        var ts2 = Date.now();
+        var keyMap = {
+          'g9_members':  'gudmo9/members',
+          'g9_hist':     'gudmo9/historial',
+          'g9_turnos':   'gudmo9/turnos',
+          'g9_bloque':   'gudmo9/bloque',
+          'g9_config':   'gudmo9/config'
+        };
+        if(keyMap[k]) window.__FB_SET__(keyMap[k], { data: v, ts: ts2 });
+      }
+    }, 800);
   }
   // Write to localStorage (fast, synchronous)
   try { 
@@ -4160,10 +4172,22 @@ let municionData = ld('g9_municion', []);
 //   asignaciones:[{memberId,memberName,memberRank,cargo,cantidad,devuelto}],
 //   cerrado:bool}]
 
-function saveMunicion(){ sv('g9_municion', municionData); }
+function saveMunicion(){
+  sv('g9_municion', municionData);
+  if(window.__FB_READY__){
+    var ts = Date.now();
+    window.__FB_SET__('gudmo9/municion', { data: JSON.stringify(municionData), ts: ts });
+  }
+}
 
 var inventarioDEI = ld('g9_inventario', {stock:{}, movimientos:[]});
-function saveInventario(){ sv('g9_inventario', inventarioDEI); }
+function saveInventario(){
+  sv('g9_inventario', inventarioDEI);
+  if(window.__FB_READY__){
+    var ts = Date.now();
+    window.__FB_SET__('gudmo9/inventario', { data: JSON.stringify(inventarioDEI), ts: ts });
+  }
+}
 
 function munAccion(btn){
   var action = btn.getAttribute('data-action');
@@ -6061,7 +6085,7 @@ function dashDrawSemaforo(enServicio, personal){
     title='NO OPERACIONAL'; subtitle=problemas+' cargos críticos sin cubrir';
   }
 
-  el.style.cssTel.style.cssText='border-radius:14px;padding:16px;margin-bottom:14px;cursor:pointer;background:'+bg+';border:2px solid '+color;
+  el.style.cssText='border-radius:14px;padding:16px;margin-bottom:14px;cursor:pointer;background:'+bg+';border:2px solid '+color;
 
   var chips = missingCargos.map(function(c){
     return '<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:9px;padding:3px 9px;border-radius:20px;margin:2px 2px 0 0;display:inline-block">⚠️ '+c+'</span>';
