@@ -1377,39 +1377,42 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   var URL  = "https://mptfylmatnvlaztrqcax.supabase.co";
   var KEY  = "sb_publishable_qKMworw6YVacmgAh8E98wg_zDfr7W6E";
   var API  = URL + "/rest/v1/gudmo9";
-  var HDR  = {
-    "Content-Type":  "application/json",
-    "apikey":        KEY,
-    "Authorization": "Bearer " + KEY,
-    "Prefer":        "resolution=merge-duplicates"
-  };
-
   window.__FB_SET__ = async function(path, data){
     try {
       var key = path.replace('/','_');
       var val = typeof data.data === 'string' ? data.data : JSON.stringify(data);
       var resp = await fetch(API, {
         method: "POST",
-        headers: HDR,
+        headers: {
+          "Content-Type":  "application/json",
+          "apikey":        KEY,
+          "Authorization": "Bearer " + KEY,
+          "Prefer":        "resolution=merge-duplicates"
+        },
         body: JSON.stringify({ key: key, data: val, updated_at: new Date().toISOString() })
       });
-      if(!resp.ok){ var e=await resp.text(); console.warn('SB write '+resp.status,e.substring(0,100)); return false; }
+      if(!resp.ok){
+        var txt = await resp.text();
+        console.warn('SB write error '+resp.status, txt.substring(0,120));
+        return false;
+      }
       return true;
-    } catch(e){ console.warn('SB write:', e); return false; }
+    } catch(e){ console.warn('SB write excep:', e.message); return false; }
   };
 
   window.__FB_GET__ = async function(path){
     try {
       var key = path.replace('/','_');
       var resp = await fetch(API + "?key=eq." + encodeURIComponent(key) + "&select=data", {
-        headers: { "apikey": KEY, "Authorization": "Bearer " + KEY }
+        method: "GET",
+        headers: { "apikey": KEY, "Authorization": "Bearer " + KEY, "Accept": "application/json" }
       });
-      if(!resp.ok) return null;
+      if(!resp.ok){ console.warn('SB read error '+resp.status); return null; }
       var rows = await resp.json();
       if(!rows || !rows.length || !rows[0].data) return null;
       var raw = rows[0].data;
       try { return JSON.parse(raw); } catch(e){ return {data: raw}; }
-    } catch(e){ console.warn('SB read:', e); return null; }
+    } catch(e){ console.warn('SB read excep:', e.message); return null; }
   };
 
   window.__FB_READY__ = true;
