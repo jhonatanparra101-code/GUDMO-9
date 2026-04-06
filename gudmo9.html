@@ -6225,8 +6225,8 @@ function renderFormacionTactica(){
   var opLanzs= getCargoAll('Op. Lanzadora'); // hasta 2
   var taser  = getCargo('Op. Taser');
   var enfer  = getCargo('Enfermero');
-  var rfa1   = getCargoAll('Lider Operadores')[0]||null;
-  var rfa2   = getCargoAll('Lider Operadores')[1]||null;
+  var rfa1   = getCargoAll('Medios Técnicos')[0]||null;
+  var rfa2   = getCargoAll('Medios Técnicos')[1]||null;
 
   var fila = 'display:flex;align-items:flex-end;justify-content:center;gap:3px;margin-bottom:8px;flex-wrap:nowrap;overflow-x:auto;';
 
@@ -6251,11 +6251,11 @@ function renderFormacionTactica(){
 
   // FILA 2: R-FA · [CTE ESC 2] · R-FA
   html2 += '<div style="'+fila+'">';
-  html2 += muneco('Lider Operadores','R-FA', rfa1, 52);
+  html2 += muneco('Medios Técnicos','M.TEC', rfa1, 52);
   html2 += '<div style="min-width:24px"></div>';
   html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 56);
   html2 += '<div style="min-width:24px"></div>';
-  html2 += muneco('Lider Operadores','R-FA', rfa2, 52);
+  html2 += muneco('Medios Técnicos','M.TEC', rfa2, 52);
   html2 += '</div>';
 
   // FILA 3: S S T S S  (SPI SPI TASER SPI SPI)
