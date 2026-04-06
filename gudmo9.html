@@ -6070,7 +6070,7 @@ function dashToggleSemaforoDetalle(){
 
 function dashDrawSemaforo(enServicio, personal){
   var el = document.getElementById('dashSemaforo');
-  if(!el) return;
+  if(!el || !el.style) return;
   var missingCargos = CRITICAL_CARGOS.filter(function(c){
     return !enServicio.find(function(m){return m.cargo===c;});
   });
@@ -6562,7 +6562,11 @@ function initData(){
     console.error('Init error:', e);
   }
 }
-initApp();
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 </script>
 </body>
 </html>
