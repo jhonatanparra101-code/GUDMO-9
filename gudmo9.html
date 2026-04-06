@@ -2721,7 +2721,12 @@ function saveEdit(){
   // Historial
   const histDate=document.getElementById('histDate').value;
   const histObsVal=document.getElementById('histObs').value.trim();
-  if(histDate){
+  // Si no se llenó histDate pero hay fechaSalida, usar fechaSalida como fecha de registro
+  var ESTADOS_CON_FECHA = ['PermisoDEI','PermisoGUDMO','Permiso','Vacaciones',
+    'Incapacidad','Franquicia','Curso','Luto',
+    'ComisionRegion','ComisionFuera','ComisionErradicacion','Anexo'];
+  var fechaHist = histDate || (ESTADOS_CON_FECHA.includes(selStatus) ? (members[idx].fechaSalida||'') : '');
+  if(fechaHist){
     historial.push({
       id:uid(),
       memberId:editingId,
@@ -2729,11 +2734,12 @@ function saveEdit(){
       memberRank:members[idx].rank,
       escuadra:members[idx].escuadra,
       status:selStatus,
-      date:histDate,
-      fechaSalida:members[idx].fechaSalida||'',
+      date:fechaHist,
+      fechaSalida:members[idx].fechaSalida||fechaHist,
       fechaFin:members[idx].fechaFin||'',
       comisionLugar:members[idx].comisionLugar||'',
-      obs:histObsVal || (selStatus!==prevStatus?`Cambio de ${prevStatus} a ${selStatus}`:'')
+      tipoPermiso:selStatus==='Permiso'?(members[idx].tipoPermiso||''):'',
+      obs:histObsVal || (selStatus!==prevStatus?'Cambio de '+prevStatus+' a '+selStatus:'')
     });
     sv('g9_hist',historial);
   }
@@ -5708,6 +5714,8 @@ var NAV_COLORS = {
 function navDiasEnMes(memberId, tipo, mesIdx, anio){
   var TIPO_GRUPOS = {
     'Permiso': ['Permiso','PermisoGUDMO','PermisoDEI'],
+    'PermisoDEI': ['PermisoDEI','Permiso'],   // 'Permiso' genérico también cuenta si tipoPermiso=DEI
+    'PermisoGUDMO': ['PermisoGUDMO','Permiso'], // igual para GUDMO
     'Comision': ['Comision','ComisionRegion','ComisionFuera','ComisionErradicacion']
   };
   var tiposABuscar = TIPO_GRUPOS[tipo] || [tipo];
@@ -5716,15 +5724,28 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
   var registros = [];
 
   // 1. Desde historial: buscar entradas con status en el grupo de tipos
+  // Para PermisoDEI/PermisoGUDMO: incluir entradas 'Permiso' genérico si tienen tipoPermiso correcto
   var entrHist = historial.filter(function(h){
-    return h.memberId===memberId && tiposABuscar.includes(h.status);
+    if(h.memberId!==memberId) return false;
+    if(tiposABuscar.includes(h.status)) return true;
+    // Permiso genérico con tipoPermiso
+    if(h.status==='Permiso' && h.tipoPermiso){
+      if(tipo==='PermisoDEI' && h.tipoPermiso==='DEI') return true;
+      if(tipo==='PermisoGUDMO' && h.tipoPermiso==='GUDMO') return true;
+    }
+    return false;
   });
 
   // 2. Desde members: estado actual con fechaSalida y fechaFin
   // Usamos ayer como tope máximo: solo días ya transcurridos
   var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
   var m = members.find(function(x){ return x.id===memberId; });
-  if(m && tiposABuscar.includes(m.status) && m.fechaSalida){
+  var statusOkSec2 = tiposABuscar.includes(m&&m.status) ||
+    (m && m.status==='Permiso' && (
+      (tipo==='PermisoDEI'   && m.tipoPermiso==='DEI')  ||
+      (tipo==='PermisoGUDMO' && m.tipoPermiso==='GUDMO')
+    ));
+  if(m && statusOkSec2 && m.fechaSalida){
     var sal = new Date(m.fechaSalida+'T00:00:00');
     // Si la novedad aún no empezó no hay días que contar
     if(sal <= ayer){
@@ -5757,7 +5778,7 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
         ? (function(){ var d=new Date(h.fechaFin+'T00:00:00'); d.setDate(d.getDate()-1); return d; })()
         : ayer;
       // No doble contar con el estado actual
-      if(m && tiposABuscar.includes(m.status) && m.fechaSalida===h.fechaSalida) return;
+      if(m && statusOkSec2 && m.fechaSalida===h.fechaSalida) return;
       var d2 = navDiasEnRango(sal2, fin2, mesIdx, anio);
       if(d2>0){
         diasCalc += d2;
