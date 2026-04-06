@@ -1542,7 +1542,7 @@ const sv = (k,v) => {
           'g9_bloque':   'gudmo9/bloque',
           'g9_config':   'gudmo9/config'
         };
-        if(keyMap[k]) window.__FB_SET__(keyMap[k], { data: v, ts: ts2 });
+        if(keyMap[k]) window.__FB_SET__(keyMap[k], { data: JSON.stringify(v), ts: ts2 });
       }
     }, 800);
   }
@@ -1713,10 +1713,11 @@ async function fbSincronizar(){
   try {
     await fbSaveAll();
     var loaded = await fbLoadAll();
-    render(); renderDashboard();
-    if(typeof checkReturnAlerts==='function') checkReturnAlerts();
-    if(typeof applyProximosEstados==='function') applyProximosEstados();
-    if(typeof renderMunicion==='function') renderMunicion();
+    try { render(); } catch(e){ console.warn('render:',e); }
+    try { renderDashboard(); } catch(e){ console.warn('renderDashboard:',e); }
+    if(typeof checkReturnAlerts==='function') try{ checkReturnAlerts(); }catch(e){}
+    if(typeof applyProximosEstados==='function') try{ applyProximosEstados(); }catch(e){}
+    if(typeof renderMunicion==='function') try{ renderMunicion(); }catch(e){}
     checkAndShowStorageToolbar();
     showToast('✅ Todo sincronizado','#22c55e');
     showCloudStatus('☁️ Sincronizado','#22c55e');
@@ -1735,10 +1736,11 @@ async function fbCargarForzado(){
   try {
     var loaded = await fbLoadAll();
     if(loaded){
-      render(); renderDashboard();
-      if(typeof checkReturnAlerts==='function') checkReturnAlerts();
-      if(typeof applyProximosEstados==='function') applyProximosEstados();
-      if(typeof renderMunicion==='function') renderMunicion();
+      try { render(); } catch(e){ console.warn('render:',e); }
+      try { renderDashboard(); } catch(e){ console.warn('renderDashboard:',e); }
+      if(typeof checkReturnAlerts==='function') try{ checkReturnAlerts(); }catch(e){}
+      if(typeof applyProximosEstados==='function') try{ applyProximosEstados(); }catch(e){}
+      if(typeof renderMunicion==='function') try{ renderMunicion(); }catch(e){}
       checkAndShowStorageToolbar();
       showToast('✅ Datos actualizados desde la nube','#22c55e');
     } else {
