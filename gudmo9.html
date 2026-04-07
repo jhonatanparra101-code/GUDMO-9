@@ -5774,6 +5774,7 @@ var NAV_COLORS = {
 // "Permiso (todos)" agrupa Permiso + PermisoGUDMO + PermisoDEI
 // "Comision (todas)" agrupa Comision + ComisionRegion + ComisionFuera + ComisionErradicacion
 function navDiasEnMes(memberId, tipo, mesIdx, anio){
+  // Grupos de tipos: qué statuses buscar para cada filtro
   var TIPO_GRUPOS = {
     'Permiso':    ['Permiso','PermisoGUDMO','PermisoDEI'],
     'PermisoDEI': ['PermisoDEI'],
@@ -5784,92 +5785,83 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
   var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
   var m = members.find(function(x){ return x.id===memberId; });
 
-  // ── Paso 1: recopilar TODOS los periodos únicos de esta novedad ──
-  // Un periodo es {ini:'YYYY-MM-DD', fin:'YYYY-MM-DD'} donde fin = último día de novedad
-  var periodos = [];
-  var vistosIni = {}; // evitar duplicados por fechaSalida igual
+  // ── Recopilar periodos únicos: clave = fechaSalida (un funcionario solo puede
+  //    tener UNA novedad activa a la vez, así que fechaSalida identifica el periodo) ──
+  var periodosMap = {}; // key: fechaSalida → {ini, fin, iniStr, finStr}
 
-  // Función para agregar periodo si no está duplicado
-  function agregarPeriodo(iniStr, finStr, fuente){
+  function registrarPeriodo(iniStr, finStr){
     if(!iniStr) return;
-    var key = iniStr+'|'+(finStr||'');
-    if(vistosIni[key]) return; // ya está
-    vistosIni[key] = true;
+    if(periodosMap[iniStr]) return; // ya registrado con esta fecha de inicio
     var ini = new Date(iniStr+'T00:00:00');
+    if(ini > ayer) return; // aún no empezó
     var fin;
     if(finStr){
-      // fechaFin = día de presentación → último día de novedad = fechaFin - 1
       fin = new Date(finStr+'T00:00:00');
-      fin.setDate(fin.getDate()-1);
+      fin.setDate(fin.getDate()-1); // fechaFin es día de presentación, -1 = último día de novedad
     } else {
-      fin = ayer;
+      fin = new Date(ayer); // sin fechaFin: va hasta ayer
     }
-    if(ini > ayer) return; // aun no empezo
-    periodos.push({ini:ini, fin:fin, iniStr:iniStr, finStr:finStr||'', fuente:fuente});
+    periodosMap[iniStr] = {ini:ini, fin:fin, iniStr:iniStr, finStr:finStr||''};
   }
 
-  // Desde historial
+  // Función para saber si un registro del historial corresponde al tipo buscado
+  function matchTipo(h){
+    if(tiposABuscar.includes(h.status)) return true;
+    // Retrocompatibilidad: status='Permiso' con tipoPermiso específico
+    if(h.status==='Permiso'){
+      if(tipo==='PermisoDEI'    && h.tipoPermiso==='DEI')   return true;
+      if(tipo==='PermisoGUDMO'  && h.tipoPermiso==='GUDMO') return true;
+      if(tipo==='Permiso') return true; // Permiso todos incluye genérico
+    }
+    return false;
+  }
+
+  // Desde historial — solo entradas CON fechaSalida (periodo definido)
   historial.forEach(function(h){
     if(h.memberId!==memberId) return;
-    // Verificar si el status coincide con el tipo buscado
-    var ok = tiposABuscar.includes(h.status);
-    // Retrocompatibilidad: Permiso genérico con tipoPermiso
-    if(!ok && h.status==='Permiso' && h.tipoPermiso){
-      if(tipo==='PermisoDEI'   && h.tipoPermiso==='DEI')   ok=true;
-      if(tipo==='PermisoGUDMO' && h.tipoPermiso==='GUDMO') ok=true;
-      if(tipo==='Permiso') ok=true;
-    }
-    if(!ok) return;
-    // Solo usar entradas con fechaSalida — ignorar entradas sin fechas
-    // (las entradas sin fechaSalida son cambios de estado, no novedades con duración)
+    if(!matchTipo(h)) return;
     if(h.fechaSalida){
-      agregarPeriodo(h.fechaSalida, h.fechaFin||'', 'hist');
+      registrarPeriodo(h.fechaSalida, h.fechaFin||'');
     }
-    // Entradas sin fechaSalida: solo contar si NO hay otra entrada del mismo periodo
-    // y el tipo es exacto (no genérico) — para guardia/cursos registrados por día
-    else if(!h.fechaSalida && ['Guardia','Curso','Incapacidad','Franquicia','Luto','LeyMaria','Vacaciones','Anexo'].includes(h.status)){
-      agregarPeriodo(h.date, h.fechaFin||'', 'hist-dia');
+    // Entradas sin fechaSalida: tratar h.date como inicio para tipos que se registran por día
+    else if(h.date && ['Guardia','Curso','Incapacidad','Franquicia','Luto','LeyMaria','Vacaciones'].includes(h.status)){
+      registrarPeriodo(h.date, h.fechaFin||h.date);
     }
   });
 
-  // Estado actual del miembro si está en esta novedad ahora
+  // Estado actual del miembro
   if(m && m.fechaSalida){
-    var statusOk = tiposABuscar.includes(m.status) ||
+    var mOk = tiposABuscar.includes(m.status) ||
       (m.status==='Permiso' && (
         (tipo==='PermisoDEI'   && m.tipoPermiso==='DEI')  ||
         (tipo==='PermisoGUDMO' && m.tipoPermiso==='GUDMO') ||
         (tipo==='Permiso')
       ));
-    if(statusOk) agregarPeriodo(m.fechaSalida, m.fechaFin||'', 'actual');
+    if(mOk) registrarPeriodo(m.fechaSalida, m.fechaFin||'');
   }
 
-  // ── Paso 2: para cada periodo, contar los días que caen en mesIdx/anio ──
+  // ── Sumar días de cada periodo que caen en mesIdx/anio ──
   var diasCalc = 0;
   var registros = [];
-  periodos.forEach(function(p){
+  Object.values(periodosMap).forEach(function(p){
     var d = navDiasEnRango(p.ini, p.fin, mesIdx, anio);
     if(d>0){
       diasCalc += d;
-      registros.push({
-        desde: p.iniStr,
-        hasta: p.finStr||'hoy',
-        dias: d,
-        origen: p.fuente
-      });
+      registros.push({desde:p.iniStr, hasta:p.finStr||'hoy', dias:d});
     }
   });
 
-  // ── Paso 3: Guardia histórica importada ──
+  // Guardia histórica importada
   if(tipo==='Guardia'){
     var mesNombre = NAV_MESES_LARGO[mesIdx];
     guardiaData.filter(function(r){ return r.memberId===memberId && r.mes===mesNombre && r.ano===anio; })
     .forEach(function(r){
       diasCalc += (r.dias||0);
-      registros.push({ desde:mesNombre+' '+anio, hasta:'', dias:r.dias, origen:'guardia' });
+      registros.push({desde:mesNombre+' '+anio, hasta:'', dias:r.dias});
     });
   }
 
-  return { dias: diasCalc, registros: registros };
+  return {dias: diasCalc, registros: registros};
 }
 // Cuántos días de un rango [inicio, fin] caen en el mes mesIdx del año anio.
 // REGLA DE INTEGRIDAD: nunca se cuentan días futuros — el tope siempre es ayer
