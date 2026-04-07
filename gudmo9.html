@@ -1159,6 +1159,42 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <div id="navTabla"></div>
 </div>
 
+<!-- MODAL DETALLE/EDICION NOVEDADES -->
+<div class="modal-overlay" id="navDetalleModal" style="display:none" onclick="if(event.target===this)navCerrarDetalle()">
+  <div class="modal" style="max-height:85vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="modal-title" id="navDetalleTitulo" style="margin:0">Novedades</div>
+      <button onclick="navCerrarDetalle()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px">✕</button>
+    </div>
+    <div id="navDetalleBody"></div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR NOVEDAD INDIVIDUAL -->
+<div class="modal-overlay" id="navEditModal" style="display:none" onclick="if(event.target===this)navCerrarEditar()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="navEditTitulo">Editar novedad</div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px">Fecha inicio</label>
+      <input type="date" id="navEditFechaInicio" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:9px;color:var(--text);font-size:13px">
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px">Fecha fin (presentación)</label>
+      <input type="date" id="navEditFechaFin" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:9px;color:var(--text);font-size:13px">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px">Observación</label>
+      <input type="text" id="navEditObs" placeholder="Opcional" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:9px;color:var(--text);font-size:13px">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="navGuardarEdicion()" style="flex:1;background:var(--cyan);color:#000;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:13px;cursor:pointer">Guardar</button>
+      <button onclick="navCerrarEditar()" style="flex:1;background:var(--card);color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;cursor:pointer">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT MODAL -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
@@ -5934,23 +5970,123 @@ function renderNavMatriz(){
 }
 
 // Panel de detalle al tocar un número de la matriz
-function navShowDetalle(memberId, tipo, mesIdx, anio){
-  var m = members.find(function(x){ return x.id===memberId; });
-  if(!m) return;
-  var res = navDiasEnMes(memberId, tipo, mesIdx, anio);
-  if(!res.dias) return;
-  var colores = NAV_COLORS[tipo]||{bg:'rgba(99,102,241,.15)',color:'#6366f1'};
-  var mesNom = NAV_MESES_LARGO[mesIdx];
-  var nomCorto = m.rank+' '+m.name.split(' ').slice(0,2).join(' ');
-  var detalle = res.registros.map(function(r){
-    return '<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:11px;color:var(--text)">'
-      +'<span style="color:'+colores.color+';font-weight:700">'+r.dias+' día'+(r.dias>1?'s':'')+'</span>'
-      +' · '+r.desde+(r.hasta&&r.hasta!==r.desde?' → '+r.hasta:'')
-      +'</div>';
-  }).join('');
-  showToast('📅 '+nomCorto+' — '+tipo+' '+mesNom+': '+res.dias+' días', colores.color);
+// ── estado global para edición de novedades ──
+var _navEditIdx = null;
+
+function navCerrarDetalle(){
+  var m = document.getElementById('navDetalleModal');
+  if(m) m.style.display='none';
+}
+function navCerrarEditar(){
+  var m = document.getElementById('navEditModal');
+  if(m) m.style.display='none';
 }
 
+function navShowDetalle(memberId, tipo, mesIdx, anio){
+  var mb = members.find(function(x){ return x.id===memberId; });
+  if(!mb) return;
+  var colores = NAV_COLORS[tipo]||{bg:'rgba(99,102,241,.15)',color:'#6366f1'};
+  var mesNom = NAV_MESES_LARGO[mesIdx];
+  var nomCorto = mb.rank+' '+mb.name.split(' ').slice(0,2).join(' ');
+  var TIPO_GRUPOS_S = {
+    'Permiso':['Permiso','PermisoGUDMO','PermisoDEI'],
+    'PermisoDEI':['PermisoDEI','Permiso'],
+    'PermisoGUDMO':['PermisoGUDMO','Permiso'],
+    'Comision':['Comision','ComisionRegion','ComisionFuera','ComisionErradicacion']
+  };
+  var tiposBuscar = TIPO_GRUPOS_S[tipo]||[tipo];
+  var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
+  var entradas = [];
+  historial.forEach(function(h, idx){
+    if(h.memberId!==memberId) return;
+    var ok = tiposBuscar.includes(h.status);
+    if(!ok && h.status==='Permiso' && h.tipoPermiso){
+      if(tipo==='PermisoDEI' && h.tipoPermiso==='DEI') ok=true;
+      if(tipo==='PermisoGUDMO' && h.tipoPermiso==='GUDMO') ok=true;
+    }
+    if(!ok) return;
+    var fechaRef = h.fechaSalida || h.date;
+    if(!fechaRef) return;
+    var fRef = new Date(fechaRef+'T00:00:00');
+    if(fRef.getMonth()!==mesIdx || fRef.getFullYear()!==anio) return;
+    entradas.push({ h:h, idx:idx });
+  });
+  var res = navDiasEnMes(memberId, tipo, mesIdx, anio);
+  var html2 = '<div style="font-size:11px;color:var(--muted);margin-bottom:12px">'
+    +nomCorto+' · '+mesNom+' '+anio
+    +'<span style="margin-left:8px;background:'+colores.bg+';color:'+colores.color
+    +';padding:2px 8px;border-radius:10px;font-weight:700">'+(res.dias||0)+' dias total</span></div>';
+  if(entradas.length===0){
+    html2 += '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0">Sin registros editables en este mes</div>';
+  }
+  entradas.forEach(function(e){
+    var h = e.h;
+    var fIni = h.fechaSalida||h.date||'?';
+    var fFin = h.fechaFin||'';
+    var dias = 0;
+    if(h.fechaSalida && h.fechaFin){
+      var sal=new Date(h.fechaSalida+'T00:00:00');
+      var fin=new Date(h.fechaFin+'T00:00:00'); fin.setDate(fin.getDate()-1);
+      var finR = fin<ayer?fin:ayer;
+      dias = Math.max(0, Math.round((finR-sal)/86400000)+1);
+    } else { dias=1; }
+    html2 += '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+      +'<span style="color:'+colores.color+';font-weight:700;font-size:13px">'+dias+' dia'+(dias!==1?'s':'')+'</span>'
+      +'<div style="display:flex;gap:6px">'
+      +'<button onclick="navAbrirEditar('+e.idx+')" style="background:rgba(6,182,212,.15);color:var(--cyan);border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">Editar</button>'
+      +'<button onclick="navEliminarRegistro('+e.idx+',\''+memberId+'\',\''+tipo+'\','+mesIdx+','+anio+')" style="background:rgba(239,68,68,.12);color:#ef4444;border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">Borrar</button>'
+      +'</div></div>'
+      +'<div style="font-size:11px;color:var(--muted2)">'+fIni+(fFin?' hasta '+fFin:'')+(h.obs?' · '+h.obs:'')+'</div>'
+      +'</div>';
+  });
+  document.getElementById('navDetalleTitulo').textContent = nomCorto;
+  document.getElementById('navDetalleBody').innerHTML = html2;
+  document.getElementById('navDetalleModal').style.display = 'flex';
+}
+
+function navAbrirEditar(histIdx){
+  var h = historial[histIdx];
+  if(!h) return;
+  _navEditIdx = histIdx;
+  document.getElementById('navEditTitulo').textContent = 'Editar novedad — '+h.memberName.split(' ')[0];
+  document.getElementById('navEditFechaInicio').value = h.fechaSalida||h.date||'';
+  document.getElementById('navEditFechaFin').value = h.fechaFin||'';
+  document.getElementById('navEditObs').value = h.obs||'';
+  document.getElementById('navEditModal').style.display = 'flex';
+}
+
+function navGuardarEdicion(){
+  if(_navEditIdx===null) return;
+  var h = historial[_navEditIdx];
+  if(!h) return;
+  var fIni = document.getElementById('navEditFechaInicio').value;
+  var fFin = document.getElementById('navEditFechaFin').value;
+  var obs  = document.getElementById('navEditObs').value.trim();
+  if(!fIni){ showToast('Ingresa la fecha de inicio','#f97316'); return; }
+  h.fechaSalida = fIni;
+  h.date        = fIni;
+  h.fechaFin    = fFin;
+  h.obs         = obs;
+  sv('g9_hist', historial);
+  navCerrarEditar();
+  navCerrarDetalle();
+  showToast('Novedad actualizada','#22c55e');
+  try{ renderNavMatriz(); }catch(e){}
+}
+
+function navEliminarRegistro(histIdx, memberId, tipo, mesIdx, anio){
+  if(!confirm('Eliminar este registro de novedad?')) return;
+  historial.splice(histIdx, 1);
+  sv('g9_hist', historial);
+  showToast('Registro eliminado','#ef4444');
+  try{ renderNavMatriz(); }catch(e){}
+  navCerrarDetalle();
+  setTimeout(function(){
+    var r2 = navDiasEnMes(memberId, tipo, mesIdx, anio);
+    if(r2.dias>0) navShowDetalle(memberId, tipo, mesIdx, anio);
+  }, 200);
+}
 function exportarNavExcel(){
   var tipoFiltro = document.getElementById('navTipoFiltro').value;
   var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
