@@ -5675,6 +5675,8 @@ function renderGuardiaTabla(){
           return '<td style="background:'+bg+';color:'+col+';text-align:center;padding:5px 2px;border:1px solid var(--border);font-weight:'+(d>0?'700':'400')+'">'+(d>0?d:'-')+'</td>';
         }).join('');
         var nomCorto = m.name.split(' ').slice(0,2).join(' ');
+        var _src = getStatusRowColor(m.status);
+        var _dot = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+_src.left+';margin-right:5px;vertical-align:middle"></span>';
         rows += '<tr>'
           +'<td style="padding:5px 8px;border:1px solid var(--border);color:var(--text)">'
           +'<span style="font-size:8px;color:var(--muted);margin-right:4px">'+m.rank+'</span>'+nomCorto
@@ -5891,6 +5893,33 @@ function navDiasEnRango(inicio, fin, mesIdx, anio){
   return Math.round((real_fin - real_inicio)/(1000*60*60*24)) + 1;
 }
 
+
+  // Resalte por estado actual del funcionario
+  var STATUS_ROW_COLORS = {
+    'Servicio':             {bg:'rgba(34,197,94,.10)',   left:'#22c55e'},
+    'Guardia':              {bg:'rgba(249,115,22,.10)',  left:'#f97316'},
+    'Permiso':              {bg:'rgba(139,92,246,.10)',  left:'#8b5cf6'},
+    'PermisoGUDMO':         {bg:'rgba(99,102,241,.10)',  left:'#6366f1'},
+    'PermisoDEI':           {bg:'rgba(59,130,246,.10)',  left:'#3b82f6'},
+    'Vacaciones':           {bg:'rgba(6,182,212,.10)',   left:'#06b6d4'},
+    'Franquicia':           {bg:'rgba(168,85,247,.10)',  left:'#a855f7'},
+    'Incapacidad':          {bg:'rgba(239,68,68,.10)',   left:'#ef4444'},
+    'Curso':                {bg:'rgba(234,179,8,.10)',   left:'#eab308'},
+    'Luto':                 {bg:'rgba(107,114,128,.14)', left:'#6b7280'},
+    'LeyMaria':             {bg:'rgba(244,114,182,.10)', left:'#f472b6'},
+    'PermisoCumple':        {bg:'rgba(251,191,36,.10)',  left:'#fbbf24'},
+    'ComisionRegion':       {bg:'rgba(16,185,129,.10)',  left:'#10b981'},
+    'ComisionFuera':        {bg:'rgba(245,158,11,.10)',  left:'#f59e0b'},
+    'ComisionErradicacion': {bg:'rgba(220,38,38,.10)',   left:'#dc2626'},
+    'Comision':             {bg:'rgba(148,163,184,.10)', left:'#94a3b8'},
+    'Anexo':                {bg:'rgba(20,184,166,.10)',  left:'#14b8a6'},
+    'Secretario':           {bg:'rgba(20,184,166,.10)',  left:'#14b8a6'},
+    'Excusa':               {bg:'rgba(167,139,250,.10)', left:'#a78bfa'},
+  };
+  function getStatusRowColor(st){
+    return STATUS_ROW_COLORS[st] || {bg:'rgba(255,255,255,.02)', left:'transparent'};
+  }
+
 function renderNavMatriz(){
   var tipoFiltro = document.getElementById('navTipoFiltro').value;
   var mesFiltro  = document.getElementById('navMesFiltro').value;
@@ -5983,11 +6012,16 @@ function renderNavMatriz(){
       var res = navDiasEnMes(m.id, tipoFiltro, mesIdx, anio);
       var pct = Math.min(100, Math.round(res.dias/maxDias*100));
       var nomCorto = m.name.split(' ').slice(0,2).join(' ');
-      out2 += '<div style="background:var(--card);border:1px solid '+(res.dias>0?colores.color:'var(--border)')+';border-radius:8px;padding:10px 12px;cursor:'+(res.dias>0?'pointer':'default')+'" '
+      var _sc = getStatusRowColor(m.status);
+      var _stLabel = {'Servicio':'En Servicio','Guardia':'Guardia','Permiso':'Permiso','PermisoGUDMO':'Perm. GUDMO','PermisoDEI':'Perm. DEI','Vacaciones':'Vacaciones','Franquicia':'Franquicia','Incapacidad':'Incapacidad','Curso':'Curso','Luto':'Lic. Luto','LeyMaria':'Ley María','PermisoCumple':'Perm. Cumpleaños','ComisionRegion':'Com. Región','ComisionFuera':'Com. Fuera','ComisionErradicacion':'Erradicación','Anexo':'Anexo','Secretario':'Secretario','Excusa':'Excusa'};
+      out2 += '<div style="background:'+_sc.bg+';border:1px solid '+(res.dias>0?colores.color:'var(--border)')+';border-left:3px solid '+_sc.left+';border-radius:8px;padding:10px 12px;cursor:'+(res.dias>0?'pointer':'default')+'" '
         +(res.dias>0?'onclick="navShowDetalle(\''+m.id+'\',\''+tipoFiltro+'\','+mesIdx+','+anio+')"':'')+' >'
         +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(res.dias>0?'7px':'0')+'">'
-        +'<div class="rank-badge" style="width:26px;height:26px;font-size:8px;flex-shrink:0">'+m.rank+'</div>'
-        +'<div style="flex:1;font-size:11px;font-weight:600;color:var(--text)">'+nomCorto+'</div>'
+        +'<div class="rank-badge" style="width:26px;height:26px;font-size:8px;flex-shrink:0;background:'+_sc.left+'">'+m.rank+'</div>'
+        +'<div style="flex:1">'
+        +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+nomCorto+'</div>'
+        +'<div style="font-size:9px;color:'+_sc.left+';font-weight:600;margin-top:1px">'+(_stLabel[m.status]||m.status)+'</div>'
+        +'</div>'
         +'<div style="font-size:28px;font-weight:900;line-height:1;color:'+(res.dias>0?colores.color:'var(--muted)')+'">'+( res.dias||'—' )+'</div>'
         +(res.dias>0?'<div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:1px">días</div>':'')
         +'</div>'
