@@ -124,7 +124,9 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .bl-Anexo{border-left:3px solid var(--pink)}
 .bl-Secretario{border-left:3px solid var(--teal)}
 .bl-Excusa{border-left:3px solid #a78bfa}
+.bl-LeyMaria{border-left:3px solid #f472b6}
 .bl-Luto{border-left:3px solid #6b7280}
+.bl-LeyMaria{border-left:3px solid #f472b6}
 .bl-Luto{border-left:3px solid #6b7280}
 
 .p-Servicio{background:rgba(34,197,94,.13);color:var(--green)}
@@ -444,6 +446,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <option value="Anexo">Anexo dispositivo</option>
       <option value="Comision">Comisión</option>
       <option value="Luto">Licencia por Luto</option>
+      <option value="LeyMaria">🌸 Ley María</option>
     </select>
   </div>
   <div id="histList"></div>
@@ -596,7 +599,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <option value="Incapacidad">Incapacidades</option>
       <option value="PermisoHoras">⏱️ Permisos por Horas</option>
       <option value="Excusa">Excusa</option>
-      <option value="Luto">🖤 Lic. Luto</option>
+      <option value="LeyMaria">🌸 Ley María</option>
       <option value="__turno__">📌 Turno específico...</option>
     </select>
     <select id="repTurno" style="display:none" onchange="renderReportes()">
@@ -1132,6 +1135,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       </optgroup>
       <optgroup label="── Otras ──">
         <option value="Luto">🖤 Lic. Luto</option>
+        <option value="LeyMaria">🌸 Ley María</option>
         <option value="Vacaciones">🏖️ Vacaciones</option>
         <option value="Franquicia">🔄 Franquicia</option>
         <option value="Incapacidad">🏥 Incapacidad</option>
@@ -2113,7 +2117,7 @@ function buildCard(m){
   var isCrit=CRITICAL_CARGOS.includes(m.cargo);
   var isOffDuty=m.status!=='Servicio'&&isCrit;
   var today=localDateStr();
-  var hasDates=(m.fechaSalida||m.fechaFin)&&['Permiso','Vacaciones','Franquicia','Curso','Incapacidad','Luto'].includes(m.status);
+  var hasDates=(m.fechaSalida||m.fechaFin)&&['Permiso','Vacaciones','Franquicia','Curso','Incapacidad','Luto','LeyMaria','PermisoGUDMO','PermisoDEI'].includes(m.status);
 
   var badges='';
   if(curEscuadra==='all') badges+='<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(200,146,42,.15);color:var(--gold2)">'+m.escuadra+'</span>';
@@ -2173,7 +2177,7 @@ function buildCard(m){
 
 function updateStats(){
   var esc=escMembers();
-  var keys=['Servicio','Vacaciones','Permiso','Franquicia','Guardia','Incapacidad','Curso','Anexo','Secretario','Excusa','Luto'];
+  var keys=['Servicio','Vacaciones','Permiso','Franquicia','Guardia','Incapacidad','Curso','Anexo','Secretario','Excusa','Luto','LeyMaria'];
   for(var ki=0;ki<keys.length;ki++){
     var el=document.getElementById('cs-'+keys[ki]);
     if(el){
@@ -2301,7 +2305,7 @@ const STATUS_MAP={
   'comisionerradicacion':'ComisionErradicacion','erradicacion':'ComisionErradicacion',
   'permisogudmo':'PermisoGUDMO','permiso gudmo':'PermisoGUDMO',
   'permisodei':'PermisoDEI','permiso dei':'PermisoDEI',
-  'luto':'Luto','licencia luto':'Luto','lic luto':'Luto',
+  'luto':'Luto','licencia luto':'Luto','lic luto':'Luto','ley maria':'LeyMaria','leymaria':'LeyMaria','ley maría':'LeyMaria',
   'curso':'Curso','ascenso':'Curso',
   'anexo':'Anexo',
 };
@@ -2759,7 +2763,7 @@ function saveEdit(){
   const histObsVal=document.getElementById('histObs').value.trim();
   // Si no se llenó histDate pero hay fechaSalida, usar fechaSalida como fecha de registro
   var ESTADOS_CON_FECHA = ['PermisoDEI','PermisoGUDMO','Permiso','Vacaciones',
-    'Incapacidad','Franquicia','Curso','Luto',
+    'Incapacidad','Franquicia','Curso','Luto','LeyMaria',
     'ComisionRegion','ComisionFuera','ComisionErradicacion','Anexo'];
   var fechaHist = histDate || (ESTADOS_CON_FECHA.includes(selStatus) ? (members[idx].fechaSalida||'') : '');
   if(fechaHist){
@@ -3231,45 +3235,67 @@ function renderTurnos(){
 }
 
 function getDiasLaboralesDesde(fechaStr){
-  // Cuenta días laborables desde fechaStr hasta hoy
-  // Excluye períodos de permiso (cuando el DEI está de descanso)
+  // Cuenta dias laborables desde fechaStr hasta hoy
+  // Excluye periodos en que el DEI estaba de permiso masivo (presente o pasado)
   if(!fechaStr) return 0;
   var desde = new Date(fechaStr+'T00:00:00');
   var hoy = new Date(); hoy.setHours(0,0,0,0);
   if(desde >= hoy) return 0;
   var dias = 0;
   var cur = new Date(desde);
-  cur.setDate(cur.getDate()+1); // el día SIGUIENTE al de recepción
+  cur.setDate(cur.getDate()+1); // dia SIGUIENTE a la recepcion
 
-  // Recolectar todos los períodos de pausa del DEI actual
-  var pausas = [];
   var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
-  // Pausa 1: ciclo laboral (bloque búsqueda pausas)
+  // Pausas explícitas del bloque operacional
+  var pausas = [];
   var bd = bloqueData[esc];
   if(bd && bd.pausas) bd.pausas.forEach(function(p){ if(p.inicio) pausas.push(p); });
-  // Pausa 2: permiso masivo — detectar del personal
-  // Si más del 50% del DEI está en permiso en una fecha dada, esa fecha no cuenta
+
+  // Construir mapa de periodos de permiso masivo desde historial
+  // Agrupar por fechaSalida/fechaFin de permisos donde >60% del DEI estuvo de permiso
+  // Primero obtener todos los periodos de permiso del personal del DEI
+  var escPersonal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
+  var totalPersonal = escPersonal.length;
+
+  // Recopilar todos los periodos de permiso desde historial
+  var periodosPermiso = []; // {inicio, fin}
+  historial.forEach(function(h){
+    if(!escPersonal.find(function(m){ return m.id===h.memberId; })) return;
+    var statusPermiso = ['Permiso','PermisoGUDMO','PermisoDEI','Vacaciones','Luto','LeyMaria'].includes(h.status);
+    if(!statusPermiso) return;
+    if(h.fechaSalida && h.fechaFin) periodosPermiso.push({id:h.memberId, ini:h.fechaSalida, fin:h.fechaFin});
+  });
+  // Permiso actual del personal
+  escPersonal.forEach(function(m){
+    var sp = ['Permiso','PermisoGUDMO','PermisoDEI','Vacaciones','Luto','LeyMaria'].includes(m.status);
+    if(sp && m.fechaSalida) periodosPermiso.push({id:m.id, ini:m.fechaSalida, fin:m.fechaFin||'9999-12-31'});
+  });
+
   while(cur <= hoy){
     var dStr = cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+
+    // Pausa 1: bloque operacional
     var enPausa = pausas.some(function(p){
       return dStr >= p.inicio && (!p.fin || dStr < p.fin);
     });
-    // También verificar si el personal estaba en permiso masivo esa fecha
-    if(!enPausa){
-      var escPersonal = members.filter(function(m){ return m.escuadra===esc; });
-      var enPermiso = escPersonal.filter(function(m){
-        return m.status==='Permiso' && m.fechaSalida && m.fechaFin &&
-               dStr >= m.fechaSalida && dStr < m.fechaFin;
-      }).length;
-      // Si más del 60% están en permiso → día de pausa
-      if(escPersonal.length > 0 && (enPermiso/escPersonal.length) > 0.6) enPausa = true;
+
+    // Pausa 2: permiso masivo — cuántos miembros del DEI estaban de permiso ese día
+    if(!enPausa && totalPersonal > 0){
+      var enPermisoDia = periodosPermiso.filter(function(p){
+        return dStr >= p.ini && dStr < p.fin;
+      });
+      // Contar únicos (evitar duplicados del mismo miembro)
+      var unicos = {};
+      enPermisoDia.forEach(function(p){ unicos[p.id]=true; });
+      var countPerm = Object.keys(unicos).length;
+      if(countPerm/totalPersonal > 0.6) enPausa = true;
     }
+
     if(!enPausa) dias++;
     cur.setDate(cur.getDate()+1);
   }
   return dias;
 }
-
 function getDiasRestantes(turno){
   if(!turno.historial.length) return null;
   var sorted = [...turno.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
@@ -5972,6 +5998,8 @@ function renderNavMatriz(){
 // Panel de detalle al tocar un número de la matriz
 // ── estado global para edición de novedades ──
 var _navEditIdx = null;
+var _navAgregarMemberId = null;
+var _navAgregarTipo = null;
 
 function navCerrarDetalle(){
   var m = document.getElementById('navDetalleModal');
@@ -5996,6 +6024,9 @@ function navShowDetalle(memberId, tipo, mesIdx, anio){
   };
   var tiposBuscar = TIPO_GRUPOS_S[tipo]||[tipo];
   var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
+  var anio = new Date().getFullYear();
+
+  // Buscar en historial SIN filtrar por mes — mostrar todos para editar
   var entradas = [];
   historial.forEach(function(h, idx){
     if(h.memberId!==memberId) return;
@@ -6005,20 +6036,32 @@ function navShowDetalle(memberId, tipo, mesIdx, anio){
       if(tipo==='PermisoGUDMO' && h.tipoPermiso==='GUDMO') ok=true;
     }
     if(!ok) return;
-    var fechaRef = h.fechaSalida || h.date;
-    if(!fechaRef) return;
-    var fRef = new Date(fechaRef+'T00:00:00');
-    if(fRef.getMonth()!==mesIdx || fRef.getFullYear()!==anio) return;
     entradas.push({ h:h, idx:idx });
   });
+  // Ordenar por fecha descendente
+  entradas.sort(function(a,b){
+    var fa = a.h.fechaSalida||a.h.date||'';
+    var fb = b.h.fechaSalida||b.h.date||'';
+    return fb.localeCompare(fa);
+  });
+
   var res = navDiasEnMes(memberId, tipo, mesIdx, anio);
-  var html2 = '<div style="font-size:11px;color:var(--muted);margin-bottom:12px">'
-    +nomCorto+' · '+mesNom+' '+anio
-    +'<span style="margin-left:8px;background:'+colores.bg+';color:'+colores.color
-    +';padding:2px 8px;border-radius:10px;font-weight:700">'+(res.dias||0)+' dias total</span></div>';
+  var html2 = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    +'<div style="font-size:11px;color:var(--muted)">'+nomCorto+'<br><span style="font-size:9px">'+mesNom+' '+anio
+    +'<span style="margin-left:6px;background:'+colores.bg+';color:'+colores.color
+    +';padding:2px 8px;border-radius:10px;font-weight:700">'+(res.dias||0)+' dias</span></span></div>'
+    +'<button data-mid="'+memberId+'" data-tipo="'+tipo+'" onclick="navAgregarRegistro(this.dataset.mid,this.dataset.tipo)" '
+    +'style="background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);'
+    +'border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:700">+ Agregar</button>'
+    +'</div>';
+
   if(entradas.length===0){
-    html2 += '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px 0">Sin registros editables en este mes</div>';
+    html2 += '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0">'
+      +'Sin registros. Usa + Agregar para crear uno.</div>';
+  } else {
+    html2 += '<div style="font-size:9px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px">Todos los registros de este tipo</div>';
   }
+
   entradas.forEach(function(e){
     var h = e.h;
     var fIni = h.fechaSalida||h.date||'?';
@@ -6029,21 +6072,43 @@ function navShowDetalle(memberId, tipo, mesIdx, anio){
       var fin=new Date(h.fechaFin+'T00:00:00'); fin.setDate(fin.getDate()-1);
       var finR = fin<ayer?fin:ayer;
       dias = Math.max(0, Math.round((finR-sal)/86400000)+1);
-    } else { dias=1; }
-    html2 += '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+    } else if(h.date){
+      dias = 1;
+    }
+    // Destacar si pertenece al mes seleccionado
+    var enEsteMes = false;
+    var fRef = new Date((h.fechaSalida||h.date||'2000-01-01')+'T00:00:00');
+    if(fRef.getMonth()===mesIdx && fRef.getFullYear()===anio) enEsteMes = true;
+    var borderColor = enEsteMes ? colores.color : 'var(--border)';
+    html2 += '<div style="background:var(--navy);border:1px solid '+borderColor+';border-radius:10px;padding:10px 12px;margin-bottom:8px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
       +'<span style="color:'+colores.color+';font-weight:700;font-size:13px">'+dias+' dia'+(dias!==1?'s':'')+'</span>'
       +'<div style="display:flex;gap:6px">'
       +'<button onclick="navAbrirEditar('+e.idx+')" style="background:rgba(6,182,212,.15);color:var(--cyan);border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">Editar</button>'
-      +'<button onclick="navEliminarRegistro('+e.idx+',\''+memberId+'\',\''+tipo+'\','+mesIdx+','+anio+')" style="background:rgba(239,68,68,.12);color:#ef4444;border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">Borrar</button>'
+      +'<button data-idx="'+e.idx+'" data-mid="'+memberId+'" data-tipo="'+tipo+'" data-mes="'+mesIdx+'" data-anio="'+anio+'" onclick="navEliminarRegistro(+this.dataset.idx,this.dataset.mid,this.dataset.tipo,+this.dataset.mes,+this.dataset.anio)" style="background:rgba(239,68,68,.12);color:#ef4444;border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600">Borrar</button>'
       +'</div></div>'
-      +'<div style="font-size:11px;color:var(--muted2)">'+fIni+(fFin?' hasta '+fFin:'')+(h.obs?' · '+h.obs:'')+'</div>'
+      +'<div style="font-size:11px;color:var(--muted2)">'+fIni+(fFin?' → pres. '+fFin:'')+(h.obs?' · '+h.obs:'')+'</div>'
+      +(enEsteMes?'':' <div style="font-size:9px;color:var(--muted);margin-top:2px">⚠️ Fuera del mes seleccionado</div>')
       +'</div>';
   });
-  document.getElementById('navDetalleTitulo').textContent = nomCorto;
+
+  document.getElementById('navDetalleTitulo').textContent = nomCorto+' — '+tipo;
   document.getElementById('navDetalleBody').innerHTML = html2;
   document.getElementById('navDetalleModal').style.display = 'flex';
 }
+function navAgregarRegistro(memberId, tipo){
+  var mb = members.find(function(x){ return x.id===memberId; });
+  if(!mb) return;
+  _navEditIdx = null; // null = modo agregar
+  _navAgregarMemberId = memberId;
+  _navAgregarTipo = tipo;
+  document.getElementById('navEditTitulo').textContent = 'Agregar '+tipo+' — '+mb.name.split(' ')[0];
+  document.getElementById('navEditFechaInicio').value = '';
+  document.getElementById('navEditFechaFin').value = '';
+  document.getElementById('navEditObs').value = '';
+  document.getElementById('navEditModal').style.display = 'flex';
+}
+
 
 function navAbrirEditar(histIdx){
   var h = historial[histIdx];
@@ -6057,21 +6122,41 @@ function navAbrirEditar(histIdx){
 }
 
 function navGuardarEdicion(){
-  if(_navEditIdx===null) return;
-  var h = historial[_navEditIdx];
-  if(!h) return;
   var fIni = document.getElementById('navEditFechaInicio').value;
   var fFin = document.getElementById('navEditFechaFin').value;
   var obs  = document.getElementById('navEditObs').value.trim();
   if(!fIni){ showToast('Ingresa la fecha de inicio','#f97316'); return; }
-  h.fechaSalida = fIni;
-  h.date        = fIni;
-  h.fechaFin    = fFin;
-  h.obs         = obs;
+
+  if(_navEditIdx !== null){
+    // MODO EDITAR
+    var h = historial[_navEditIdx];
+    if(!h) return;
+    h.fechaSalida = fIni;
+    h.date        = fIni;
+    h.fechaFin    = fFin;
+    h.obs         = obs;
+    showToast('Novedad actualizada','#22c55e');
+  } else {
+    // MODO AGREGAR
+    var mb = members.find(function(x){ return x.id===_navAgregarMemberId; });
+    if(!mb) return;
+    historial.push({
+      id: uid(),
+      memberId: _navAgregarMemberId,
+      memberName: mb.name,
+      memberRank: mb.rank,
+      escuadra: mb.escuadra,
+      status: _navAgregarTipo,
+      date: fIni,
+      fechaSalida: fIni,
+      fechaFin: fFin,
+      obs: obs
+    });
+    showToast('Novedad agregada','#22c55e');
+  }
   sv('g9_hist', historial);
   navCerrarEditar();
   navCerrarDetalle();
-  showToast('Novedad actualizada','#22c55e');
   try{ renderNavMatriz(); }catch(e){}
 }
 
@@ -6128,6 +6213,7 @@ var NOVEDAD_COLORS = {
   'ComisionFuera':         '#f59e0b',
   'ComisionErradicacion':  '#dc2626',
   'Luto':                  '#6b7280',
+  'LeyMaria':              '#f472b6',
   'Vacaciones':            '#06b6d4',
   'Franquicia':  '#eab308',
   'Incapacidad': '#ef4444',
@@ -6136,6 +6222,7 @@ var NOVEDAD_COLORS = {
   'Secretario':  '#14b8a6',
   'Excusa':      '#a78bfa',
   'Luto':        '#9ca3af',
+  'LeyMaria':    '#f472b6',
   'Comision':    '#f59e0b',
 };
 
