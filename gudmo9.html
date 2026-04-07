@@ -5154,7 +5154,10 @@ function aplicarPermisoMasivo(){
       memberRank: m.rank,
       escuadra: m.escuadra,
       status: 'Permiso',
+      tipoPermiso: pmTipoSel,
       date: salida,
+      fechaSalida: salida,
+      fechaFin: regreso||'',
       fechaLlegada: regreso||'',
       obs: 'Permiso masivo '+pmTipoSel+(regreso?' hasta '+fmtDate(regreso):'')
     });
