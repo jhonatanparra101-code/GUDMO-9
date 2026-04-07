@@ -125,8 +125,10 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .bl-Secretario{border-left:3px solid var(--teal)}
 .bl-Excusa{border-left:3px solid #a78bfa}
 .bl-LeyMaria{border-left:3px solid #f472b6}
+.bl-PermisoCumple{border-left:3px solid #fbbf24}
 .bl-Luto{border-left:3px solid #6b7280}
 .bl-LeyMaria{border-left:3px solid #f472b6}
+.bl-PermisoCumple{border-left:3px solid #fbbf24}
 .bl-Luto{border-left:3px solid #6b7280}
 
 .p-Servicio{background:rgba(34,197,94,.13);color:var(--green)}
@@ -447,6 +449,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <option value="Comision">Comisión</option>
       <option value="Luto">Licencia por Luto</option>
       <option value="LeyMaria">🌸 Ley María</option>
+      <option value="PermisoCumple">🎂 Permiso Cumpleaños</option>
     </select>
   </div>
   <div id="histList"></div>
@@ -600,6 +603,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <option value="PermisoHoras">⏱️ Permisos por Horas</option>
       <option value="Excusa">Excusa</option>
       <option value="LeyMaria">🌸 Ley María</option>
+      <option value="PermisoCumple">🎂 Permiso Cumpleaños</option>
       <option value="__turno__">📌 Turno específico...</option>
     </select>
     <select id="repTurno" style="display:none" onchange="renderReportes()">
@@ -1136,6 +1140,9 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <optgroup label="── Otras ──">
         <option value="Luto">🖤 Lic. Luto</option>
         <option value="LeyMaria">🌸 Ley María</option>
+        <option value="PermisoCumple">🎂 Permiso Cumpleaños</option>
+      <option value="PermisoCumple">🎂 Permiso Cumpleaños</option>
+        <option value="PermisoCumple">🎂 Permiso Cumpleaños</option>
         <option value="Vacaciones">🏖️ Vacaciones</option>
         <option value="Franquicia">🔄 Franquicia</option>
         <option value="Incapacidad">🏥 Incapacidad</option>
@@ -2117,7 +2124,7 @@ function buildCard(m){
   var isCrit=CRITICAL_CARGOS.includes(m.cargo);
   var isOffDuty=m.status!=='Servicio'&&isCrit;
   var today=localDateStr();
-  var hasDates=(m.fechaSalida||m.fechaFin)&&['Permiso','Vacaciones','Franquicia','Curso','Incapacidad','Luto','LeyMaria','PermisoGUDMO','PermisoDEI'].includes(m.status);
+  var hasDates=(m.fechaSalida||m.fechaFin)&&['Permiso','Vacaciones','Franquicia','Curso','Incapacidad','Luto','LeyMaria','PermisoCumple','PermisoGUDMO','PermisoDEI'].includes(m.status);
 
   var badges='';
   if(curEscuadra==='all') badges+='<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(200,146,42,.15);color:var(--gold2)">'+m.escuadra+'</span>';
@@ -2177,7 +2184,7 @@ function buildCard(m){
 
 function updateStats(){
   var esc=escMembers();
-  var keys=['Servicio','Vacaciones','Permiso','Franquicia','Guardia','Incapacidad','Curso','Anexo','Secretario','Excusa','Luto','LeyMaria'];
+  var keys=['Servicio','Vacaciones','Permiso','Franquicia','Guardia','Incapacidad','Curso','Anexo','Secretario','Excusa','Luto','LeyMaria','PermisoCumple'];
   for(var ki=0;ki<keys.length;ki++){
     var el=document.getElementById('cs-'+keys[ki]);
     if(el){
@@ -2305,7 +2312,7 @@ const STATUS_MAP={
   'comisionerradicacion':'ComisionErradicacion','erradicacion':'ComisionErradicacion',
   'permisogudmo':'PermisoGUDMO','permiso gudmo':'PermisoGUDMO',
   'permisodei':'PermisoDEI','permiso dei':'PermisoDEI',
-  'luto':'Luto','licencia luto':'Luto','lic luto':'Luto','ley maria':'LeyMaria','leymaria':'LeyMaria','ley maría':'LeyMaria',
+  'luto':'Luto','licencia luto':'Luto','lic luto':'Luto','ley maria':'LeyMaria','leymaria':'LeyMaria','ley maría':'LeyMaria','cumpleanos':'PermisoCumple','cumpleaños':'PermisoCumple','permiso cumpleanos':'PermisoCumple',
   'curso':'Curso','ascenso':'Curso',
   'anexo':'Anexo',
 };
@@ -2763,7 +2770,7 @@ function saveEdit(){
   const histObsVal=document.getElementById('histObs').value.trim();
   // Si no se llenó histDate pero hay fechaSalida, usar fechaSalida como fecha de registro
   var ESTADOS_CON_FECHA = ['PermisoDEI','PermisoGUDMO','Permiso','Vacaciones',
-    'Incapacidad','Franquicia','Curso','Luto','LeyMaria',
+    'Incapacidad','Franquicia','Curso','Luto','LeyMaria','PermisoCumple',
     'ComisionRegion','ComisionFuera','ComisionErradicacion','Anexo'];
   var fechaHist = histDate || (ESTADOS_CON_FECHA.includes(selStatus) ? (members[idx].fechaSalida||'') : '');
   if(fechaHist){
@@ -6211,6 +6218,7 @@ var NOVEDAD_COLORS = {
   'ComisionErradicacion':  '#dc2626',
   'Luto':                  '#6b7280',
   'LeyMaria':              '#f472b6',
+  'PermisoCumple':         '#fbbf24',
   'Vacaciones':            '#06b6d4',
   'Franquicia':  '#eab308',
   'Incapacidad': '#ef4444',
