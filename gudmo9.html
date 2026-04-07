@@ -5982,8 +5982,8 @@ function renderNavMatriz(){
         +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(res.dias>0?'7px':'0')+'">'
         +'<div class="rank-badge" style="width:26px;height:26px;font-size:8px;flex-shrink:0">'+m.rank+'</div>'
         +'<div style="flex:1;font-size:11px;font-weight:600;color:var(--text)">'+nomCorto+'</div>'
-        +'<div style="font-size:18px;font-weight:900;color:'+(res.dias>0?colores.color:'var(--muted)')+'">'+( res.dias||'—' )+'</div>'
-        +(res.dias>0?'<div style="font-size:9px;color:var(--muted)">días</div>':'')
+        +'<div style="font-size:28px;font-weight:900;line-height:1;color:'+(res.dias>0?colores.color:'var(--muted)')+'">'+( res.dias||'—' )+'</div>'
+        +(res.dias>0?'<div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:1px">días</div>':'')
         +'</div>'
         +(res.dias>0?'<div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">'
           +'<div style="height:100%;width:'+pct+'%;background:'+colores.color+';border-radius:2px"></div>'
@@ -6017,10 +6017,10 @@ function navShowDetalle(memberId, tipo, mesIdx, anio){
   var mesNom = NAV_MESES_LARGO[mesIdx];
   var nomCorto = mb.rank+' '+mb.name.split(' ').slice(0,2).join(' ');
   var TIPO_GRUPOS_S = {
-    'Permiso':['Permiso','PermisoGUDMO','PermisoDEI'],
-    'PermisoDEI':['PermisoDEI','Permiso'],
-    'PermisoGUDMO':['PermisoGUDMO','Permiso'],
-    'Comision':['Comision','ComisionRegion','ComisionFuera','ComisionErradicacion']
+    'Permiso':    ['Permiso','PermisoGUDMO','PermisoDEI'],
+    'PermisoDEI': ['PermisoDEI'],
+    'PermisoGUDMO':['PermisoGUDMO'],
+    'Comision':   ['Comision','ComisionRegion','ComisionFuera','ComisionErradicacion']
   };
   var tiposBuscar = TIPO_GRUPOS_S[tipo]||[tipo];
   var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
