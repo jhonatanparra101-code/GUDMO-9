@@ -5775,88 +5775,91 @@ var NAV_COLORS = {
 // "Comision (todas)" agrupa Comision + ComisionRegion + ComisionFuera + ComisionErradicacion
 function navDiasEnMes(memberId, tipo, mesIdx, anio){
   var TIPO_GRUPOS = {
-    'Permiso': ['Permiso','PermisoGUDMO','PermisoDEI'],
-    'PermisoDEI': ['PermisoDEI','Permiso'],   // 'Permiso' genérico también cuenta si tipoPermiso=DEI
-    'PermisoGUDMO': ['PermisoGUDMO','Permiso'], // igual para GUDMO
-    'Comision': ['Comision','ComisionRegion','ComisionFuera','ComisionErradicacion']
+    'Permiso':    ['Permiso','PermisoGUDMO','PermisoDEI'],
+    'PermisoDEI': ['PermisoDEI'],
+    'PermisoGUDMO':['PermisoGUDMO'],
+    'Comision':   ['Comision','ComisionRegion','ComisionFuera','ComisionErradicacion']
   };
   var tiposABuscar = TIPO_GRUPOS[tipo] || [tipo];
-
-  var diasCalc = 0;
-  var registros = [];
-
-  // 1. Desde historial: buscar entradas con status en el grupo de tipos
-  // Para PermisoDEI/PermisoGUDMO: incluir entradas 'Permiso' genérico si tienen tipoPermiso correcto
-  var entrHist = historial.filter(function(h){
-    if(h.memberId!==memberId) return false;
-    if(tiposABuscar.includes(h.status)) return true;
-    // Permiso genérico con tipoPermiso
-    if(h.status==='Permiso' && h.tipoPermiso){
-      if(tipo==='PermisoDEI' && h.tipoPermiso==='DEI') return true;
-      if(tipo==='PermisoGUDMO' && h.tipoPermiso==='GUDMO') return true;
-    }
-    return false;
-  });
-
-  // 2. Desde members: estado actual con fechaSalida y fechaFin
-  // Usamos ayer como tope máximo: solo días ya transcurridos
   var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
   var m = members.find(function(x){ return x.id===memberId; });
-  var statusOkSec2 = tiposABuscar.includes(m&&m.status) ||
-    (m && m.status==='Permiso' && (
-      (tipo==='PermisoDEI'   && m.tipoPermiso==='DEI')  ||
-      (tipo==='PermisoGUDMO' && m.tipoPermiso==='GUDMO')
-    ));
-  if(m && statusOkSec2 && m.fechaSalida){
-    var sal = new Date(m.fechaSalida+'T00:00:00');
-    // Si la novedad aún no empezó no hay días que contar
-    if(sal <= ayer){
-    // fechaFin es la fecha de PRESENTACIÓN (el día que ya trabaja),
-    // así que el último día de novedad es fechaFin - 1.
-    // Si no hay fechaFin, usamos ayer como tope.
-    var finBase = m.fechaFin ? (function(){ var d=new Date(m.fechaFin+'T00:00:00'); d.setDate(d.getDate()-1); return d; })() : ayer;
-    var fin = finBase;
-    var d = navDiasEnRango(sal, fin, mesIdx, anio);
+
+  // ── Paso 1: recopilar TODOS los periodos únicos de esta novedad ──
+  // Un periodo es {ini:'YYYY-MM-DD', fin:'YYYY-MM-DD'} donde fin = último día de novedad
+  var periodos = [];
+  var vistosIni = {}; // evitar duplicados por fechaSalida igual
+
+  // Función para agregar periodo si no está duplicado
+  function agregarPeriodo(iniStr, finStr, fuente){
+    if(!iniStr) return;
+    var key = iniStr+'|'+(finStr||'');
+    if(vistosIni[key]) return; // ya está
+    vistosIni[key] = true;
+    var ini = new Date(iniStr+'T00:00:00');
+    var fin;
+    if(finStr){
+      // fechaFin = día de presentación → último día de novedad = fechaFin - 1
+      fin = new Date(finStr+'T00:00:00');
+      fin.setDate(fin.getDate()-1);
+    } else {
+      fin = ayer;
+    }
+    if(ini > ayer) return; // aun no empezo
+    periodos.push({ini:ini, fin:fin, iniStr:iniStr, finStr:finStr||'', fuente:fuente});
+  }
+
+  // Desde historial
+  historial.forEach(function(h){
+    if(h.memberId!==memberId) return;
+    // Verificar si el status coincide con el tipo buscado
+    var ok = tiposABuscar.includes(h.status);
+    // Retrocompatibilidad: Permiso genérico con tipoPermiso
+    if(!ok && h.status==='Permiso' && h.tipoPermiso){
+      if(tipo==='PermisoDEI'   && h.tipoPermiso==='DEI')   ok=true;
+      if(tipo==='PermisoGUDMO' && h.tipoPermiso==='GUDMO') ok=true;
+      if(tipo==='Permiso') ok=true;
+    }
+    if(!ok) return;
+    // Solo usar entradas con fechaSalida — ignorar entradas sin fechas
+    // (las entradas sin fechaSalida son cambios de estado, no novedades con duración)
+    if(h.fechaSalida){
+      agregarPeriodo(h.fechaSalida, h.fechaFin||'', 'hist');
+    }
+    // Entradas sin fechaSalida: solo contar si NO hay otra entrada del mismo periodo
+    // y el tipo es exacto (no genérico) — para guardia/cursos registrados por día
+    else if(!h.fechaSalida && ['Guardia','Curso','Incapacidad','Franquicia','Luto','LeyMaria','Vacaciones','Anexo'].includes(h.status)){
+      agregarPeriodo(h.date, h.fechaFin||'', 'hist-dia');
+    }
+  });
+
+  // Estado actual del miembro si está en esta novedad ahora
+  if(m && m.fechaSalida){
+    var statusOk = tiposABuscar.includes(m.status) ||
+      (m.status==='Permiso' && (
+        (tipo==='PermisoDEI'   && m.tipoPermiso==='DEI')  ||
+        (tipo==='PermisoGUDMO' && m.tipoPermiso==='GUDMO') ||
+        (tipo==='Permiso')
+      ));
+    if(statusOk) agregarPeriodo(m.fechaSalida, m.fechaFin||'', 'actual');
+  }
+
+  // ── Paso 2: para cada periodo, contar los días que caen en mesIdx/anio ──
+  var diasCalc = 0;
+  var registros = [];
+  periodos.forEach(function(p){
+    var d = navDiasEnRango(p.ini, p.fin, mesIdx, anio);
     if(d>0){
       diasCalc += d;
       registros.push({
-        desde: m.fechaSalida,
-        hasta: m.fechaFin||'hoy',
+        desde: p.iniStr,
+        hasta: p.finStr||'hoy',
         dias: d,
-        origen: 'actual'
+        origen: p.fuente
       });
-    }
-    } // fin if(sal <= ayer)
-  }
-
-  // 3. Desde historial enriquecido: si tiene fechaSalida en el objeto (guardado al registrar)
-  entrHist.forEach(function(h){
-    if(h.fechaSalida){
-      var sal2 = new Date(h.fechaSalida+'T00:00:00');
-      // Si la novedad aún no empezó (fechaSalida futura) no hay nada que contar
-      if(sal2 > ayer) return;
-      // fechaFin es fecha de presentación → último día de novedad es fechaFin-1
-      var fin2 = h.fechaFin
-        ? (function(){ var d=new Date(h.fechaFin+'T00:00:00'); d.setDate(d.getDate()-1); return d; })()
-        : ayer;
-      // No doble contar con el estado actual
-      if(m && statusOkSec2 && m.fechaSalida===h.fechaSalida) return;
-      var d2 = navDiasEnRango(sal2, fin2, mesIdx, anio);
-      if(d2>0){
-        diasCalc += d2;
-        registros.push({ desde:h.fechaSalida, hasta:h.fechaFin||h.date, dias:d2, origen:'hist' });
-      }
-    } else {
-      // Si no tiene fechas, contar el día de registro solo si ya transcurrió (≤ ayer)
-      var dh = new Date(h.date+'T00:00:00');
-      if(dh <= ayer && dh.getMonth()===mesIdx && dh.getFullYear()===anio){
-        diasCalc += 1;
-        registros.push({ desde:h.date, hasta:h.date, dias:1, origen:'hist' });
-      }
     }
   });
 
-  // 4. Para Guardia: también incluir guardiaData (fuente histórica importada)
+  // ── Paso 3: Guardia histórica importada ──
   if(tipo==='Guardia'){
     var mesNombre = NAV_MESES_LARGO[mesIdx];
     guardiaData.filter(function(r){ return r.memberId===memberId && r.mes===mesNombre && r.ano===anio; })
@@ -5868,7 +5871,6 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
 
   return { dias: diasCalc, registros: registros };
 }
-
 // Cuántos días de un rango [inicio, fin] caen en el mes mesIdx del año anio.
 // REGLA DE INTEGRIDAD: nunca se cuentan días futuros — el tope siempre es ayer
 // (el último día completamente transcurrido). Un día solo aparece en la tabla
