@@ -5973,8 +5973,8 @@ function navDiasEnRango(inicio, fin, mesIdx, anio){
 
 function renderNavMatriz(){
   var tipoFiltro = document.getElementById('navTipoFiltro').value;
-  // Proteger PermisoDEI — requiere contraseña DEI
-  if((tipoFiltro==='PermisoDEI' || tipoFiltro==='PermisoGUDMO') && !_deiUnlocked){
+  // Proteger todos los filtros de permisos — requiere contraseña DEI
+  if((tipoFiltro==='PermisoDEI' || tipoFiltro==='PermisoGUDMO' || tipoFiltro==='Permiso') && !_deiUnlocked){
     requireDeiPin(function(){ renderNavMatriz(); });
     return;
   }
