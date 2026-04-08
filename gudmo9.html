@@ -181,8 +181,9 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .sel-Anexo{border-color:var(--pink);background:rgba(236,72,153,.1);color:var(--pink)}
 .sel-Secretario{border-color:var(--teal);background:rgba(20,184,166,.1);color:var(--teal)}
 .sel-Excusa{border-color:#a78bfa;background:rgba(167,139,250,.1);color:#a78bfa}
-.sel-Luto{border-color:#6b7280;background:rgba(107,114,128,.1);color:#9ca3af}
 .sel-Luto{border-color:#9ca3af;background:rgba(107,114,128,.12);color:#d1d5db}
+.sel-LeyMaria{border-color:#f472b6;background:rgba(244,114,182,.1);color:#f472b6}
+.sel-PermisoCumple{border-color:#fbbf24;background:rgba(251,191,36,.1);color:#fbbf24}
 .btn-row{display:flex;gap:8px;margin-top:14px}
 .btn{flex:1;padding:11px;border-radius:9px;border:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.8px;transition:all .2s}
 .btn-primary{background:var(--gold);color:#000}
@@ -5991,6 +5992,7 @@ function renderNavMatriz(){
           +'<td style="background:'+_nr.bg+';border-left:3px solid '+_nr.left+';border-top:1px solid var(--border);border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:5px 8px;color:var(--text);position:sticky;left:0;z-index:1">'
           +'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:'+_nr.left+';margin-right:4px;vertical-align:middle"></span>'
           +'<span style="font-size:8px;color:var(--muted);margin-right:3px">'+m.rank+'</span>'+nomCorto+'</td>'
+          +cells
           +'<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?colores.color:'var(--muted)')+';font-weight:700;background:'+(total>0?colores.bg:'transparent')+'">'+(total||'-')+'</td>'
           +'</tr>';
       });
