@@ -127,8 +127,6 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .bl-LeyMaria{border-left:3px solid #f472b6}
 .bl-PermisoCumple{border-left:3px solid #fbbf24}
 .bl-Luto{border-left:3px solid #6b7280}
-.bl-LeyMaria{border-left:3px solid #f472b6}
-.bl-PermisoCumple{border-left:3px solid #fbbf24}
 .bl-Luto{border-left:3px solid #6b7280}
 
 .p-Servicio{background:rgba(34,197,94,.13);color:var(--green)}
@@ -147,8 +145,9 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .p-Anexo{background:rgba(236,72,153,.13);color:var(--pink)}
 .p-Secretario{background:rgba(20,184,166,.13);color:var(--teal)}
 .p-Excusa{background:rgba(167,139,250,.13);color:#a78bfa}
-.p-Luto{background:rgba(107,114,128,.13);color:#9ca3af}
-.p-Luto{background:rgba(107,114,128,.18);color:#d1d5db}
+.p-Luto{background:rgba(107,114,128,.15);color:#d1d5db}
+.p-LeyMaria{background:rgba(244,114,182,.13);color:#f472b6}
+.p-PermisoCumple{background:rgba(251,191,36,.13);color:#fbbf24}
 
 /* ── MODAL ── */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:200;align-items:flex-end;justify-content:center}
@@ -5678,8 +5677,8 @@ function renderGuardiaTabla(){
         var _src = getStatusRowColor(m.status);
         var _dot = '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+_src.left+';margin-right:5px;vertical-align:middle"></span>';
         rows += '<tr>'
-          +'<td style="padding:5px 8px;border:1px solid var(--border);color:var(--text)">'
-          +'<span style="font-size:8px;color:var(--muted);margin-right:4px">'+m.rank+'</span>'+nomCorto
+          +'<td style="background:'+_src.bg+';border-left:3px solid '+_src.left+';padding:5px 8px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);border-right:1px solid var(--border);color:var(--text);position:sticky;left:0;z-index:1">'
+          +_dot+'<span style="font-size:8px;color:var(--muted);margin-right:4px">'+m.rank+'</span>'+nomCorto
           +'</td>'
           +cells
           +'<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?'var(--gold2)':'var(--muted)')+';font-weight:700">'+(total||'-')+'</td>'
