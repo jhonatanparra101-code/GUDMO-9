@@ -5986,10 +5986,11 @@ function renderNavMatriz(){
           cells += '<td onclick="navShowDetalle(\''+m.id+'\',\''+tipoFiltro+'\','+mi+','+anio+')" title="'+tip+'" style="background:'+bg+';color:'+col+';text-align:center;padding:5px 2px;border:1px solid var(--border);font-weight:'+(res.dias>0?'700':'400')+';cursor:'+(res.dias>0?'pointer':'default')+'">'+val+'</td>';
         }
         var nomCorto = m.name.split(' ').slice(0,2).join(' ');
+        var _nr = getStatusRowColor(m.status);
         rows += '<tr>'
-          +'<td style="padding:5px 8px;border:1px solid var(--border);color:var(--text);background:var(--navy);position:sticky;left:0;z-index:1">'
+          +'<td style="background:'+_nr.bg+';border-left:3px solid '+_nr.left+';border-top:1px solid var(--border);border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:5px 8px;color:var(--text);position:sticky;left:0;z-index:1">'
+          +'<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:'+_nr.left+';margin-right:4px;vertical-align:middle"></span>'
           +'<span style="font-size:8px;color:var(--muted);margin-right:3px">'+m.rank+'</span>'+nomCorto+'</td>'
-          +cells
           +'<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?colores.color:'var(--muted)')+';font-weight:700;background:'+(total>0?colores.bg:'transparent')+'">'+(total||'-')+'</td>'
           +'</tr>';
       });
