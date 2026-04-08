@@ -2,6 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GUDMO-9">
+  <meta name="theme-color" content="#0a0e1a">
+  <link rel="manifest" href="manifest.json">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>GUDMO-9 — Parte Diario</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -238,9 +245,53 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 .add-form{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:14px}
 .hist-filter{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
 .hist-filter select{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px;outline:none}
+
+/* ── LOGIN ── */
+#loginScreen{position:fixed;inset:0;background:linear-gradient(135deg,#0a0e1a 0%,#0d1528 60%,#0a1020 100%);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column}
+#loginScreen.hidden{display:none}
+.login-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:36px 30px;width:min(340px,90vw);text-align:center;backdrop-filter:blur(10px)}
+.login-logo{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:4px;color:var(--gold2);margin-bottom:4px}
+.login-sub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:28px}
+.login-input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:13px 16px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:14px;box-sizing:border-box;text-align:center;letter-spacing:2px}
+.login-input:focus{border-color:var(--gold2)}
+.login-btn{width:100%;background:var(--gold);color:#000;border:none;border-radius:10px;padding:13px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:1px;cursor:pointer;margin-bottom:10px}
+.login-btn:active{opacity:.85}
+.login-err{color:#ef4444;font-size:12px;min-height:18px;margin-bottom:4px}
+.login-hint{font-size:10px;color:var(--muted);margin-top:12px}
+/* Modal PIN DEI */
+#deiPinModal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:8000;display:none;align-items:center;justify-content:center}
+#deiPinModal.open{display:flex}
+.dei-pin-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px 24px;width:min(300px,88vw);text-align:center}
+.dei-pin-title{font-size:14px;font-weight:700;color:var(--gold2);margin-bottom:6px}
+.dei-pin-sub{font-size:11px;color:var(--muted);margin-bottom:18px}
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">GUDMO-9</div>
+    <div class="login-sub">Sistema de Gestión DEI</div>
+    <input class="login-input" type="password" id="loginPass" placeholder="Contraseña de acceso" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-err" id="loginErr"></div>
+    <button class="login-btn" onclick="doLogin()">🔐 Ingresar</button>
+    <div class="login-hint">Acceso restringido — solo personal autorizado</div>
+  </div>
+</div>
+
+<!-- MODAL PIN DEI -->
+<div id="deiPinModal">
+  <div class="dei-pin-box">
+    <div class="dei-pin-title">🛡️ Permisos DEI — Acceso Restringido</div>
+    <div class="dei-pin-sub">Esta sección es de uso exclusivo del Cdte. DEI y personal autorizado</div>
+    <input class="login-input" type="password" id="deiPinInput" placeholder="Contraseña DEI" autocomplete="off" onkeydown="if(event.key==='Enter')checkDeiPin()">
+    <div class="login-err" id="deiPinErr"></div>
+    <button class="login-btn" onclick="checkDeiPin()">✅ Confirmar</button>
+    <button style="width:100%;background:transparent;border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--muted);font-size:12px;cursor:pointer;margin-top:4px" onclick="closeDeiPin()">Cancelar</button>
+  </div>
+</div>
+
 
 <header>
   <div class="hdr">
@@ -5922,6 +5973,11 @@ function navDiasEnRango(inicio, fin, mesIdx, anio){
 
 function renderNavMatriz(){
   var tipoFiltro = document.getElementById('navTipoFiltro').value;
+  // Proteger PermisoDEI — requiere contraseña DEI
+  if((tipoFiltro==='PermisoDEI' || tipoFiltro==='PermisoGUDMO') && !_deiUnlocked){
+    requireDeiPin(function(){ renderNavMatriz(); });
+    return;
+  }
   var mesFiltro  = document.getElementById('navMesFiltro').value;
   var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
   var personal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
@@ -6787,6 +6843,80 @@ function dashDrawAlertas(){
 //
 //  INIT — Pre-cargar datos del Excel GUDMO-9
 //
+
+// ── AUTENTICACIÓN ──
+var APP_PASS = 'GUDMO9DEI';       // Contraseña general — cámbiala
+var DEI_PASS = 'DEI2PRIVADO';     // Contraseña sección DEI — cámbiala
+var _appUnlocked = false;
+var _deiUnlocked = false;
+var _deiPinCallback = null;
+
+function doLogin(){
+  var v = document.getElementById('loginPass').value;
+  if(v === APP_PASS){
+    _appUnlocked = true;
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('loginPass').value = '';
+    document.getElementById('loginErr').textContent = '';
+    // Guardar sesión en sessionStorage (se borra al cerrar la pestaña)
+    sessionStorage.setItem('gudmo9_auth','1');
+  } else {
+    document.getElementById('loginErr').textContent = '⚠️ Contraseña incorrecta';
+    document.getElementById('loginPass').value = '';
+    document.getElementById('loginPass').focus();
+  }
+}
+
+function requireDeiPin(callback){
+  if(_deiUnlocked){
+    callback();
+    return;
+  }
+  _deiPinCallback = callback;
+  document.getElementById('deiPinInput').value = '';
+  document.getElementById('deiPinErr').textContent = '';
+  document.getElementById('deiPinModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('deiPinInput').focus(); }, 100);
+}
+
+function checkDeiPin(){
+  var v = document.getElementById('deiPinInput').value;
+  if(v === DEI_PASS){
+    _deiUnlocked = true;
+    document.getElementById('deiPinModal').classList.remove('open');
+    document.getElementById('deiPinInput').value = '';
+    sessionStorage.setItem('gudmo9_dei','1');
+    if(_deiPinCallback){ _deiPinCallback(); _deiPinCallback = null; }
+  } else {
+    document.getElementById('deiPinErr').textContent = '⚠️ Contraseña incorrecta';
+    document.getElementById('deiPinInput').value = '';
+    document.getElementById('deiPinInput').focus();
+  }
+}
+
+function closeDeiPin(){
+  document.getElementById('deiPinModal').classList.remove('open');
+  _deiPinCallback = null;
+  // Volver al filtro anterior (Permiso todos)
+  var sel = document.getElementById('navTipoFiltro');
+  if(sel && (sel.value==='PermisoDEI' || sel.value==='PermisoGUDMO')){
+    sel.value = 'Permiso';
+    renderNavMatriz();
+  }
+}
+
+// Verificar sesión al cargar
+(function checkSession(){
+  if(sessionStorage.getItem('gudmo9_auth')==='1'){
+    _appUnlocked = true;
+    var ls = document.getElementById('loginScreen');
+    if(ls) ls.classList.add('hidden');
+  }
+  if(sessionStorage.getItem('gudmo9_dei')==='1'){
+    _deiUnlocked = true;
+  }
+})();
+
 async function initApp(){
   // Recuperar de IndexedDB si localStorage no tiene datos O tiene array vacío
   try {
