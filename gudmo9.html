@@ -476,6 +476,16 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
     <div class="parte-ttl">📄 PARTE DEL DISPOSITIVO</div>
     <div class="parte-meta" id="parteMeta"></div>
   </div>
+  <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+    <select id="parteEscFiltro" onchange="buildParte()" style="flex:1;min-width:140px;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-size:12px">
+      <option value="all">GUDMO-9 completo</option>
+      <option value="DEI 1">DEI 1</option>
+      <option value="DEI 2">DEI 2</option>
+      <option value="DEI 3">DEI 3</option>
+      <option value="Plana Mayor">Plana Mayor</option>
+    </select>
+    <button onclick="buildParte()" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:8px;padding:7px 12px;color:var(--blue);font-size:11px;cursor:pointer;font-weight:700">🔄 Actualizar</button>
+  </div>
   <div class="parte-preview" id="partePreview"></div>
   <div class="action-grid">
     <div class="ac" onclick="copyParte()"><div class="ai">📋</div><div class="al">Copiar</div><div class="as">Para WhatsApp</div></div>
@@ -2979,12 +2989,28 @@ function buildParte(){
   const fecha=`${DAYS[now.getDay()]} ${now.getDate()} de ${MONTHS_L[now.getMonth()]} de ${now.getFullYear()}`;
   const hora=now.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
 
-  const escLabelParte = curEscuadra==='all'?'GUDMO-9 COMPLETO':curEscuadra;
+  // Usar el filtro del selector del parte (independiente del filtro global)
+  var _parteEscEl = document.getElementById('parteEscFiltro');
+  var _parteEsc = _parteEscEl ? _parteEscEl.value : (curEscuadra==='all'?'all':curEscuadra);
+  var _parteMiembros = members.filter(function(m){
+    if(m.esEspejo) return false;
+    if(_parteEsc==='all') return true;
+    return m.escuadra===_parteEsc;
+  });
+  const escLabelParte = _parteEsc==='all'?'GUDMO-9 COMPLETO':_parteEsc;
   const groups={
     Servicio:[],Vacaciones:[],Permiso:[],Franquicia:[],
     Guardia:[],Incapacidad:[],Comision:[],Curso:[],Anexo:[],Secretario:[],Excusa:[],Luto:[]
   };
-  sorted().forEach(m=>{ if(groups[m.status]) groups[m.status].push(m); });
+  // Ordenar _parteMiembros por rango
+  var _parteSorted = [..._parteMiembros].sort(function(a,b){
+    return (RANK_KEYS.indexOf(a.rank)||99) - (RANK_KEYS.indexOf(b.rank)||99);
+  });
+  _parteSorted.forEach(function(m){
+    // PermisoGUDMO y PermisoDEI se agrupan bajo Permiso en el parte
+    var st = m.status==='PermisoGUDMO'||m.status==='PermisoDEI' ? 'Permiso' : m.status;
+    if(groups[st]!==undefined) groups[st].push(m);
+  });
 
   const lines=arr=>arr.length
     ? arr.map((x,i)=>`  ${i+1}. ${x.rank} ${x.name}${x.cargo?' ['+x.cargo+']':''}${x.restriccion?' 🚫 RESTRINGIDO: '+(x.restriccionObs||''):''}${x.obs?' ('+x.obs+')':''}`).join('\n')
@@ -2996,7 +3022,7 @@ function buildParte(){
   const escSrv=groups.Servicio.filter(m=>m.cargo==='Escudero').length;
 
   const catSrv   = countByCategory(groups.Servicio);
-  const catTotal = countByCategory(members);
+  const catTotal = countByCategory(_parteMiembros);
   const catVac   = countByCategory(groups.Vacaciones);
   const catPerm  = countByCategory(groups.Permiso);
   const catFran  = countByCategory(groups.Franquicia);
@@ -3028,7 +3054,7 @@ RECEPTOR       : ${config.sup||'___________________'}
 📊 EFECTIVOS DEL DISPOSITIVO
   Of. - N.E. - PT - P.P.
   ─────────────────────────────────────
-  Nómina total  :  ${dashFmt(catTotal)}  (${members.length})
+  Nómina total  :  ${dashFmt(catTotal)}  (${_parteMiembros.length})
   En servicio   :  ${dashFmt(catSrv)}  (${totSrv})
   Vacaciones    :  ${dashFmt(catVac)}  (${groups.Vacaciones.length})
   Permiso       :  ${dashFmt(catPerm)}  (${groups.Permiso.length})
@@ -7558,21 +7584,55 @@ function dashDrawBloque(){
     el.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Sin iniciar</div>'; return;
   }
   var dias = calcDiasBloque(esc);
-  var pct = Math.min(100,Math.round(dias/35*100));
-  var color = dias>=35?'#22c55e':d.activo?'#3b82f6':'#f97316';
-  var estado = dias>=35?'COMPLETADO':d.activo?'EN CURSO':'EN PAUSA';
+  var pct = Math.min(100,Math.round(dias/DIAS_BLOQUE_TOTAL*100));
+
+  // Calcular disponibilidad actual del DEI
+  var escPersonal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
+  var totalPersonal = escPersonal.length;
+  var enServicioAhora = escPersonal.filter(function(m){ return m.status==='Servicio'; }).length;
+  var pctDisp = totalPersonal>0 ? Math.round(enServicioAhora/totalPersonal*100) : 0;
+  var tieneDisp50 = pctDisp >= 50;
+
+  // Estado del bloque
+  var enPausa = d.pausas.some(function(p){ return p.inicio && !p.fin; });
+  var completo = dias >= DIAS_BLOQUE_TOTAL;
+
+  var color, estado;
+  if(completo){
+    color='#22c55e'; estado='✅ COMPLETADO';
+  } else if(!d.activo){
+    color='var(--muted)'; estado='⚪ INACTIVO';
+  } else if(enPausa){
+    color='#f97316'; estado='⏸️ EN PERMISO';
+  } else if(!tieneDisp50){
+    color='#f97316'; estado='⚠️ DISP. BAJA';
+  } else {
+    color='#3b82f6'; estado='🔵 EN CURSO';
+  }
+
+  var restantes = Math.max(0, DIAS_BLOQUE_TOTAL - dias);
+  var dispColor = tieneDisp50 ? '#22c55e' : '#ef4444';
+  var dispIcon  = tieneDisp50 ? '✅' : '⚠️';
+
   el.innerHTML=
     '<div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:6px">'
     +'<div style="font-size:32px;font-weight:900;color:'+color+';line-height:1">'+dias+'</div>'
-    +'<div style="font-size:12px;color:var(--muted);padding-bottom:4px">/35</div>'
+    +'<div style="font-size:12px;color:var(--muted);padding-bottom:4px">/'+DIAS_BLOQUE_TOTAL+'</div>'
     +'<div style="flex:1"></div>'
     +'<div style="font-size:9px;font-weight:700;color:'+color+';padding:2px 7px;border-radius:10px;background:'+color+'22">'+estado+'</div>'
     +'</div>'
-    +'<div style="font-size:9px;color:var(--muted);margin-bottom:6px">días de bloque</div>'
-    +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">'
+    +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:6px">'
     +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px;transition:width .5s"></div>'
     +'</div>'
-    +'<div style="font-size:8px;color:var(--muted);margin-top:4px;text-align:right">'+pct+'% completado</div>';
+    +'<div style="display:flex;justify-content:space-between;font-size:8px;color:var(--muted);margin-bottom:5px">'
+    +'<span>'+pct+'% completado</span>'
+    +'<span>'+restantes+' día'+(restantes!==1?'s':'')+' restante'+(restantes!==1?'s':'')+'</span>'
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:'+dispColor+'18;border:1px solid '+dispColor+'44;border-radius:6px">'
+    +'<span style="font-size:11px">'+dispIcon+'</span>'
+    +'<span style="font-size:9px;color:'+dispColor+';font-weight:700">'+pctDisp+'% disponible</span>'
+    +'<span style="font-size:9px;color:var(--muted)">('+enServicioAhora+'/'+totalPersonal+' en servicio)</span>'
+    +'</div>';
 }
 
 function dashDrawAlertas(){
