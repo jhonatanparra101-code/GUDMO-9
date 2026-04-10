@@ -361,6 +361,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <button class="tab-btn" onclick="showTab('parte',this)">📄 Parte</button>
   <button class="tab-btn" onclick="showTab('historial',this)">📆 Historial</button>
   <button class="tab-btn" onclick="showTab('turnos',this)">📖 Bitácora</button>
+  <button class="tab-btn" onclick="showTab('minuta',this)">📋 Minuta</button>
   <button class="tab-btn" onclick="showTab('reportes',this)">📊 Reportes</button>
   <button class="tab-btn" onclick="showTab('aseo',this)">🧹 Aseo</button>
   <button class="tab-btn" onclick="showTab('misiones',this)">🎯 Misiones</button>
@@ -642,6 +643,17 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 </div>
 
 <!-- REPORTES -->
+<div class="section" id="tab-minuta">
+  <div class="sh">📋 Minuta DEI 2</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+    <button class="btn btn-primary" style="flex:none;padding:7px 14px;font-size:11px" onclick="showAddMinuta()">+ Nueva tarea</button>
+    <div style="font-size:10px;color:var(--muted);padding:4px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px">
+      📋 Solo Subintendentes (SI) llevan la Minuta
+    </div>
+  </div>
+  <div id="minutaList"></div>
+</div>
+
 <div class="section" id="tab-reportes">
   <div class="sh">📊 Reportes de Novedades</div>
   <div class="hist-filter" style="margin-bottom:12px">
@@ -2071,6 +2083,7 @@ function showTab(id,btn){
   if(id==='parte') buildParte();
   if(id==='historial'){populateHistSelects();renderHistorial();}
   if(id==='turnos') renderTurnos();
+  if(id==='minuta') renderMinuta();
   if(id==='reportes') renderReportes();
   if(id==='aseo') renderAseo();
   if(id==='misiones') renderMisiones();
@@ -3141,6 +3154,406 @@ function showToast(msg,bg){
 //  TURNOS ROTATIVOS
 //
 
+// ═══════════════════════════════════════════
+//  MÓDULO MINUTA — solo Subintendentes (SI)
+// ═══════════════════════════════════════════
+var minutas = ld('g9_minutas', []);
+
+function svMinutas(){ sv('g9_minutas', minutas); }
+
+function getSigMinuta(t){
+  if(!t.miembros.length) return null;
+  if(!t.historial.length) return members.find(function(m){return m.id===t.miembros[0].memberId;})||null;
+  var last=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);})[0];
+  var lastIdx=t.miembros.findIndex(function(m){return m.memberId===last.memberId;});
+  var nextIdx=(lastIdx+1)%t.miembros.length;
+  return members.find(function(m){return m.id===t.miembros[nextIdx].memberId;})||null;
+}
+
+function getSigMinutaDisp(t){
+  if(!t.miembros.length) return null;
+  var NODISP=['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
+  var startIdx=0;
+  if(t.historial.length){
+    var last=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);})[0];
+    var li=t.miembros.findIndex(function(m){return m.memberId===last.memberId;});
+    startIdx=(li+1)%t.miembros.length;
+  }
+  for(var i=0;i<t.miembros.length;i++){
+    var idx=(startIdx+i)%t.miembros.length;
+    var m=members.find(function(x){return x.id===t.miembros[idx].memberId;});
+    if(!m) continue;
+    if(NODISP.includes(m.status)) continue;
+    return {member:m, saltados:i, idxEnTurno:idx};
+  }
+  var m=members.find(function(x){return x.id===t.miembros[startIdx].memberId;});
+  return m?{member:m,saltados:0,idxEnTurno:startIdx,todosOcupados:true}:null;
+}
+
+function renderMinuta(){
+  minutas = ld('g9_minutas', []) || [];
+  var container=document.getElementById('minutaList');
+  if(!container) return;
+  var esc=curEscuadra==='all'?'DEI 2':curEscuadra;
+  var myMin=minutas.filter(function(t){return t.escuadra===esc||t.escuadra==='all';});
+  if(!myMin.length){
+    container.innerHTML='<div class="empty"><div class="ei">📋</div><p style="margin-bottom:12px">No hay tareas de Minuta todavía.</p></div>';
+    return;
+  }
+
+  var out='';
+  myMin.forEach(function(t){
+    var lastH=t.historial.length?[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);})[0]:null;
+    var lastM=lastH?members.find(function(m){return m.id===lastH.memberId;}):null;
+    var dispInfo=getSigMinutaDisp(t);
+    var sigDisp=dispInfo?dispInfo.member:getSigMinuta(t);
+    var saltados=dispInfo?dispInfo.saltados:0;
+    var pendientesList=(t.pendientes||[]).map(function(p){
+      var mp=members.find(function(x){return x.id===p.memberId;}); return mp?mp.name.split(' ')[0]:null;
+    }).filter(Boolean);
+
+    // Días restantes
+    var diasR=null; var diasMsg=''; var fechaEnt=null;
+    if(t.historial.length && t.tipo==='semanal_laboral'){
+      var sortedH=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+      var diasTurno=t.diasLaboralesPorTurno||7;
+      var trans=getDiasLaboralesDesde(sortedH[0].fecha);
+      diasR=Math.max(0,diasTurno-trans);
+      if(diasR===0) diasMsg='<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:3px">🔔 ¡Toca entregar hoy!</div>';
+      else diasMsg='<div style="font-size:10px;color:var(--muted);margin-top:3px">📅 '+diasR+' día'+(diasR!==1?'s':'')+' laborable'+(diasR!==1?'s':'')+' restante'+(diasR!==1?'s':'')+'</div>';
+    }
+
+    // Lista miembros
+    var memberListHtml='';
+    t.miembros.forEach(function(mm,i){
+      var m=members.find(function(x){return x.id===mm.memberId;});
+      if(!m) return;
+      var isNext=dispInfo&&dispInfo.member&&dispInfo.member.id===m.id;
+      var isLast=lastH&&lastH.memberId===m.id;
+      var lastEntry=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);}).find(function(h){return h.memberId===m.id;});
+      var totalVeces=t.historial.filter(function(h){return h.memberId===m.id;}).length;
+      var esPend=(t.pendientes||[]).find(function(p){return p.memberId===m.id;});
+      memberListHtml+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:3px;background:'+(isNext?'rgba(200,146,42,.12)':'rgba(255,255,255,.02)')+'">'
+        +'<div style="font-size:14px;color:var(--muted);width:18px;text-align:center">'+(i+1)+'</div>'
+        +'<div style="flex:1">'
+        +'<div style="font-size:12px;font-weight:600;color:'+(isNext?'var(--gold2)':'var(--text)')+'">'+m.rank+' '+m.name+'</div>'
+        +(lastEntry?'<div style="font-size:9.5px;color:var(--muted)">Último: 📅 '+fmtDate(lastEntry.fecha)+(lastEntry.obs?'<span style="font-style:italic;color:var(--cyan)"> · '+lastEntry.obs+'</span>':'')+'</div>':'<div style="font-size:9.5px;color:var(--muted)">Sin registros</div>')
+        +(totalVeces>0?'<div style="font-size:9px;color:var(--cyan);margin-top:1px">📋 Ha llevado: <strong>'+totalVeces+'</strong> '+(totalVeces!==1?'veces':'vez')+'</div>':'')
+        +(esPend?'<div style="font-size:9px;color:var(--yellow);margin-top:1px">⏳ Pendiente al regresar de '+esPend.motivo+'</div>':'')
+        +'</div>'
+        +(isNext?'<div style="font-size:9px;font-weight:700;color:var(--gold2);background:rgba(200,146,42,.2);padding:2px 7px;border-radius:8px">PRÓXIMO</div>':'')
+        +(esPend&&!isNext?'<div style="font-size:9px;color:var(--yellow);background:rgba(251,191,36,.15);padding:2px 7px;border-radius:8px">PENDIENTE</div>':'')
+        +(isLast&&!isNext&&!esPend?'<div style="font-size:9px;color:var(--muted);padding:2px 7px">último</div>':'')
+        +'</div>';
+    });
+
+    // Banner próximo
+    var saltAviso=saltados>0?'<div style="font-size:9.5px;color:var(--yellow);margin-top:3px">⏭️ Se omiten '+saltados+' por ausencia</div>':'';
+    var pendAviso=pendientesList.length>0?'<div style="font-size:9.5px;color:var(--yellow);margin-top:2px">⏳ Pendientes: '+pendientesList.join(', ')+'</div>':'';
+    var proximoBanner='';
+    if(!sigDisp){
+      proximoBanner='<div style="font-size:12px;color:var(--muted);margin-bottom:10px">⚠️ Sin miembros SI configurados</div>';
+    } else {
+      proximoBanner='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="font-size:24px">📋</div>'
+        +'<div style="flex:1">'
+        +(lastM&&lastM.id!==sigDisp.id?'<div style="font-size:10px;color:var(--muted)">Tiene ahora: <strong>'+lastM.rank+' '+lastM.name.split(' ')[0]+'</strong></div>':'')
+        +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Próximo</div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--green)">'+sigDisp.rank+' '+sigDisp.name+'</div>'
+        +saltAviso+pendAviso+diasMsg
+        +'</div>'
+        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-mid='"+t.id+"' onclick='entregarMinuta(this.dataset.mid)'>✅ Entregar</button>"
+        +'</div>'
+        +'</div>';
+    }
+
+    // Historial tabla
+    var histHtml='';
+    if(t.historial.length){
+      var sortedH=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+      histHtml='<div style="margin-top:10px">'
+        +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📊 Registro de entregas</div>'
+        +'<div style="overflow-x:auto">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:10px">'
+        +'<thead><tr>'
+        +'<th style="background:var(--navy);padding:5px 8px;text-align:left;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:100px">FUNCIONARIO</th>';
+      sortedH.forEach(function(h,i){
+        histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:55px">T'+(i+1)+'<br><span style="font-size:8px;font-weight:400">'+fmtDate(h.fecha)+'</span></th>';
+      });
+      histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--gold2);font-size:9px;border:1px solid var(--border);min-width:36px">TOT</th>'
+        +'</tr></thead><tbody>';
+      var miembrosOrden=t.miembros.map(function(mm){return members.find(function(x){return x.id===mm.memberId;});}).filter(Boolean);
+      miembrosOrden.forEach(function(m){
+        var total=0;
+        var nomCorto=m.name.split(' ').slice(0,2).join(' ');
+        var row='<tr><td style="padding:5px 8px;border:1px solid var(--border);color:var(--text)"><span style="font-size:8px;color:var(--muted);margin-right:3px">'+m.rank+'</span>'+nomCorto+'</td>';
+        sortedH.forEach(function(h){
+          var esSuyo=h.memberId===m.id;
+          if(esSuyo) total++;
+          row+='<td style="text-align:center;padding:5px 2px;border:1px solid var(--border);background:'+(esSuyo?'rgba(34,197,94,.15)':'transparent')+';color:'+(esSuyo?'var(--green)':'var(--muted)')+';font-weight:'+(esSuyo?'700':'400')+'">'
+            +(esSuyo?'<span title="'+fmtDate(h.fecha)+(h.obs?' · '+h.obs:'')+'">✓<br><span style="font-size:7px;font-weight:400;color:var(--muted)">'+fmtDate(h.fecha).slice(0,5)+'</span></span>':'-')+'</td>';
+        });
+        row+='<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?'var(--gold2)':'var(--muted)')+';font-weight:700">'+(total||'-')+'</td></tr>';
+        histHtml+=row;
+      });
+      // Fila acciones
+      histHtml+='<tfoot><tr><td style="padding:4px 8px;border:1px solid var(--border);font-size:9px;color:var(--muted)">ACCIONES</td>';
+      sortedH.forEach(function(h,idx_h){
+        var hm=members.find(function(x){return x.id===h.memberId;});
+        var nom=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
+        histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
+          +'<button onclick="editarEntregaMinuta(\''+t.id+'\','+idx_h+')" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
+          +'<button onclick="borrarEntregaMinuta(\''+t.id+'\','+idx_h+',\''+nom+'\')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
+          +'</td>';
+      });
+      histHtml+='<td style="border:1px solid var(--border)"></td></tr></tfoot>';
+      histHtml+='</tbody></table></div></div>';
+    }
+
+    // Pendientes banner
+    var pendHtml=(t.pendientes&&t.pendientes.length)
+      ?'<div style="margin-top:10px;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:10px 12px">'
+        +'<div style="font-size:10px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">⏳ Pendientes al regresar</div>'
+        +t.pendientes.map(function(p){
+          var mp=members.find(function(x){return x.id===p.memberId;});
+          return mp?'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(251,191,36,.1)">'
+            +'<div style="font-size:11px;color:var(--text);flex:1">'+mp.rank+' '+mp.name+'</div>'
+            +'<div style="font-size:9px;color:var(--muted)">'+p.motivo+'</div>'
+            +'<button onclick="quitarPendienteMinuta(\''+t.id+'\',\''+mp.id+'\')" style="background:none;border:none;font-size:11px;cursor:pointer;color:var(--muted);padding:0 4px" title="Ya cumplió">✅</button>'
+            +'</div>':'';
+        }).join('')
+        +'</div>'
+      :'';
+
+    out+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+      +'<div style="font-size:22px">📋</div>'
+      +'<div style="flex:1">'
+      +'<div style="font-size:17px;font-weight:700;letter-spacing:1px;color:var(--gold2)">'+t.nombre+'</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+t.escuadra+' · Solo SI · '+t.miembros.length+' personas</div>'
+      +'</div>'
+      +"<button data-mid='"+t.id+"' onclick='reordenarMinuta(this.dataset.mid)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
+      +"<button data-mid='"+t.id+"' onclick='eliminarMinuta(this.dataset.mid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
+      +'</div>'
+      +proximoBanner
+      +'<div style="margin-bottom:4px">'
+      +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Orden del turno</div>'
+      +(memberListHtml||'<div style="font-size:11px;color:var(--muted)">Sin miembros SI</div>')
+      +'</div>'
+      +histHtml+pendHtml
+      +'</div>';
+  });
+  container.innerHTML=out;
+}
+
+function entregarMinuta(mId){
+  minutas = ld('g9_minutas', [])||[];
+  var t=minutas.find(function(x){return x.id===mId;});
+  if(!t) return;
+  var disp=getSigMinutaDisp(t);
+  if(!disp){showToast('⚠️ Sin miembros SI configurados','#f97316');return;}
+  var sig=disp.member; var saltados=disp.saltados;
+  var avisoSalt='';
+  if(saltados>0&&!disp.todosOcupados){
+    var startIdx=0;
+    if(t.historial.length){var last=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);})[0];var li=t.miembros.findIndex(function(m){return m.memberId===last.memberId;});startIdx=(li+1)%t.miembros.length;}
+    var noms=[];
+    for(var i=0;i<saltados;i++){var idx=(startIdx+i)%t.miembros.length;var ms=members.find(function(x){return x.id===t.miembros[idx].memberId;});if(ms)noms.push(ms.rank+' '+ms.name.split(' ')[0]);}
+    avisoSalt='<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px"><div style="font-weight:700;color:var(--gold2);margin-bottom:4px">⏭️ Se omiten '+saltados+' por ausencia:</div><div style="color:var(--muted)">'+noms.join(', ')+'</div><div style="color:var(--muted);margin-top:4px;font-size:10px">Quedan como pendientes al regresar.</div></div>';
+  }
+  document.getElementById('mTitle').textContent='📋 Entregar Minuta';
+  document.getElementById('mSubtitle').textContent=t.nombre;
+  document.getElementById('statusGrid').innerHTML=avisoSalt
+    +'<div class="fg" style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted)">Recibe</label>'
+    +'<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;font-size:13px;font-weight:700;color:var(--green)">'+sig.rank+' '+sig.name+'</div></div>'
+    +'<div class="fg" style="grid-column:1/-1"><label>Observación <span style="color:var(--muted);font-weight:400">(opcional)</span></label>'
+    +'<textarea id="minutaObs" rows="3" placeholder="Ej: Minuta al día, novedad X..." style="resize:none;font-size:12px"></textarea></div>'
+    +'<div class="fg" style="grid-column:1/-1"><label>Fecha</label><input type="date" id="minutaFecha" value="'+localDateStr()+'"></div>';
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+  document.querySelectorAll('.btn-row')[0].innerHTML='<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button><button class="btn btn-primary" onclick="confirmarEntregaMinuta(\''+mId+'\')">✅ Confirmar</button>';
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function confirmarEntregaMinuta(mId){
+  minutas=ld('g9_minutas', [])||[];
+  var t=minutas.find(function(x){return x.id===mId;});
+  if(!t) return;
+  var disp=getSigMinutaDisp(t);
+  if(!disp){cancelTurnoModal();return;}
+  var sig=disp.member; var saltados=disp.saltados;
+  var obs=(document.getElementById('minutaObs')||{}).value||'';
+  var fecha=(document.getElementById('minutaFecha')||{}).value||localDateStr();
+  if(saltados>0&&!disp.todosOcupados){
+    if(!t.pendientes) t.pendientes=[];
+    var startIdx=0;
+    if(t.historial.length){var last=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);})[0];var li=t.miembros.findIndex(function(m){return m.memberId===last.memberId;});startIdx=(li+1)%t.miembros.length;}
+    for(var i=0;i<saltados;i++){var idx=(startIdx+i)%t.miembros.length;var ms=members.find(function(x){return x.id===t.miembros[idx].memberId;});if(ms&&!t.pendientes.find(function(p){return p.memberId===ms.id;}))t.pendientes.push({memberId:ms.id,fechaProgramada:fecha,motivo:ms.status||'Ausente',fechaRegistro:localDateStr()});}
+  }
+  t.historial.push({memberId:sig.id,fecha:fecha,obs:obs.trim()});
+  sv('g9_minutas',minutas);
+  cancelTurnoModal();
+  renderMinuta();
+  showToast('✅ Minuta entregada a '+sig.rank+' '+sig.name.split(' ')[0]);
+}
+
+function editarEntregaMinuta(mId,idx){
+  minutas=ld('g9_minutas', [])||[];
+  var t=minutas.find(function(x){return x.id===mId;});
+  if(!t) return;
+  var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var h=sorted[idx]; if(!h) return;
+  var optsM=t.miembros.map(function(mm){var mx=members.find(function(x){return x.id===mm.memberId;});return mx?'<option value="'+mx.id+'"'+(mx.id===h.memberId?' selected':'')+'>'+mx.rank+' '+mx.name+'</option>':'';}).join('');
+  document.getElementById('mTitle').textContent='✏️ Editar entrega Minuta';
+  document.getElementById('mSubtitle').textContent=t.nombre+' — T'+(idx+1);
+  document.getElementById('statusGrid').innerHTML='<div class="fg" style="grid-column:1/-1"><label>Funcionario</label><select id="editMinMember">'+optsM+'</select></div>'
+    +'<div class="fg" style="grid-column:1/-1"><label>Fecha</label><input type="date" id="editMinFecha" value="'+h.fecha+'"></div>'
+    +'<div class="fg" style="grid-column:1/-1"><label>Observación</label><textarea id="editMinObs" rows="3" style="resize:none;font-size:12px">'+(h.obs||'')+'</textarea></div>';
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+  document.querySelectorAll('.btn-row')[0].innerHTML='<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button><button class="btn btn-primary" onclick="guardarEdicionMinuta(\''+mId+'\','+idx+')">💾 Guardar</button>';
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function guardarEdicionMinuta(mId,idx){
+  minutas=ld('g9_minutas', [])||[];
+  var t=minutas.find(function(x){return x.id===mId;});
+  if(!t) return;
+  var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var h=sorted[idx]; if(!h) return;
+  var realIdx=t.historial.indexOf(h); if(realIdx===-1) return;
+  t.historial[realIdx].memberId=document.getElementById('editMinMember').value;
+  t.historial[realIdx].fecha=document.getElementById('editMinFecha').value;
+  t.historial[realIdx].obs=document.getElementById('editMinObs').value.trim();
+  sv('g9_minutas',minutas);
+  cancelTurnoModal();
+  renderMinuta();
+  showToast('✅ Entrega actualizada');
+}
+
+function borrarEntregaMinuta(mId,idx,nombre){
+  if(!confirm('¿Borrar la entrega T'+(idx+1)+' ('+nombre+')?')) return;
+  minutas=ld('g9_minutas', [])||[];
+  var t=minutas.find(function(x){return x.id===mId;});
+  if(!t) return;
+  var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var h=sorted[idx]; if(!h) return;
+  var realIdx=t.historial.indexOf(h); if(realIdx!==-1) t.historial.splice(realIdx,1);
+  sv('g9_minutas',minutas);
+  renderMinuta();
+  showToast('🗑️ Entrega eliminada');
+}
+
+function quitarPendienteMinuta(mId,memberId){
+  minutas=ld('g9_minutas', [])||[];
+  var t=minutas.find(function(x){return x.id===mId;});
+  if(!t||!t.pendientes) return;
+  var m=members.find(function(x){return x.id===memberId;});
+  t.pendientes=t.pendientes.filter(function(p){return p.memberId!==memberId;});
+  t.historial.push({memberId:memberId,fecha:localDateStr(),obs:'(Pendiente cumplido al regresar)'});
+  sv('g9_minutas',minutas);
+  renderMinuta();
+  showToast('✅ '+(m?m.rank+' '+m.name.split(' ')[0]:'Funcionario')+' — pendiente cumplido');
+}
+
+function reordenarMinuta(mId){
+  minutas=ld('g9_minutas', [])||[];
+  var t=minutas.find(function(x){return x.id===mId;});
+  if(!t) return;
+  var optsHtml=t.miembros.map(function(mm,i){
+    var m=members.find(function(x){return x.id===mm.memberId;});
+    var nom=m?m.rank+' '+m.name:'(desconocido)';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;margin-bottom:4px">'
+      +'<span style="color:var(--muted);font-size:13px">☰</span><span style="flex:1;font-size:12px;font-weight:600">'+nom+'</span>'
+      +'<button onclick="moverMiembroMinuta(\''+mId+'\','+i+',-1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▲</button>'
+      +'<button onclick="moverMiembroMinuta(\''+mId+'\','+i+',1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▼</button>'
+      +'</div>';
+  }).join('');
+  document.getElementById('mTitle').textContent='↕️ Reordenar Minuta';
+  document.getElementById('mSubtitle').textContent=t.nombre;
+  document.getElementById('statusGrid').innerHTML='<div style="font-size:10px;color:var(--muted);margin-bottom:8px">Usa ▲▼ para cambiar el orden.</div><div id="reordenMinList">'+optsHtml+'</div>';
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+  document.querySelectorAll('.btn-row')[0].innerHTML='<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cerrar</button>';
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function moverMiembroMinuta(mId,idx,dir){
+  minutas=ld('g9_minutas', [])||[];
+  var t=minutas.find(function(x){return x.id===mId;});
+  if(!t) return;
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=t.miembros.length) return;
+  var tmp=t.miembros[idx]; t.miembros[idx]=t.miembros[newIdx]; t.miembros[newIdx]=tmp;
+  sv('g9_minutas',minutas);
+  var listEl=document.getElementById('reordenMinList');
+  if(listEl){
+    var optsHtml=t.miembros.map(function(mm,i){
+      var m=members.find(function(x){return x.id===mm.memberId;});
+      var nom=m?m.rank+' '+m.name:'(desconocido)';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;margin-bottom:4px">'
+        +'<span style="color:var(--muted);font-size:13px">☰</span><span style="flex:1;font-size:12px;font-weight:600">'+nom+'</span>'
+        +'<button onclick="moverMiembroMinuta(\''+mId+'\','+i+',-1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▲</button>'
+        +'<button onclick="moverMiembroMinuta(\''+mId+'\','+i+',1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▼</button>'
+        +'</div>';
+    }).join('');
+    listEl.innerHTML=optsHtml;
+  }
+  renderMinuta();
+}
+
+function showAddMinuta(){
+  minutas=ld('g9_minutas', [])||[];
+  var esc=curEscuadra==='all'?'DEI 2':curEscuadra;
+  var siMems=members.filter(function(m){return m.escuadra===esc&&m.rank==='SI';});
+  if(!siMems.length){showToast('⚠️ No hay Subintendentes (SI) en '+esc,'#f97316');return;}
+  var opts=siMems.map(function(m){return '<option value="'+m.id+'">'+m.rank+' '+m.name+'</option>';}).join('');
+  document.getElementById('mTitle').textContent='Nueva tarea de Minuta';
+  document.getElementById('mSubtitle').textContent=esc+' — Solo SI';
+  document.getElementById('statusGrid').innerHTML=
+    '<div class="fg" style="grid-column:1/-1"><label>Nombre</label><input type="text" id="minutaNombre" placeholder="Ej: Minuta física DEI 2"></div>'
+    +'<div class="fg" style="grid-column:1/-1"><label>Días laborales por turno</label><input type="number" id="minutaDias" value="7" min="1" max="30" style="width:80px"></div>'
+    +'<div class="fg" style="grid-column:1/-1"><label>Subintendentes en el turno</label><select id="minutaMiembros" multiple style="height:120px">'+opts+'</select><div style="font-size:9.5px;color:var(--muted);margin-top:3px">Mantenga presionado para seleccionar varios</div></div>';
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+  document.querySelectorAll('.btn-row')[0].innerHTML='<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button><button class="btn btn-primary" onclick="guardarNuevaMinuta()">Guardar</button>';
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function guardarNuevaMinuta(){
+  minutas=ld('g9_minutas', [])||[];
+  var nombre=document.getElementById('minutaNombre').value.trim();
+  if(!nombre){showToast('⚠️ Ingrese un nombre','#f97316');return;}
+  var dias=parseInt(document.getElementById('minutaDias').value)||7;
+  var sel=Array.from(document.getElementById('minutaMiembros').selectedOptions).map(function(o){return{memberId:o.value};});
+  if(!sel.length){showToast('⚠️ Seleccione al menos un SI','#f97316');return;}
+  var esc=curEscuadra==='all'?'DEI 2':curEscuadra;
+  minutas.push({id:uid(),nombre:nombre,tipo:'semanal_laboral',escuadra:esc,soloRango:['SI'],miembros:sel,historial:[],pendientes:[],diasLaboralesPorTurno:dias});
+  sv('g9_minutas',minutas);
+  cancelTurnoModal();
+  showTab('minuta',document.querySelector('.tab-btn[onclick*="minuta"]'));
+  showToast('✅ Tarea de Minuta creada');
+}
+
+function eliminarMinuta(mId){
+  if(!confirm('¿Eliminar esta tarea de Minuta?')) return;
+  minutas=ld('g9_minutas', [])||[];
+  minutas=minutas.filter(function(t){return t.id!==mId;});
+  sv('g9_minutas',minutas);
+  renderMinuta();
+}
+
+// ═══════════════════════════════════════════
+
 function renderTurnos(){
   var container = document.getElementById('turnosList');
   var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
@@ -3328,6 +3741,7 @@ function renderTurnos(){
       +'<div style="font-size:17px;font-weight:700;letter-spacing:1px;color:var(--gold2)">'+t.nombre+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+t.escuadra+' · '+t.miembros.length+' personas</div>'
       +'</div>'
+      +"<button data-tid='"+t.id+"' onclick='reordenarTurno(this.dataset.tid)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
       +"<button data-tid='"+t.id+"' onclick='deleteTurno(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
       +'</div>'
       +proximoBanner
@@ -3471,10 +3885,13 @@ function getSiguiente(turno){
 }
 
 function getSiguienteDisponible(turno){
-  // Devuelve el próximo que NO está en vacaciones/permiso/incapacidad
-  // Si todos están no disponibles, retorna el natural (sin saltar infinito)
+  // Devuelve el próximo que NO está en vacaciones/permiso/incapacidad/guardia
+  // y que NO tiene cargo de mando (excluidos de llevar bitácora)
   if(!turno.miembros.length) return null;
   const ESTADOS_NO_DISP = ['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
+  // Cargos que NO llevan bitácora (primero y segundo al mando)
+  // Cargos que NO llevan bitácora: Comandante y Comandante de DEI
+  const CARGOS_MANDO = turno.cargosExcluidos || ['Cte. Escuadra','Cte. DEI'];
 
   // Calcular índice de inicio
   var startIdx = 0;
@@ -3489,9 +3906,12 @@ function getSiguienteDisponible(turno){
     const idx = (startIdx+i) % turno.miembros.length;
     const m = members.find(x=>x.id===turno.miembros[idx].memberId);
     if(!m) continue;
-    if(!ESTADOS_NO_DISP.includes(m.status)) return {member:m, saltados:i, idxEnTurno:idx};
+    if(ESTADOS_NO_DISP.includes(m.status)) continue;
+    // Excluir cargos de mando
+    if(m.cargo && CARGOS_MANDO.some(function(c){ return m.cargo.toLowerCase().includes(c.toLowerCase()); })) continue;
+    return {member:m, saltados:i, idxEnTurno:idx};
   }
-  // Todos no disponibles — retornar el natural igual
+  // Todos no disponibles/mando — retornar el natural igual
   const m = members.find(x=>x.id===turno.miembros[startIdx].memberId);
   return m ? {member:m, saltados:0, idxEnTurno:startIdx, todosOcupados:true} : null;
 }
@@ -3701,6 +4121,62 @@ function borrarEntregaBitacora(tId, idx, nombre){
   showToast('🗑️ Entrega eliminada');
 }
 
+function reordenarTurno(tId){
+  var t = turnos.find(function(x){return x.id===tId;});
+  if(!t) return;
+
+  var optsHtml = t.miembros.map(function(mm,i){
+    var m=members.find(function(x){return x.id===mm.memberId;});
+    var nom=m?m.rank+' '+m.name:'(desconocido)';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:grab" data-idx="'+i+'">'
+      +'<span style="color:var(--muted);font-size:13px">☰</span>'
+      +'<span style="flex:1;font-size:12px;font-weight:600">'+nom+'</span>'
+      +'<button onclick="moverMiembroTurno(\''+tId+'\','+i+',-1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▲</button>'
+      +'<button onclick="moverMiembroTurno(\''+tId+'\','+i+',1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▼</button>'
+      +'</div>';
+  }).join('');
+
+  document.getElementById('mTitle').textContent='↕️ Reordenar turno';
+  document.getElementById('mSubtitle').textContent=t.nombre;
+  document.getElementById('statusGrid').innerHTML=
+    '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">Usa ▲▼ para cambiar el orden. El último que recibió se mantiene en historial.</div>'
+    +'<div id="reordenList" style="grid-column:1/-1">'+optsHtml+'</div>';
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+  document.querySelectorAll('.btn-row')[0].innerHTML=
+    '<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cerrar</button>';
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function moverMiembroTurno(tId, idx, dir){
+  var t = turnos.find(function(x){return x.id===tId;});
+  if(!t) return;
+  var newIdx = idx + dir;
+  if(newIdx<0||newIdx>=t.miembros.length) return;
+  var tmp = t.miembros[idx];
+  t.miembros[idx] = t.miembros[newIdx];
+  t.miembros[newIdx] = tmp;
+  sv('g9_turnos',turnos);
+  // Re-render solo la lista dentro del modal
+  var listEl = document.getElementById('reordenList');
+  if(listEl){
+    var optsHtml = t.miembros.map(function(mm,i){
+      var m=members.find(function(x){return x.id===mm.memberId;});
+      var nom=m?m.rank+' '+m.name:'(desconocido)';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;margin-bottom:4px" data-idx="'+i+'">'
+        +'<span style="color:var(--muted);font-size:13px">☰</span>'
+        +'<span style="flex:1;font-size:12px;font-weight:600">'+nom+'</span>'
+        +'<button onclick="moverMiembroTurno(\''+tId+'\','+i+',-1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▲</button>'
+        +'<button onclick="moverMiembroTurno(\''+tId+'\','+i+',1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▼</button>'
+        +'</div>';
+    }).join('');
+    listEl.innerHTML=optsHtml;
+  }
+  renderTurnos();
+}
+
 function verHistTurno(tId){
   // Navigate to Reportes and pre-select this turno
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -3834,7 +4310,10 @@ function renderReportes(){
   }
 
   const entries = historial.filter(h=>{
-    if(h.status!==tipo) return false;
+    // Permiso agrupa: Permiso, PermisoGUDMO, PermisoDEI
+    var statusMatch = h.status===tipo;
+    if(!statusMatch && tipo==='Permiso') statusMatch = ['Permiso','PermisoGUDMO','PermisoDEI'].includes(h.status);
+    if(!statusMatch) return false;
     if(escFilt && h.escuadra!==escFilt) return false;
     return true;
   }).sort((a,b)=>b.date.localeCompare(a.date));
@@ -7238,6 +7717,23 @@ function initData(){
   });
   // Si no hay datos guardados, cargar desde el Excel importado
   // members already loaded above at variable declaration
+
+  // Pre-load minuta turno if not already present
+  var minutas = ld('g9_minutas', []);
+  if(!minutas.find(function(t){ return t.id==='minuta001'; })){
+    minutas.unshift({
+      id:'minuta001',
+      nombre:'Minuta DEI 2',
+      tipo:'semanal_laboral',
+      escuadra:'DEI 2',
+      soloRango:['SI'],
+      miembros:[],
+      historial:[],
+      pendientes:[],
+      diasLaboralesPorTurno:7
+    });
+    sv('g9_minutas', minutas);
+  }
 
   // Pre-load bitácora turno if not already present
   var existeBita = turnos.find(function(t){ return t.id==='bita001'; });
