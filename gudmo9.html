@@ -3166,7 +3166,7 @@ function renderTurnos(){
       var lastEntry=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);}).find(function(h){return h.memberId===m.id;});
       var totalVeces=t.historial.filter(function(h){return h.memberId===m.id;}).length;
       var esPendiente=(t.pendientes||[]).find(function(p){return p.memberId===m.id;});
-      var AUSENTE=['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion'];
+      var AUSENTE=['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
       var estaAusente=AUSENTE.includes(m.status);
       var bgColor=isNext?'rgba(200,146,42,.12)':estaAusente?'rgba(99,102,241,.07)':'rgba(255,255,255,.02)';
       var nameColor=isNext?'var(--gold2)':estaAusente?'var(--muted)':'var(--text)';
@@ -3290,6 +3290,19 @@ function renderTurnos(){
           histHtml+=row;
         });
 
+        // Fila de acciones: editar y borrar cada entrega
+        histHtml+='<tfoot><tr><td style="padding:4px 8px;border:1px solid var(--border);font-size:9px;color:var(--muted)">ACCIONES</td>';
+        sorted.forEach(function(h,idx_h){
+          var hm=members.find(function(x){return x.id===h.memberId;});
+          var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
+          histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
+            +'<button onclick="editarEntregaBitacora(\''+t.id+'\','+idx_h+')" '
+            +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
+            +'<button onclick="borrarEntregaBitacora(\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
+            +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
+            +'</td>';
+        });
+        histHtml+='<td style="border:1px solid var(--border)"></td></tr></tfoot>';
         histHtml+='</tbody></table></div></div>';
 
       } else {
@@ -3461,7 +3474,7 @@ function getSiguienteDisponible(turno){
   // Devuelve el próximo que NO está en vacaciones/permiso/incapacidad
   // Si todos están no disponibles, retorna el natural (sin saltar infinito)
   if(!turno.miembros.length) return null;
-  const ESTADOS_NO_DISP = ['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion'];
+  const ESTADOS_NO_DISP = ['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
 
   // Calcular índice de inicio
   var startIdx = 0;
@@ -3486,7 +3499,7 @@ function getSiguienteDisponible(turno){
 function getPendienteBitacora(turno){
   // Retorna lista de miembros que estaban en vacaciones/ausencia cuando les tocaba
   // y quedaron "pendientes" para cuando regresen
-  var ESTADOS_NO_DISP = ['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion'];
+  var ESTADOS_NO_DISP = ['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
   var pendientes = (turno.pendientes||[]);
   return pendientes.map(function(p){
     var m = members.find(x=>x.id===p.memberId);
@@ -3614,6 +3627,78 @@ function quitarPendiente(tId, memberId){
   sv('g9_turnos',turnos);
   renderTurnos();
   showToast('✅ '+(m?m.rank+' '+m.name.split(' ')[0]:'Funcionario')+' marcado — pendiente cumplido');
+}
+
+function editarEntregaBitacora(tId, idx){
+  var t = turnos.find(function(x){return x.id===tId;});
+  if(!t) return;
+  var sorted = [...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var h = sorted[idx];
+  if(!h) return;
+  var m = members.find(function(x){return x.id===h.memberId;});
+  var nombreM = m ? m.rank+' '+m.name : 'Desconocido';
+
+  // Construir lista de miembros para reasignar
+  var optsM = t.miembros.map(function(mm){
+    var mx=members.find(function(x){return x.id===mm.memberId;});
+    return mx ? '<option value="'+mx.id+'"'+(mx.id===h.memberId?' selected':'')+'>'+mx.rank+' '+mx.name+'</option>' : '';
+  }).join('');
+
+  document.getElementById('mTitle').textContent='✏️ Editar entrega';
+  document.getElementById('mSubtitle').textContent=t.nombre+' — T'+(idx+1);
+  document.getElementById('statusGrid').innerHTML=
+    '<div class="fg" style="grid-column:1/-1">'
+      +'<label>Funcionario que recibió</label>'
+      +'<select id="editBitaMember">'+optsM+'</select>'
+    +'</div>'
+    +'<div class="fg" style="grid-column:1/-1">'
+      +'<label>Fecha</label>'
+      +'<input type="date" id="editBitaFecha" value="'+h.fecha+'">'
+    +'</div>'
+    +'<div class="fg" style="grid-column:1/-1">'
+      +'<label>Observación</label>'
+      +'<textarea id="editBitaObs" rows="3" style="resize:none;font-size:12px">'+(h.obs||'')+'</textarea>'
+    +'</div>';
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+  document.querySelectorAll('.btn-row')[0].innerHTML=
+    '<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>'
+    +'<button class="btn btn-primary" onclick="guardarEdicionBitacora(\''+tId+'\','+idx+')">💾 Guardar</button>';
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function guardarEdicionBitacora(tId, idx){
+  var t = turnos.find(function(x){return x.id===tId;});
+  if(!t) return;
+  var sorted = [...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var h = sorted[idx];
+  if(!h) return;
+  // Encontrar el registro real en el historial original
+  var realIdx = t.historial.indexOf(h);
+  if(realIdx===-1) return;
+  t.historial[realIdx].memberId = document.getElementById('editBitaMember').value;
+  t.historial[realIdx].fecha    = document.getElementById('editBitaFecha').value;
+  t.historial[realIdx].obs      = document.getElementById('editBitaObs').value.trim();
+  sv('g9_turnos',turnos);
+  cancelTurnoModal();
+  renderTurnos();
+  showToast('✅ Entrega actualizada');
+}
+
+function borrarEntregaBitacora(tId, idx, nombre){
+  if(!confirm('¿Borrar la entrega T'+(idx+1)+' ('+nombre+')? Esto ajustará el orden del turno.')) return;
+  var t = turnos.find(function(x){return x.id===tId;});
+  if(!t) return;
+  var sorted = [...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var h = sorted[idx];
+  if(!h) return;
+  var realIdx = t.historial.indexOf(h);
+  if(realIdx!==-1) t.historial.splice(realIdx,1);
+  sv('g9_turnos',turnos);
+  renderTurnos();
+  showToast('🗑️ Entrega eliminada');
 }
 
 function verHistTurno(tId){
