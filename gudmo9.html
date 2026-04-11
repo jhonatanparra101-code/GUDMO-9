@@ -3359,6 +3359,7 @@ function renderMinuta(){
       +'<div style="font-size:17px;font-weight:700;letter-spacing:1px;color:var(--gold2)">'+t.nombre+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+t.escuadra+' · Solo SI · '+t.miembros.length+' personas</div>'
       +'</div>'
+      +"<button data-mid='"+t.id+"' onclick='editarMiembrosMinuta(this.dataset.mid)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Editar SI'>👥</button>"
       +"<button data-mid='"+t.id+"' onclick='reordenarMinuta(this.dataset.mid)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
       +"<button data-mid='"+t.id+"' onclick='eliminarMinuta(this.dataset.mid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
       +'</div>'
@@ -3535,6 +3536,49 @@ function moverMiembroMinuta(mId,idx,dir){
   renderMinuta();
 }
 
+function editarMiembrosMinuta(mId){
+  minutas = ld('g9_minutas',[])||[];
+  var t = minutas.find(function(x){return x.id===mId;});
+  if(!t) return;
+  var esc = t.escuadra||'DEI 2';
+  var siMems = members.filter(function(m){ return m.escuadra===esc && m.rank==='SI'; });
+  if(!siMems.length){ showToast('⚠️ No hay SI en '+esc,'#f97316'); return; }
+  var selIds = t.miembros.map(function(mm){ return mm.memberId; });
+  var opts = siMems.map(function(m){
+    return '<option value="'+m.id+'"'+(selIds.includes(m.id)?' selected':'')+'>'+m.rank+' '+m.name+'</option>';
+  }).join('');
+  document.getElementById('mTitle').textContent='👥 Asignar SI — '+t.nombre;
+  document.getElementById('mSubtitle').textContent=esc+' · Solo Subintendentes';
+  document.getElementById('statusGrid').innerHTML=
+    '<div class="fg" style="grid-column:1/-1">'
+    +'<label>Subintendentes en el turno <span style="color:var(--muted);font-weight:400">(mantén presionado para varios)</span></label>'
+    +'<select id="editMinMiembros" multiple style="height:160px">'+opts+'</select>'
+    +'<div style="font-size:9.5px;color:var(--muted);margin-top:4px">'+siMems.length+' SI disponibles en '+esc+'</div>'
+    +'</div>';
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+  document.querySelectorAll('.btn-row')[0].innerHTML=
+    '<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>'
+    +'<button class="btn btn-primary" onclick="guardarMiembrosMinuta(\''+mId+'\')">💾 Guardar</button>';
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function guardarMiembrosMinuta(mId){
+  minutas = ld('g9_minutas',[])||[];
+  var t = minutas.find(function(x){return x.id===mId;});
+  if(!t) return;
+  var sel = Array.from(document.getElementById('editMinMiembros').selectedOptions)
+    .map(function(o){ return {memberId:o.value}; });
+  if(!sel.length){ showToast('⚠️ Selecciona al menos un SI','#f97316'); return; }
+  t.miembros = sel;
+  sv('g9_minutas', minutas);
+  cancelTurnoModal();
+  renderMinuta();
+  showToast('✅ Miembros actualizados — '+sel.length+' SI asignados');
+}
+
 function showAddMinuta(){
   minutas=ld('g9_minutas', [])||[];
   var esc=curEscuadra==='all'?'DEI 2':curEscuadra;
@@ -3618,6 +3662,17 @@ function renderTurnos(){
       var vecesHtml=totalVeces>0
         ?'<div style="font-size:9px;color:var(--cyan);margin-top:1px">📋 Ha llevado: <strong>'+totalVeces+'</strong> '+(totalVeces!==1?'veces':'vez')+'</div>'
         :'';
+      // Días transcurridos/restantes para quien tiene la bitácora ahora
+      var diasActualHtml='';
+      if(isLast && !isNext && lastEntry){
+        var _dt=getDiasLaboralesDesde(lastEntry.fecha);
+        var _dtTurno=t.diasLaboralesPorTurno||7;
+        var _dtFaltan=Math.max(0,_dtTurno-_dt);
+        var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
+        diasActualHtml='<div style="font-size:9px;margin-top:2px;color:'+_dtColor+';font-weight:700">'
+          +(_dtFaltan===0?'🔔 ¡Toca entregar hoy!':'⏱️ Lleva '+_dt+' día'+(  _dt!==1?'s':'')+' · faltan '+_dtFaltan)
+          +'</div>';
+      }
       var pendHtml=esPendiente
         ?'<div style="font-size:9px;color:var(--yellow);margin-top:1px">⏳ Pendiente al regresar de '+esPendiente.motivo+'</div>'
         :'';
@@ -3628,7 +3683,7 @@ function renderTurnos(){
         +'<div style="font-size:14px;color:var(--muted);width:18px;text-align:center">'+(i+1)+'</div>'
         +'<div style="flex:1">'
         +'<div style="font-size:12px;font-weight:600;color:'+nameColor+'">'+m.rank+' '+m.name+estadoSpan+'</div>'
-        +lastEntryHtml+vecesHtml+pendHtml
+        +lastEntryHtml+vecesHtml+diasActualHtml+pendHtml
         +'</div>'
         +badgeNext+badgePend+badgeLast
         +'</div>';
@@ -4956,6 +5011,44 @@ function renderBloque(){
       :'<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Sin comisiones registradas este año</div>'}
     </div>
 
+    <!-- Registro diario Bloque/Base -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:10px">📅 Registro diario de operación</div>
+      ${d.activo&&!completo?`
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Marca hoy como:</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <button onclick="marcarDiaBusqueda('${dei}')"
+          style="padding:10px;border-radius:8px;border:2px solid ${(d.diasDiario&&d.diasDiario[localDateStr()]==='busqueda')?'#ef4444':'rgba(239,68,68,.3)'};background:${(d.diasDiario&&d.diasDiario[localDateStr()]==='busqueda')?'rgba(239,68,68,.25)':'rgba(239,68,68,.08)'};color:${(d.diasDiario&&d.diasDiario[localDateStr()]==='busqueda')?'#f87171':'var(--muted)'};cursor:pointer;font-size:12px;font-weight:700">
+          🔴 Bloque de Búsqueda
+        </button>
+        <button onclick="marcarDiaBase('${dei}')"
+          style="padding:10px;border-radius:8px;border:2px solid ${(d.diasDiario&&d.diasDiario[localDateStr()]==='base')?'#3b82f6':'rgba(59,130,246,.3)'};background:${(d.diasDiario&&d.diasDiario[localDateStr()]==='base')?'rgba(59,130,246,.25)':'rgba(59,130,246,.08)'};color:${(d.diasDiario&&d.diasDiario[localDateStr()]==='base')?'#60a5fa':'var(--muted)'};cursor:pointer;font-size:12px;font-weight:700">
+          🔵 Disponible en Base
+        </button>
+      </div>`:''}
+      ${(()=>{
+        if(!d.diasDiario||!Object.keys(d.diasDiario).length) return '<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px">Sin registros aún</div>';
+        var entries=Object.entries(d.diasDiario).sort(function(a,b){return b[0].localeCompare(a[0]);}).slice(0,14);
+        var busqCount=Object.values(d.diasDiario).filter(function(v){return v==='busqueda';}).length;
+        var baseCount=Object.values(d.diasDiario).filter(function(v){return v==='base';}).length;
+        var summary='<div style="display:flex;gap:12px;margin-bottom:8px">'
+          +'<span style="font-size:10px;color:#f87171;font-weight:700">🔴 Búsqueda: '+busqCount+' día'+(busqCount!==1?'s':'')+'</span>'
+          +'<span style="font-size:10px;color:#60a5fa;font-weight:700">🔵 Base: '+baseCount+' día'+(baseCount!==1?'s':'')+'</span>'
+          +'</div>';
+        var _dei_local=dei;
+        var rows=entries.map(function(e){
+          var tipo=e[1]==='busqueda'?'🔴 Búsqueda':'🔵 Base';
+          var col=e[1]==='busqueda'?'#f87171':'#60a5fa';
+          return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">'
+            +'<span style="color:var(--muted);min-width:75px">'+fmtDate(e[0])+'</span>'
+            +'<span style="color:'+col+';font-weight:700">'+tipo+'</span>'
+            +'<button onclick="quitarDiaDiario(&quot;'+_dei_local+'&quot;,&quot;'+e[0]+'&quot;)" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px">✕</button>'
+            +'</div>';
+        }).join('');
+        return summary+rows+(Object.keys(d.diasDiario).length>14?'<div style="font-size:9px;color:var(--muted);text-align:center;margin-top:4px">Mostrando últimos 14 días</div>':'');
+      })()}
+    </div>
+
     <!-- Resumen 3 DEI -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px">
       <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">📊 Resumen rotación GUDMO-9</div>
@@ -4973,6 +5066,28 @@ function renderBloque(){
       }).join('')}
     </div>
   `;
+}
+
+function marcarDiaBusqueda(dei){
+  if(!bloqueData[dei].diasDiario) bloqueData[dei].diasDiario={};
+  var hoy=localDateStr();
+  bloqueData[dei].diasDiario[hoy]='busqueda';
+  saveBloque(); renderBloque();
+  showToast('🔴 '+dei+' — Bloque de Búsqueda registrado','#ef4444');
+}
+
+function marcarDiaBase(dei){
+  if(!bloqueData[dei].diasDiario) bloqueData[dei].diasDiario={};
+  var hoy=localDateStr();
+  bloqueData[dei].diasDiario[hoy]='base';
+  saveBloque(); renderBloque();
+  showToast('🔵 '+dei+' — Disponible en Base registrado','#3b82f6');
+}
+
+function quitarDiaDiario(dei, fecha){
+  if(!bloqueData[dei].diasDiario) return;
+  delete bloqueData[dei].diasDiario[fecha];
+  saveBloque(); renderBloque();
 }
 
 function iniciarBloque(dei){
@@ -5014,7 +5129,7 @@ function ajustarDias(dei){
 
 function reiniciarBloque(dei){
   if(!confirm(`¿Iniciar nuevo bloque para ${dei}? Se borrarán los datos del bloque anterior.`)) return;
-  bloqueData[dei] = { activo:false, fechaInicio:'', diasAjuste:0, pausas:[], comisiones:[] };
+  bloqueData[dei] = { activo:false, fechaInicio:'', diasAjuste:0, pausas:[], comisiones:[], diasDiario:{} };
   saveBloque(); renderBloque();
 }
 
