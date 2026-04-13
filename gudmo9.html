@@ -3376,56 +3376,70 @@ function renderMinuta(){
 
 function entregarMinuta(mId){
   minutas = ld('g9_minutas', [])||[];
-  var t=minutas.find(function(x){return x.id===mId;});
+  var t = minutas.find(function(x){return x.id===mId;});
   if(!t) return;
-  var disp=getSigMinutaDisp(t);
-  if(!disp){showToast('⚠️ Sin miembros SI configurados','#f97316');return;}
-  var sig=disp.member; var saltados=disp.saltados;
-  var avisoSalt='';
-  if(saltados>0&&!disp.todosOcupados){
-    var startIdx=0;
-    if(t.historial.length){var last=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);})[0];var li=t.miembros.findIndex(function(m){return m.memberId===last.memberId;});startIdx=(li+1)%t.miembros.length;}
-    var noms=[];
-    for(var i=0;i<saltados;i++){var idx=(startIdx+i)%t.miembros.length;var ms=members.find(function(x){return x.id===t.miembros[idx].memberId;});if(ms)noms.push(ms.rank+' '+ms.name.split(' ')[0]);}
-    avisoSalt='<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px"><div style="font-weight:700;color:var(--gold2);margin-bottom:4px">⏭️ Se omiten '+saltados+' por ausencia:</div><div style="color:var(--muted)">'+noms.join(', ')+'</div><div style="color:var(--muted);margin-top:4px;font-size:10px">Quedan como pendientes al regresar.</div></div>';
-  }
+
+  // Mostrar TODOS los SI del DEI, no solo los del turno configurado
+  var esc = t.escuadra||'DEI 2';
+  var siDisp = members.filter(function(m){ return m.escuadra===esc && m.rank==='SI'; });
+
+  if(!siDisp.length){ showToast('⚠️ No hay SI en '+esc,'#f97316'); return; }
+
+  var optsHtml = siDisp.map(function(m){
+    return '<option value="'+m.id+'">'+m.rank+' '+m.name+(m.status!=='Servicio'?' ('+m.status+')':'')+'</option>';
+  }).join('');
+
   document.getElementById('mTitle').textContent='📋 Entregar Minuta';
   document.getElementById('mSubtitle').textContent=t.nombre;
-  document.getElementById('statusGrid').innerHTML=avisoSalt
-    +'<div class="fg" style="grid-column:1/-1"><label style="font-size:11px;color:var(--muted)">Recibe</label>'
-    +'<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;font-size:13px;font-weight:700;color:var(--green)">'+sig.rank+' '+sig.name+'</div></div>'
-    +'<div class="fg" style="grid-column:1/-1"><label>Observación <span style="color:var(--muted);font-weight:400">(opcional)</span></label>'
-    +'<textarea id="minutaObs" rows="3" placeholder="Ej: Minuta al día, novedad X..." style="resize:none;font-size:12px"></textarea></div>'
-    +'<div class="fg" style="grid-column:1/-1"><label>Fecha</label><input type="date" id="minutaFecha" value="'+localDateStr()+'"></div>';
+  document.getElementById('statusGrid').innerHTML=
+    '<div class="fg" style="grid-column:1/-1">'
+    +'<label>¿A quién le entrego la minuta?</label>'
+    +'<select id="minutaDestinatario" style="font-size:13px;padding:8px">'+optsHtml+'</select>'
+    +'</div>'
+    +'<div class="fg" style="grid-column:1/-1">'
+    +'<label>Fecha de entrega</label>'
+    +'<input type="date" id="minutaFecha" value="'+localDateStr()+'">'
+    +'</div>'
+    +'<div class="fg" style="grid-column:1/-1">'
+    +'<label>Observación <span style="color:var(--muted);font-weight:400">(opcional)</span></label>'
+    +'<textarea id="minutaObs" rows="2" placeholder="Ej: Minuta al día..." style="resize:none;font-size:12px"></textarea>'
+    +'</div>';
+
   document.getElementById('obsInput').style.display='none';
   document.getElementById('fechaFinGroup').style.display='none';
   document.getElementById('histDateGroup').style.display='none';
-  document.querySelectorAll('.btn-row')[0].innerHTML='<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button><button class="btn btn-primary" onclick="confirmarEntregaMinuta(\''+mId+'\')">✅ Confirmar</button>';
+  document.querySelectorAll('.btn-row')[0].innerHTML=
+    '<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>'
+    +'<button class="btn btn-primary" onclick="confirmarEntregaMinuta(\''+mId+'\')">✅ Confirmar</button>';
   document.querySelectorAll('.btn-row')[1].style.display='none';
   document.getElementById('editModal').classList.add('open');
 }
 
+
 function confirmarEntregaMinuta(mId){
-  minutas=ld('g9_minutas', [])||[];
-  var t=minutas.find(function(x){return x.id===mId;});
+  minutas = ld('g9_minutas', [])||[];
+  var t = minutas.find(function(x){return x.id===mId;});
   if(!t) return;
-  var disp=getSigMinutaDisp(t);
-  if(!disp){cancelTurnoModal();return;}
-  var sig=disp.member; var saltados=disp.saltados;
-  var obs=(document.getElementById('minutaObs')||{}).value||'';
-  var fecha=(document.getElementById('minutaFecha')||{}).value||localDateStr();
-  if(saltados>0&&!disp.todosOcupados){
-    if(!t.pendientes) t.pendientes=[];
-    var startIdx=0;
-    if(t.historial.length){var last=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);})[0];var li=t.miembros.findIndex(function(m){return m.memberId===last.memberId;});startIdx=(li+1)%t.miembros.length;}
-    for(var i=0;i<saltados;i++){var idx=(startIdx+i)%t.miembros.length;var ms=members.find(function(x){return x.id===t.miembros[idx].memberId;});if(ms&&!t.pendientes.find(function(p){return p.memberId===ms.id;}))t.pendientes.push({memberId:ms.id,fechaProgramada:fecha,motivo:ms.status||'Ausente',fechaRegistro:localDateStr()});}
-  }
-  t.historial.push({memberId:sig.id,fecha:fecha,obs:obs.trim()});
-  sv('g9_minutas',minutas);
+
+  var selEl = document.getElementById('minutaDestinatario');
+  var obsEl = document.getElementById('minutaObs');
+  var fechaEl = document.getElementById('minutaFecha');
+  if(!selEl){ cancelTurnoModal(); return; }
+
+  var memberId = selEl.value;
+  var obs = obsEl ? obsEl.value.trim() : '';
+  var fecha = fechaEl ? fechaEl.value : localDateStr();
+
+  if(!memberId){ showToast('⚠️ Selecciona un SI','#f97316'); return; }
+
+  t.historial.push({memberId: memberId, fecha: fecha, obs: obs});
+  sv('g9_minutas', minutas);
   cancelTurnoModal();
   renderMinuta();
-  showToast('✅ Minuta entregada a '+sig.rank+' '+sig.name.split(' ')[0]);
+  var m = members.find(function(x){return x.id===memberId;});
+  showToast('✅ Minuta entregada a '+(m?m.rank+' '+m.name.split(' ')[0]:'funcionario'));
 }
+
 
 function editarEntregaMinuta(mId,idx){
   minutas=ld('g9_minutas', [])||[];
@@ -4011,59 +4025,28 @@ function getPendienteBitacora(turno){
 function marcarCumplido(tId){
   const t = turnos.find(x=>x.id===tId);
   if(!t) return;
+  if(!t.miembros.length){ showToast('⚠️ Sin miembros configurados','#f97316'); return; }
 
-  const disp = getSiguienteDisponible(t);
-  if(!disp){ showToast('⚠️ Sin miembros configurados','#f97316'); return; }
+  // Construir select con todos los miembros del turno
+  var optsHtml = t.miembros.map(function(mm){
+    var m = members.find(function(x){return x.id===mm.memberId;});
+    return m ? '<option value="'+m.id+'">'+m.rank+' '+m.name+(m.status!=='Servicio'?' ('+m.status+')':'')+'</option>' : '';
+  }).join('');
 
-  const sig = disp.member;
-  const saltados = disp.saltados;
-  const todosOcupados = disp.todosOcupados||false;
-
-  // Construir aviso de saltados
-  var avisoSaltados = '';
-  if(saltados > 0 && !todosOcupados){
-    var saltadosNombres = [];
-    var startIdx = 0;
-    if(t.historial.length){
-      const last = [...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
-      const li = t.miembros.findIndex(m=>m.memberId===last.memberId);
-      startIdx = (li+1) % t.miembros.length;
-    }
-    for(var i=0; i<saltados; i++){
-      const idx = (startIdx+i) % t.miembros.length;
-      const ms = members.find(x=>x.id===t.miembros[idx].memberId);
-      if(ms) saltadosNombres.push(ms.rank+' '+ms.name.split(' ')[0]);
-    }
-    avisoSaltados = `<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px">
-      <div style="font-weight:700;color:var(--gold2);margin-bottom:4px">⏭️ Se omiten ${saltados} persona(s) por ausencia:</div>
-      <div style="color:var(--muted)">${saltadosNombres.join(', ')}</div>
-      <div style="color:var(--muted);margin-top:4px;font-size:10px">Quedan registradas como pendientes — llevarán la bitácora cuando regresen.</div>
-    </div>`;
-  }
-  if(todosOcupados){
-    avisoSaltados = `<div style="background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--yellow)">
-      ⚠️ Todos los miembros están ausentes. Se asigna al próximo natural de todas formas.
-    </div>`;
-  }
-
-  // Mostrar modal personalizado
   document.getElementById('mTitle').textContent='📖 Entregar Bitácora';
   document.getElementById('mSubtitle').textContent=t.nombre;
   document.getElementById('statusGrid').innerHTML=`
-    ${avisoSaltados}
     <div class="fg" style="grid-column:1/-1">
-      <label style="font-size:11px;color:var(--muted)">Recibe</label>
-      <div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;font-size:13px;font-weight:700;color:var(--green)">
-        ${sig.rank} ${sig.name}
-      </div>
-    </div>
-    <div class="fg" style="grid-column:1/-1">
-      <label>Observación <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
-      <textarea id="bitaObs" rows="3" placeholder="Ej: Bitácora al día, novedad X pendiente..." style="resize:none;font-size:12px"></textarea>
+      <label>¿A quién le entrego la bitácora?</label>
+      <select id="bitaDestinatario" style="font-size:13px;padding:8px">${optsHtml}</select>
     </div>
     <div class="fg" style="grid-column:1/-1">
       <label>Fecha de entrega</label>
       <input type="date" id="bitaFecha" value="${localDateStr()}">
+    </div>
+    <div class="fg" style="grid-column:1/-1">
+      <label>Observación <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+      <textarea id="bitaObs" rows="2" placeholder="Ej: Bitácora al día, novedad pendiente..." style="resize:none;font-size:12px"></textarea>
     </div>`;
 
   document.getElementById('obsInput').style.display='none';
@@ -4081,182 +4064,26 @@ function confirmarEntregaBitacora(tId){
   const t = turnos.find(x=>x.id===tId);
   if(!t) return;
 
-  const disp = getSiguienteDisponible(t);
-  if(!disp){ cancelTurnoModal(); return; }
+  var selEl = document.getElementById('bitaDestinatario');
+  var obsEl = document.getElementById('bitaObs');
+  var fechaEl = document.getElementById('bitaFecha');
+  if(!selEl){ cancelTurnoModal(); return; }
 
-  const sig = disp.member;
-  const saltados = disp.saltados;
-  const obs = (document.getElementById('bitaObs')||{}).value||'';
-  const fecha = (document.getElementById('bitaFecha')||{}).value||localDateStr();
+  var memberId = selEl.value;
+  var obs = obsEl ? obsEl.value.trim() : '';
+  var fecha = fechaEl ? fechaEl.value : localDateStr();
 
-  // Registrar pendientes para los saltados
-  if(saltados > 0 && !disp.todosOcupados){
-    if(!t.pendientes) t.pendientes=[];
-    var startIdx = 0;
-    if(t.historial.length){
-      const last = [...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
-      const li = t.miembros.findIndex(m=>m.memberId===last.memberId);
-      startIdx = (li+1) % t.miembros.length;
-    }
-    for(var i=0; i<saltados; i++){
-      const idx = (startIdx+i) % t.miembros.length;
-      const ms = members.find(x=>x.id===t.miembros[idx].memberId);
-      if(ms && !t.pendientes.find(p=>p.memberId===ms.id)){
-        t.pendientes.push({memberId:ms.id, fechaProgramada:fecha, motivo:ms.status||'Ausente', fechaRegistro:localDateStr()});
-      }
-    }
-  }
+  if(!memberId){ showToast('⚠️ Selecciona un funcionario','#f97316'); return; }
 
-  // Registrar la entrega en historial
-  t.historial.push({memberId:sig.id, fecha:fecha, obs:obs.trim()});
-
-  sv('g9_turnos',turnos);
+  // Guardar en historial
+  t.historial.push({memberId: memberId, fecha: fecha, obs: obs});
+  sv('g9_turnos', turnos);
   cancelTurnoModal();
   renderTurnos();
-  showToast(`✅ Bitácora entregada a ${sig.rank} ${sig.name.split(' ')[0]}`);
+  var m = members.find(x=>x.id===memberId);
+  showToast('✅ Bitácora entregada a '+(m?m.rank+' '+m.name.split(' ')[0]:'funcionario'));
 }
 
-function quitarPendiente(tId, memberId){
-  var t = turnos.find(function(x){return x.id===tId;});
-  if(!t) return;
-  var m = members.find(function(x){return x.id===memberId;});
-  if(!t.pendientes) return;
-  t.pendientes = t.pendientes.filter(function(p){return p.memberId!==memberId;});
-  // Registrar en historial que cumplió el pendiente
-  var today = localDateStr();
-  t.historial.push({memberId:memberId, fecha:today, obs:'(Pendiente cumplido al regresar)'});
-  sv('g9_turnos',turnos);
-  renderTurnos();
-  showToast('✅ '+(m?m.rank+' '+m.name.split(' ')[0]:'Funcionario')+' marcado — pendiente cumplido');
-}
-
-function editarEntregaBitacora(tId, idx){
-  var t = turnos.find(function(x){return x.id===tId;});
-  if(!t) return;
-  var sorted = [...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
-  var h = sorted[idx];
-  if(!h) return;
-  var m = members.find(function(x){return x.id===h.memberId;});
-  var nombreM = m ? m.rank+' '+m.name : 'Desconocido';
-
-  // Construir lista de miembros para reasignar
-  var optsM = t.miembros.map(function(mm){
-    var mx=members.find(function(x){return x.id===mm.memberId;});
-    return mx ? '<option value="'+mx.id+'"'+(mx.id===h.memberId?' selected':'')+'>'+mx.rank+' '+mx.name+'</option>' : '';
-  }).join('');
-
-  document.getElementById('mTitle').textContent='✏️ Editar entrega';
-  document.getElementById('mSubtitle').textContent=t.nombre+' — T'+(idx+1);
-  document.getElementById('statusGrid').innerHTML=
-    '<div class="fg" style="grid-column:1/-1">'
-      +'<label>Funcionario que recibió</label>'
-      +'<select id="editBitaMember">'+optsM+'</select>'
-    +'</div>'
-    +'<div class="fg" style="grid-column:1/-1">'
-      +'<label>Fecha</label>'
-      +'<input type="date" id="editBitaFecha" value="'+h.fecha+'">'
-    +'</div>'
-    +'<div class="fg" style="grid-column:1/-1">'
-      +'<label>Observación</label>'
-      +'<textarea id="editBitaObs" rows="3" style="resize:none;font-size:12px">'+(h.obs||'')+'</textarea>'
-    +'</div>';
-  document.getElementById('obsInput').style.display='none';
-  document.getElementById('fechaFinGroup').style.display='none';
-  document.getElementById('histDateGroup').style.display='none';
-  document.querySelectorAll('.btn-row')[0].innerHTML=
-    '<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>'
-    +'<button class="btn btn-primary" onclick="guardarEdicionBitacora(\''+tId+'\','+idx+')">💾 Guardar</button>';
-  document.querySelectorAll('.btn-row')[1].style.display='none';
-  document.getElementById('editModal').classList.add('open');
-}
-
-function guardarEdicionBitacora(tId, idx){
-  var t = turnos.find(function(x){return x.id===tId;});
-  if(!t) return;
-  var sorted = [...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
-  var h = sorted[idx];
-  if(!h) return;
-  // Encontrar el registro real en el historial original
-  var realIdx = t.historial.indexOf(h);
-  if(realIdx===-1) return;
-  t.historial[realIdx].memberId = document.getElementById('editBitaMember').value;
-  t.historial[realIdx].fecha    = document.getElementById('editBitaFecha').value;
-  t.historial[realIdx].obs      = document.getElementById('editBitaObs').value.trim();
-  sv('g9_turnos',turnos);
-  cancelTurnoModal();
-  renderTurnos();
-  showToast('✅ Entrega actualizada');
-}
-
-function borrarEntregaBitacora(tId, idx, nombre){
-  if(!confirm('¿Borrar la entrega T'+(idx+1)+' ('+nombre+')? Esto ajustará el orden del turno.')) return;
-  var t = turnos.find(function(x){return x.id===tId;});
-  if(!t) return;
-  var sorted = [...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
-  var h = sorted[idx];
-  if(!h) return;
-  var realIdx = t.historial.indexOf(h);
-  if(realIdx!==-1) t.historial.splice(realIdx,1);
-  sv('g9_turnos',turnos);
-  renderTurnos();
-  showToast('🗑️ Entrega eliminada');
-}
-
-function reordenarTurno(tId){
-  var t = turnos.find(function(x){return x.id===tId;});
-  if(!t) return;
-
-  var optsHtml = t.miembros.map(function(mm,i){
-    var m=members.find(function(x){return x.id===mm.memberId;});
-    var nom=m?m.rank+' '+m.name:'(desconocido)';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:grab" data-idx="'+i+'">'
-      +'<span style="color:var(--muted);font-size:13px">☰</span>'
-      +'<span style="flex:1;font-size:12px;font-weight:600">'+nom+'</span>'
-      +'<button onclick="moverMiembroTurno(\''+tId+'\','+i+',-1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▲</button>'
-      +'<button onclick="moverMiembroTurno(\''+tId+'\','+i+',1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▼</button>'
-      +'</div>';
-  }).join('');
-
-  document.getElementById('mTitle').textContent='↕️ Reordenar turno';
-  document.getElementById('mSubtitle').textContent=t.nombre;
-  document.getElementById('statusGrid').innerHTML=
-    '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">Usa ▲▼ para cambiar el orden. El último que recibió se mantiene en historial.</div>'
-    +'<div id="reordenList" style="grid-column:1/-1">'+optsHtml+'</div>';
-  document.getElementById('obsInput').style.display='none';
-  document.getElementById('fechaFinGroup').style.display='none';
-  document.getElementById('histDateGroup').style.display='none';
-  document.querySelectorAll('.btn-row')[0].innerHTML=
-    '<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cerrar</button>';
-  document.querySelectorAll('.btn-row')[1].style.display='none';
-  document.getElementById('editModal').classList.add('open');
-}
-
-function moverMiembroTurno(tId, idx, dir){
-  var t = turnos.find(function(x){return x.id===tId;});
-  if(!t) return;
-  var newIdx = idx + dir;
-  if(newIdx<0||newIdx>=t.miembros.length) return;
-  var tmp = t.miembros[idx];
-  t.miembros[idx] = t.miembros[newIdx];
-  t.miembros[newIdx] = tmp;
-  sv('g9_turnos',turnos);
-  // Re-render solo la lista dentro del modal
-  var listEl = document.getElementById('reordenList');
-  if(listEl){
-    var optsHtml = t.miembros.map(function(mm,i){
-      var m=members.find(function(x){return x.id===mm.memberId;});
-      var nom=m?m.rank+' '+m.name:'(desconocido)';
-      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;margin-bottom:4px" data-idx="'+i+'">'
-        +'<span style="color:var(--muted);font-size:13px">☰</span>'
-        +'<span style="flex:1;font-size:12px;font-weight:600">'+nom+'</span>'
-        +'<button onclick="moverMiembroTurno(\''+tId+'\','+i+',-1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▲</button>'
-        +'<button onclick="moverMiembroTurno(\''+tId+'\','+i+',1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px">▼</button>'
-        +'</div>';
-    }).join('');
-    listEl.innerHTML=optsHtml;
-  }
-  renderTurnos();
-}
 
 function verHistTurno(tId){
   // Navigate to Reportes and pre-select this turno
@@ -7696,59 +7523,73 @@ function dashDrawBloque(){
   var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
   var d = bloqueData[esc];
   if(!d||!d.fechaInicio){
-    el.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Sin iniciar</div>'; return;
+    el.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Configure en ⚙️</div>'; return;
   }
   var dias = calcDiasBloque(esc);
   var pct = Math.min(100,Math.round(dias/DIAS_BLOQUE_TOTAL*100));
 
-  // Calcular disponibilidad actual del DEI
-  var escPersonal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
-  var totalPersonal = escPersonal.length;
-  var enServicioAhora = escPersonal.filter(function(m){ return m.status==='Servicio'; }).length;
-  var pctDisp = totalPersonal>0 ? Math.round(enServicioAhora/totalPersonal*100) : 0;
-  var tieneDisp50 = pctDisp >= 50;
+  // Contar días por tipo desde diasDiario
+  var dd = d.diasDiario||{};
+  var diasBusqueda = Object.values(dd).filter(function(v){return v==='busqueda';}).length;
+  var diasBase     = Object.values(dd).filter(function(v){return v==='base';}).length;
+  var diasSinTipo  = Math.max(0, dias - diasBusqueda - diasBase);
 
-  // Estado del bloque
+  // Disponibilidad actual
+  var escPersonal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
+  var enServicioAhora = escPersonal.filter(function(m){ return m.status==='Servicio'; }).length;
+  var pctDisp = escPersonal.length>0 ? Math.round(enServicioAhora/escPersonal.length*100) : 0;
+  var tieneDisp50 = pctDisp >= 50;
+  var dispColor = tieneDisp50 ? '#22c55e' : '#ef4444';
+
+  // Estado
   var enPausa = d.pausas.some(function(p){ return p.inicio && !p.fin; });
   var completo = dias >= DIAS_BLOQUE_TOTAL;
-
   var color, estado;
-  if(completo){
-    color='#22c55e'; estado='✅ COMPLETADO';
-  } else if(!d.activo){
-    color='var(--muted)'; estado='⚪ INACTIVO';
-  } else if(enPausa){
-    color='#f97316'; estado='⏸️ EN PERMISO';
-  } else if(!tieneDisp50){
-    color='#f97316'; estado='⚠️ DISP. BAJA';
-  } else {
-    color='#3b82f6'; estado='🔵 EN CURSO';
-  }
+  if(completo)       { color='#22c55e'; estado='✅ COMPLETADO'; }
+  else if(!d.activo) { color='var(--muted)'; estado='⚪ INACTIVO'; }
+  else if(enPausa)   { color='#f97316'; estado='⏸️ EN PERMISO'; }
+  else if(!tieneDisp50){ color='#f97316'; estado='⚠️ DISP. BAJA'; }
+  else               { color='#3b82f6'; estado='🔵 EN CURSO'; }
 
-  var restantes = Math.max(0, DIAS_BLOQUE_TOTAL - dias);
-  var dispColor = tieneDisp50 ? '#22c55e' : '#ef4444';
-  var dispIcon  = tieneDisp50 ? '✅' : '⚠️';
+  var hoy = localDateStr();
+  var hoyTipo = dd[hoy];
+  var hoyBadge = hoyTipo==='busqueda'
+    ? '<span style="font-size:9px;background:rgba(239,68,68,.2);color:#f87171;padding:2px 7px;border-radius:8px;font-weight:700;margin-left:6px">🔴 Búsqueda hoy</span>'
+    : hoyTipo==='base'
+    ? '<span style="font-size:9px;background:rgba(59,130,246,.2);color:#60a5fa;padding:2px 7px;border-radius:8px;font-weight:700;margin-left:6px">🔵 Base hoy</span>'
+    : '<span style="font-size:9px;background:rgba(255,255,255,.06);color:var(--muted);padding:2px 7px;border-radius:8px;margin-left:6px">Sin marcar hoy</span>';
 
   el.innerHTML=
-    '<div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:6px">'
+    '<div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:4px">'
     +'<div style="font-size:32px;font-weight:900;color:'+color+';line-height:1">'+dias+'</div>'
     +'<div style="font-size:12px;color:var(--muted);padding-bottom:4px">/'+DIAS_BLOQUE_TOTAL+'</div>'
     +'<div style="flex:1"></div>'
     +'<div style="font-size:9px;font-weight:700;color:'+color+';padding:2px 7px;border-radius:10px;background:'+color+'22">'+estado+'</div>'
     +'</div>'
-    +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:6px">'
+    +hoyBadge
+    +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin:8px 0 4px">'
     +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px;transition:width .5s"></div>'
     +'</div>'
-    +'<div style="display:flex;justify-content:space-between;font-size:8px;color:var(--muted);margin-bottom:5px">'
-    +'<span>'+pct+'% completado</span>'
-    +'<span>'+restantes+' día'+(restantes!==1?'s':'')+' restante'+(restantes!==1?'s':'')+'</span>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:6px">'
+    +'<div style="text-align:center;padding:5px 0;background:rgba(239,68,68,.1);border-radius:6px">'
+    +'<div style="font-size:16px;font-weight:900;color:#f87171">'+diasBusqueda+'</div>'
+    +'<div style="font-size:8px;color:var(--muted)">🔴 Búsqueda</div>'
     +'</div>'
-    +'<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:'+dispColor+'18;border:1px solid '+dispColor+'44;border-radius:6px">'
-    +'<span style="font-size:11px">'+dispIcon+'</span>'
+    +'<div style="text-align:center;padding:5px 0;background:rgba(59,130,246,.1);border-radius:6px">'
+    +'<div style="font-size:16px;font-weight:900;color:#60a5fa">'+diasBase+'</div>'
+    +'<div style="font-size:8px;color:var(--muted)">🔵 Base</div>'
+    +'</div>'
+    +'<div style="text-align:center;padding:5px 0;background:rgba(255,255,255,.04);border-radius:6px">'
+    +'<div style="font-size:16px;font-weight:900;color:var(--muted)">'+diasSinTipo+'</div>'
+    +'<div style="font-size:8px;color:var(--muted)">Sin tipo</div>'
+    +'</div>'
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:5px;margin-top:6px;padding:4px 8px;background:'+dispColor+'18;border-radius:6px">'
     +'<span style="font-size:9px;color:'+dispColor+';font-weight:700">'+pctDisp+'% disponible</span>'
-    +'<span style="font-size:9px;color:var(--muted)">('+enServicioAhora+'/'+totalPersonal+' en servicio)</span>'
+    +'<span style="font-size:9px;color:var(--muted)">('+enServicioAhora+'/'+escPersonal.length+')</span>'
     +'</div>';
 }
+
 
 function dashDrawAlertas(){
   var el = document.getElementById('dashAlertas');
