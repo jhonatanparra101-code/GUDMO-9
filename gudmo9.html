@@ -361,7 +361,8 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <button class="tab-btn" onclick="showTab('parte',this)">📄 Parte</button>
   <button class="tab-btn" onclick="showTab('historial',this)">📆 Historial</button>
   <button class="tab-btn" onclick="showTab('turnos',this)">📖 Bitácora</button>
-  <button class="tab-btn" onclick="showTab('minuta',this)">📋 Minuta</button>
+  <button class="tab-btn" onclick="showTab('minuta2',this)">📋 Minuta</button>
+  <button class="tab-btn" onclick="showTab('mando',this)">🎖️ Mando Sem.</button>
   <button class="tab-btn" onclick="showTab('reportes',this)">📊 Reportes</button>
   <button class="tab-btn" onclick="showTab('aseo',this)">🧹 Aseo</button>
   <button class="tab-btn" onclick="showTab('misiones',this)">🎯 Misiones</button>
@@ -653,15 +654,20 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
 </div>
 
 <!-- REPORTES -->
-<div class="section" id="tab-minuta">
-  <div class="sh">📋 Minuta DEI 2</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-    <button class="btn btn-primary" style="flex:none;padding:7px 14px;font-size:11px" onclick="showAddMinuta()">+ Nueva tarea</button>
-    <div style="font-size:10px;color:var(--muted);padding:4px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px">
-      📋 Solo Subintendentes (SI) llevan la Minuta
-    </div>
+<div class="section" id="tab-minuta2">
+  <div class="sh">📋 Minuta</div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="btn btn-primary" style="flex:none;padding:8px 14px;font-size:11px" onclick="showAddTurno2()">+ Nueva Tarea Rotativa</button>
   </div>
-  <div id="minutaList"></div>
+  <div id="turnosList2"></div>
+</div>
+
+<div class="section" id="tab-mando">
+  <div class="sh">🎖️ Mando de Semana</div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="btn btn-primary" style="flex:none;padding:8px 14px;font-size:11px" onclick="showAddTurno3()">+ Nueva Tarea Rotativa</button>
+  </div>
+  <div id="turnosList3"></div>
 </div>
 
 <div class="section" id="tab-reportes">
@@ -2131,7 +2137,8 @@ function showTab(id,btn){
   if(id==='parte') buildParte();
   if(id==='historial'){populateHistSelects();renderHistorial();}
   if(id==='turnos') renderTurnos();
-  if(id==='minuta') renderMinuta();
+  if(id==='minuta2') renderTurnos2();
+  if(id==='mando') renderTurnos3();
   if(id==='reportes') renderReportes();
   if(id==='aseo') renderAseo();
   if(id==='misiones') renderMisiones();
@@ -4749,6 +4756,2110 @@ function configurarCiclo(){
   renderCiclo();
   showToast('✅ Ciclo configurado');
 }
+
+
+
+// ── MOTOR MINUTA (clon de Bitácora) ──
+var turnos2 = ld('g9_turnos2', []);
+
+function renderTurnos2(){
+  var container = document.getElementById('turnosList2');
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var myTurnos = turnos2.filter(function(t){ return t.escuadra===esc||t.escuadra==='all'; });
+  if(!myTurnos.length){
+    container.innerHTML='<div class="empty"><div class="ei">🔄</div><p style="margin-bottom:12px">No hay tareas rotativas todavía.</p></div>';
+    return;
+  }
+  var out='';
+  myTurnos.forEach(function(t){
+    var siguiente = getSiguiente(t);
+    var lastH = t.historial.length ? [...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);})[0] : null;
+    var lastM = lastH ? members.find(function(m){return m.id===lastH.memberId;}) : null;
+
+    // Member list
+    var memberListHtml='';
+    t.miembros.forEach(function(mm,i){
+      var m=members.find(function(x){return x.id===mm.memberId;});
+      if(!m) return;
+      var dispInfo=getSiguienteDisponible(t);
+      var isNext=dispInfo&&dispInfo.member&&dispInfo.member.id===m.id;
+      var isLast=lastH&&lastH.memberId===m.id;
+      var lastEntry=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);}).find(function(h){return h.memberId===m.id;});
+      var totalVeces=t.historial.filter(function(h){return h.memberId===m.id;}).length;
+      var esPendiente=(t.pendientes||[]).find(function(p){return p.memberId===m.id;});
+      var AUSENTE=['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
+      var estaAusente=AUSENTE.includes(m.status);
+      var bgColor=isNext?'rgba(200,146,42,.12)':estaAusente?'rgba(99,102,241,.07)':'rgba(255,255,255,.02)';
+      var nameColor=isNext?'var(--gold2)':estaAusente?'var(--muted)':'var(--text)';
+      var estadoSpan=estaAusente?' <span style="font-size:9px;opacity:.7">('+m.status+')</span>':'';
+      var lastEntryHtml=lastEntry
+        ?('<div style="font-size:9.5px;color:var(--muted)">Último: 📅 '+fmtDate(lastEntry.fecha)
+          +(lastEntry.obs?'<span style="font-style:italic;color:var(--cyan)"> · '+lastEntry.obs+'</span>':'')
+          +'</div>')
+        :'<div style="font-size:9.5px;color:var(--muted)">Sin registros</div>';
+      var vecesHtml=totalVeces>0
+        ?'<div style="font-size:9px;color:var(--cyan);margin-top:1px">📋 Ha llevado: <strong>'+totalVeces+'</strong> '+(totalVeces!==1?'veces':'vez')+'</div>'
+        :'';
+      // Días transcurridos para quien TIENE la minuta ahora (el último en recibirla)
+      var diasActualHtml='';
+      if(lastH && lastH.memberId===m.id){
+        // Este funcionario es quien tiene la minuta actualmente
+        var _dt=getDiasLaboralesDesde(lastH.fecha);
+        var _dtTurno=t.diasLaboralesPorTurno||7;
+        var _dtFaltan=Math.max(0,_dtTurno-_dt);
+        var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
+        diasActualHtml='<div style="font-size:10px;margin-top:3px;padding:4px 8px;border-radius:6px;background:'+_dtColor+'18;border:1px solid '+_dtColor+'44;color:'+_dtColor+';font-weight:700">'
+          +'📖 TIENE LA BITÁCORA: '+_dt+' día'+(  _dt!==1?'s':'')+' laborado'+(  _dt!==1?'s':'')+' · '
+          +(_dtFaltan===0?'¡Toca entregar!':_dtFaltan+' día'+(_dtFaltan!==1?'s':'')+' restante'+(_dtFaltan!==1?'s':''))
+          +'</div>';
+      }
+      var pendHtml=esPendiente
+        ?'<div style="font-size:9px;color:var(--yellow);margin-top:1px">⏳ Pendiente al regresar de '+esPendiente.motivo+'</div>'
+        :'';
+      var badgeNext=isNext?'<div style="font-size:9px;font-weight:700;color:var(--gold2);background:rgba(200,146,42,.2);padding:2px 7px;border-radius:8px">PRÓXIMO</div>':'';
+      var badgePend=(esPendiente&&!isNext)?'<div style="font-size:9px;color:var(--yellow);background:rgba(251,191,36,.15);padding:2px 7px;border-radius:8px">PENDIENTE</div>':'';
+      var badgeLast=(isLast&&!isNext&&!esPendiente)?'<div style="font-size:9px;color:var(--muted);padding:2px 7px">último</div>':'';
+      memberListHtml+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:3px;background:'+bgColor+';">'
+        +'<div style="font-size:14px;color:var(--muted);width:18px;text-align:center">'+(i+1)+'</div>'
+        +'<div style="flex:1">'
+        +'<div style="font-size:12px;font-weight:600;color:'+nameColor+'">'+m.rank+' '+m.name+estadoSpan+'</div>'
+        +lastEntryHtml+vecesHtml+diasActualHtml+pendHtml
+        +'</div>'
+        +badgeNext+badgePend+badgeLast
+        +'</div>';
+    });
+
+    // Próximo banner
+    var diasR = t.tipo==='semanal_laboral'?getDiasRestantes(t):null;
+    var enPerm = members.filter(function(m){return m.escuadra===t.escuadra&&m.status==='Permiso';}).length>3;
+    var diasMsg='';
+    var fechaEnt = t.tipo==='semanal_laboral'?getFechaEntregaEstimada(t):null;
+    if(diasR!==null){
+      if(enPerm){
+        diasMsg='<div style="font-size:10px;color:var(--yellow);margin-top:3px">⏸️ Contador pausado — en permiso</div>';
+        if(fechaEnt) diasMsg+='<div style="font-size:10px;color:var(--muted);margin-top:2px">📅 Entrega estimada: '+fmtDate(fechaEnt)+'</div>';
+      } else if(diasR===0){
+        diasMsg='<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:3px">🔔 ¡Toca entregar hoy!</div>';
+      } else {
+        diasMsg='<div style="font-size:10px;color:var(--muted);margin-top:3px">📅 '+diasR+' día'+(diasR!==1?'s':'')+' laborable'+(diasR!==1?'s':'')+' restante'+(diasR!==1?'s':'');
+        if(fechaEnt) diasMsg+=' · entrega est. '+fmtDate(fechaEnt);
+        diasMsg+='</div>';
+      }
+    }
+
+    var proximoBanner='';
+    // Usar el siguiente disponible (salta vacaciones/ausencias)
+    var dispBanner=getSiguienteDisponible(t);
+    var sigDisp=dispBanner?dispBanner.member:siguiente;
+    var saltadosBanner=dispBanner?dispBanner.saltados:0;
+    var pendientesBanner=(t.pendientes||[]).map(function(p){
+      var mp=members.find(function(x){return x.id===p.memberId;});
+      return mp?mp.name.split(' ')[0]:null;
+    }).filter(Boolean);
+
+    if(!sigDisp){
+      proximoBanner='<div style="font-size:12px;color:var(--muted);margin-bottom:10px">⚠️ Sin miembros configurados</div>';
+    } else {
+      var _saltAviso=saltadosBanner>0
+        ?'<div style="font-size:9.5px;color:var(--yellow);margin-top:3px">⏭️ Se omiten '+saltadosBanner+' por ausencia</div>'
+        :'';
+      var _pendAviso=pendientesBanner.length>0
+        ?'<div style="font-size:9.5px;color:var(--yellow);margin-top:2px">⏳ Pendientes: '+pendientesBanner.join(', ')+'</div>'
+        :'';
+      proximoBanner='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="font-size:24px">👤</div>'
+        +'<div style="flex:1">'
+        +(lastM&&lastM.id!==sigDisp.id?'<div style="font-size:10px;color:var(--muted)">Tiene ahora: <strong>'+lastM.rank+' '+lastM.name.split(' ')[0]+'</strong></div>':'')
+        +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Próximo</div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--green)">'+sigDisp.rank+' '+sigDisp.name+'</div>'
+        +_saltAviso+_pendAviso
+        +diasMsg
+        +'</div>'
+        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='marcarCumplido(this.dataset.tid)'>✅ Entregar</button>"
+        +'</div>'
+        +'</div>';
+    }
+
+    // Historial de entregas
+    var histHtml='';
+    if(t.historial.length){
+      var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+
+      if(t.tipo==='semanal_laboral'){
+        // MATRIZ VIEW — igual que el Excel de guardia
+        // Columnas: persona × turno recibido
+        var miembrosOrden = t.miembros.map(function(mm){
+          return members.find(function(x){return x.id===mm.memberId;});
+        }).filter(Boolean);
+
+        histHtml='<div style="margin-top:10px">'
+          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📊 Registro de entregas</div>'
+          +'<div style="overflow-x:auto">'
+          +'<table style="width:100%;border-collapse:collapse;font-size:10px">'
+          +'<thead><tr>'
+          +'<th style="background:var(--navy);padding:5px 8px;text-align:left;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:100px">FUNCIONARIO</th>';
+
+        // Column per delivery
+        sorted.forEach(function(h,i){
+          histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:55px">T'+(i+1)+'<br><span style="font-size:8px;font-weight:400">'+fmtDate(h.fecha)+'</span></th>';
+        });
+        histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--gold2);font-size:9px;border:1px solid var(--border);min-width:36px">TOT</th>'
+          +'</tr></thead><tbody>';
+
+        miembrosOrden.forEach(function(m){
+          var total=0;
+          var nomCorto=m.name.split(' ').slice(0,2).join(' ');
+          var row='<tr><td style="padding:5px 8px;border:1px solid var(--border);color:var(--text)">'
+            +'<span style="font-size:8px;color:var(--muted);margin-right:3px">'+m.rank+'</span>'+nomCorto+'</td>';
+          sorted.forEach(function(h){
+            var esSuyo=h.memberId===m.id;
+            if(esSuyo) total++;
+            row+='<td style="text-align:center;padding:5px 2px;border:1px solid var(--border);'
+              +'background:'+(esSuyo?'rgba(34,197,94,.15)':'transparent')+';'
+              +'color:'+(esSuyo?'var(--green)':'var(--muted)')+';font-weight:'+(esSuyo?'700':'400')+'">'
+              +(esSuyo?'<span title="'+fmtDate(h.fecha)+(h.obs?' · '+h.obs:'')+'">✓<br><span style="font-size:7px;font-weight:400;color:var(--muted)">'+fmtDate(h.fecha).slice(0,5)+'</span></span>':'-')+'</td>';
+          });
+          row+='<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?'var(--gold2)':'var(--muted)')+';font-weight:700">'+(total||'-')+'</td></tr>';
+          histHtml+=row;
+        });
+
+        // Fila de acciones: editar y borrar cada entrega
+        histHtml+='<tfoot><tr><td style="padding:4px 8px;border:1px solid var(--border);font-size:9px;color:var(--muted)">ACCIONES</td>';
+        sorted.forEach(function(h,idx_h){
+          var hm=members.find(function(x){return x.id===h.memberId;});
+          var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
+          histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
+            +'<button onclick="editarEntregaBitacora(\''+t.id+'\','+idx_h+')" '
+            +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
+            +'<button onclick="borrarEntregaBitacora(\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
+            +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
+            +'</td>';
+        });
+        histHtml+='<td style="border:1px solid var(--border)"></td></tr></tfoot>';
+        histHtml+='</tbody></table></div></div>';
+
+      } else {
+        // Lista simple para otros tipos de turno
+        histHtml='<div style="margin-top:10px">'
+          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Historial</div>'
+          +'<div style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">';
+        sorted.reverse().forEach(function(h){
+          var hm=members.find(function(x){return x.id===h.memberId;});
+          histHtml+='<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)">'
+            +'<div style="font-size:10px;color:var(--muted);min-width:70px">'+fmtDate(h.fecha)+'</div>'
+            +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+(hm?hm.rank+' '+hm.name:'Desconocido')+'</div>'
+            +'</div>';
+        });
+        histHtml+='</div></div>';
+      }
+    }
+
+    out+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+      +'<div style="font-size:22px">'+(t.tipo==='semanal_laboral'?'📖':t.tipo==='semanal'?'📅':'📆')+'</div>'
+      +'<div style="flex:1">'
+      +'<div style="font-size:17px;font-weight:700;letter-spacing:1px;color:var(--gold2)">'+t.nombre+'</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+t.escuadra+' · '+t.miembros.length+' personas</div>'
+      +'</div>'
+      +"<button data-tid='"+t.id+"' onclick='reordenarTurno(this.dataset.tid)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
+      +"<button data-tid='"+t.id+"' onclick='deleteTurno(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
+      +'</div>'
+      +proximoBanner
+      +'<div style="margin-bottom:4px">'
+      +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Orden del turno</div>'
+      +(memberListHtml||'<div style="font-size:11px;color:var(--muted)">Sin miembros</div>')
+      +'</div>'
+      +histHtml
+      +((t.pendientes&&t.pendientes.length)
+        ?'<div style="margin-top:10px;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:10px 12px">'
+          +'<div style="font-size:10px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">⏳ Pendientes al regresar</div>'
+          +t.pendientes.map(function(p){
+            var mp=members.find(function(x){return x.id===p.memberId;});
+            return mp
+              ?'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(251,191,36,.1)">'
+                +'<div style="font-size:11px;color:var(--text);flex:1">'+mp.rank+' '+mp.name+'</div>'
+                +'<div style="font-size:9px;color:var(--muted)">'+p.motivo+'</div>'
+                +'<button onclick="quitarPendiente(\''+t.id+'\',\''+mp.id+'\')" style="background:none;border:none;font-size:11px;cursor:pointer;color:var(--muted);padding:0 4px" title="Ya cumplió">✅</button>'
+                +'</div>'
+              :'';
+          }).join('')
+          +'</div>'
+        :'')
+      +'</div>';
+  });
+  container.innerHTML=out;
+}
+
+function getDiasLaboralesDesde(fechaStr){
+  // Cuenta dias laborables desde fechaStr hasta hoy
+  // Excluye periodos en que el DEI estaba de permiso masivo (presente o pasado)
+  if(!fechaStr) return 0;
+  var desde = new Date(fechaStr+'T00:00:00');
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  if(desde >= hoy) return 0;
+  var dias = 0;
+  var cur = new Date(desde);
+  cur.setDate(cur.getDate()+1); // dia SIGUIENTE a la recepcion
+
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  // Pausas explícitas del bloque operacional
+  var pausas = [];
+  var bd = bloqueData[esc];
+  if(bd && bd.pausas) bd.pausas.forEach(function(p){ if(p.inicio) pausas.push(p); });
+
+  // Construir mapa de periodos de permiso masivo desde historial
+  // Agrupar por fechaSalida/fechaFin de permisos donde >60% del DEI estuvo de permiso
+  // Primero obtener todos los periodos de permiso del personal del DEI
+  var escPersonal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
+  var totalPersonal = escPersonal.length;
+
+  // Recopilar todos los periodos de permiso desde historial
+  var periodosPermiso = []; // {inicio, fin}
+  historial.forEach(function(h){
+    if(!escPersonal.find(function(m){ return m.id===h.memberId; })) return;
+    var statusPermiso = ['Permiso','PermisoGUDMO','PermisoDEI','Vacaciones','Luto','LeyMaria'].includes(h.status);
+    if(!statusPermiso) return;
+    if(h.fechaSalida && h.fechaFin) periodosPermiso.push({id:h.memberId, ini:h.fechaSalida, fin:h.fechaFin});
+  });
+  // Permiso actual del personal
+  escPersonal.forEach(function(m){
+    var sp = ['Permiso','PermisoGUDMO','PermisoDEI','Vacaciones','Luto','LeyMaria'].includes(m.status);
+    if(sp && m.fechaSalida) periodosPermiso.push({id:m.id, ini:m.fechaSalida, fin:m.fechaFin||'9999-12-31'});
+  });
+
+  while(cur <= hoy){
+    var dStr = cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+
+    // Pausa 1: bloque operacional
+    var enPausa = pausas.some(function(p){
+      return dStr >= p.inicio && (!p.fin || dStr < p.fin);
+    });
+
+    // Pausa 2: permiso masivo — cuántos miembros del DEI estaban de permiso ese día
+    if(!enPausa && totalPersonal > 0){
+      var enPermisoDia = periodosPermiso.filter(function(p){
+        return dStr >= p.ini && dStr < p.fin;
+      });
+      // Contar únicos (evitar duplicados del mismo miembro)
+      var unicos = {};
+      enPermisoDia.forEach(function(p){ unicos[p.id]=true; });
+      var countPerm = Object.keys(unicos).length;
+      if(countPerm/totalPersonal > 0.6) enPausa = true;
+    }
+
+    if(!enPausa) dias++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return dias;
+}
+function getDiasRestantes(turno){
+  if(!turno.historial.length) return null;
+  var sorted = [...turno.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var last = sorted[0];
+  var diasTurno = turno.diasLaboralesPorTurno || 7;
+  var diasTranscurridos = getDiasLaboralesDesde(last.fecha);
+  return Math.max(0, diasTurno - diasTranscurridos);
+}
+
+function getFechaEntregaEstimada(turno){
+  // Calcula la fecha estimada de entrega (diasTurno días laborables desde recepción)
+  if(!turno.historial.length) return null;
+  var sorted = [...turno.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var last = sorted[0];
+  var diasTurno = turno.diasLaboralesPorTurno || 7;
+  var esc = turno.escuadra||'DEI 2';
+  var bd = bloqueData[esc];
+  var pausas = (bd&&bd.pausas)||[];
+
+  var diasContados = 0;
+  var cur = new Date(last.fecha+'T00:00:00');
+  cur.setDate(cur.getDate()+1);
+  var limite = new Date(); limite.setMonth(limite.getMonth()+6); // max 6 meses
+
+  while(diasContados < diasTurno && cur <= limite){
+    var dStr = cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+    var enPausa = pausas.some(function(p){ return dStr>=p.inicio&&(!p.fin||dStr<p.fin); });
+    if(!enPausa){
+      var escPersonal = members.filter(function(m){ return m.escuadra===esc; });
+      var enPermiso = escPersonal.filter(function(m){
+        return m.status==='Permiso'&&m.fechaSalida&&m.fechaFin&&dStr>=m.fechaSalida&&dStr<m.fechaFin;
+      }).length;
+      if(escPersonal.length>0&&(enPermiso/escPersonal.length)>0.6) enPausa=true;
+    }
+    if(!enPausa) diasContados++;
+    if(diasContados===diasTurno) return dStr;
+    cur.setDate(cur.getDate()+1);
+  }
+  return null;
+}
+
+function getSiguiente(turno){
+  // Devuelve el próximo según el historial (sin filtrar por estado)
+  // Usado para saber quién sería el "natural" siguiente
+  if(!turno.miembros.length) return null;
+  if(!turno.historial.length) return members.find(m=>m.id===turno.miembros[0].memberId)||null;
+  const last = [...turno.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
+  const lastIdx = turno.miembros.findIndex(m=>m.memberId===last.memberId);
+  const nextIdx = (lastIdx+1) % turno.miembros.length;
+  return members.find(m=>m.id===turno.miembros[nextIdx].memberId)||null;
+}
+
+function getSiguienteDisponible(turno){
+  // Devuelve el próximo que NO está en vacaciones/permiso/incapacidad/guardia
+  // y que NO tiene cargo de mando (excluidos de llevar minuta)
+  if(!turno.miembros.length) return null;
+  const ESTADOS_NO_DISP = ['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
+  // Cargos que NO llevan minuta (primero y segundo al mando)
+  // Cargos que NO llevan minuta: Comandante y Comandante de DEI
+  const CARGOS_MANDO = turno.cargosExcluidos || ['Cte. Escuadra','Cte. DEI'];
+
+  // Calcular índice de inicio
+  var startIdx = 0;
+  if(turno.historial.length){
+    const last = [...turno.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
+    const lastIdx = turno.miembros.findIndex(m=>m.memberId===last.memberId);
+    startIdx = (lastIdx+1) % turno.miembros.length;
+  }
+
+  // Buscar el primero disponible a partir de startIdx
+  for(var i=0; i<turno.miembros.length; i++){
+    const idx = (startIdx+i) % turno.miembros.length;
+    const m = members.find(x=>x.id===turno.miembros[idx].memberId);
+    if(!m) continue;
+    if(ESTADOS_NO_DISP.includes(m.status)) continue;
+    // Excluir cargos de mando
+    if(m.cargo && CARGOS_MANDO.some(function(c){ return m.cargo.toLowerCase().includes(c.toLowerCase()); })) continue;
+    return {member:m, saltados:i, idxEnTurno:idx};
+  }
+  // Todos no disponibles/mando — retornar el natural igual
+  const m = members.find(x=>x.id===turno.miembros[startIdx].memberId);
+  return m ? {member:m, saltados:0, idxEnTurno:startIdx, todosOcupados:true} : null;
+}
+
+function getPendienteBitacora(turno){
+  // Retorna lista de miembros que estaban en vacaciones/ausencia cuando les tocaba
+  // y quedaron "pendientes" para cuando regresen
+  var ESTADOS_NO_DISP = ['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
+  var pendientes = (turno.pendientes||[]);
+  return pendientes.map(function(p){
+    var m = members.find(x=>x.id===p.memberId);
+    return m ? {member:m, fechaProgramada:p.fechaProgramada, motivo:p.motivo} : null;
+  }).filter(Boolean);
+}
+
+function marcarCumplido(tId){
+  const t = turnos2.find(x=>x.id===tId);
+  if(!t) return;
+  if(!t.miembros.length){ showToast('⚠️ Sin miembros configurados','#f97316'); return; }
+
+  // Construir select con todos los miembros del turno
+  var optsHtml = t.miembros.map(function(mm){
+    var m = members.find(function(x){return x.id===mm.memberId;});
+    return m ? '<option value="'+m.id+'">'+m.rank+' '+m.name+(m.status!=='Servicio'?' ('+m.status+')':'')+'</option>' : '';
+  }).join('');
+
+  document.getElementById('mTitle').textContent='📋 Entregar Minuta';
+  document.getElementById('mSubtitle').textContent=t.nombre;
+  document.getElementById('statusGrid').innerHTML=`
+    <div class="fg" style="grid-column:1/-1">
+      <label>¿A quién le entrego la minuta?</label>
+      <select id="bitaDestinatario" style="font-size:13px;padding:8px">${optsHtml}</select>
+    </div>
+    <div class="fg" style="grid-column:1/-1">
+      <label>Fecha de entrega</label>
+      <input type="date" id="bitaFecha" value="${localDateStr()}">
+    </div>
+    <div class="fg" style="grid-column:1/-1">
+      <label>Observación <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+      <textarea id="minuta2Obs" rows="2" placeholder="Ej: Minuta al día, novedad pendiente..." style="resize:none;font-size:12px"></textarea>
+    </div>`;
+
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+
+  document.querySelectorAll('.btn-row')[0].innerHTML=`
+    <button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="confirmarEntregaBitacora('${tId}')">✅ Confirmar entrega</button>`;
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function confirmarEntregaBitacora2(tId){
+  const t = turnos2.find(x=>x.id===tId);
+  if(!t) return;
+
+  var selEl = document.getElementById('bitaDestinatario');
+  var obsEl = document.getElementById('minuta2Obs');
+  var fechaEl = document.getElementById('bitaFecha');
+  if(!selEl){ cancelTurnoModal(); return; }
+
+  var memberId = selEl.value;
+  var obs = obsEl ? obsEl.value.trim() : '';
+  var fecha = fechaEl ? fechaEl.value : localDateStr();
+
+  if(!memberId){ showToast('⚠️ Selecciona un funcionario','#f97316'); return; }
+
+  // Guardar en historial
+  t.historial.push({memberId: memberId, fecha: fecha, obs: obs});
+  sv('g9_turnos2', turnos2);
+  cancelTurnoModal();
+  renderTurnos2();
+  var m = members.find(x=>x.id===memberId);
+  showToast('✅ Minuta entregada a '+(m?m.rank+' '+m.name.split(' ')[0]:'funcionario'));
+}
+
+
+function verHistTurno(tId){
+  // Navigate to Reportes and pre-select this turno
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-reportes').classList.add('active');
+  const repBtn=document.querySelector('.tab-btn[onclick*="reportes"]');
+  if(repBtn) repBtn.classList.add('active');
+  document.getElementById('repTipo').value='__turno__';
+  populateTurnoSelect();
+  document.getElementById('repTurno').style.display='block';
+  document.getElementById('repTurno').value=tId;
+  renderReportes();
+}
+
+function deleteTurno(id){
+  if(!confirm('¿Eliminar esta tarea rotativa?')) return;
+  turnos2 = turnos2.filter(t=>t.id!==id);
+  sv('g9_turnos2',turnos2);
+  renderTurnos2();
+}
+
+// Modal para crear turno
+function showAddTurno2(){
+  const esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  const escMems = members.filter(m=>m.escuadra===esc);
+  // Build NE members list for minuta type
+  const neMems = escMems.filter(m=>['IJ','IN','IT','SI'].includes(m.rank));
+  
+  const opts = escMems.map(m=>`<option value="${m.id}">${m.rank} ${m.name}</option>`).join('');
+  
+  document.getElementById('mTitle').textContent='Nueva Tarea Rotativa';
+  document.getElementById('mSubtitle').textContent=esc;
+  document.getElementById('statusGrid').innerHTML=`
+    <div class="fg" style="grid-column:1/-1">
+      <label>Nombre de la tarea</label>
+      <input type="text" id="turnoNombre" placeholder="Ej: Fondo del DEI, Minuta física...">
+    </div>
+    <div class="fg" style="grid-column:1/-1">
+      <label>Frecuencia</label>
+      <select id="turnoTipo">
+        <option value="mensual">Mensual</option>
+        <option value="semanal">Semanal</option>
+      </select>
+    </div>
+    <div class="fg" style="grid-column:1/-1">
+      <label>Miembros en el turno (seleccione varios)</label>
+      <select id="turnoMiembros" multiple style="height:120px">${opts}</select>
+      <div style="font-size:9.5px;color:var(--muted);margin-top:3px">Mantenga presionado para seleccionar varios · El orden es el turno</div>
+    </div>`;
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+  document.querySelectorAll('.btn-row')[0].innerHTML=`
+    <button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveTurno()">Guardar</button>`;
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function cancelTurnoModal(){
+  // Restore all hidden fields
+  const obs=document.getElementById('obsInput');
+  const fechaGrp=document.getElementById('fechaFinGroup');
+  const histGrp=document.getElementById('histDateGroup');
+  if(obs) obs.style.display='';
+  if(fechaGrp) fechaGrp.style.display='';
+  if(histGrp) histGrp.style.display='';
+  const tpg2=document.getElementById('tipoPermisoGroup');
+  if(tpg2) tpg2.style.display='none';
+  const adg2=document.getElementById('anexoDestinoGroup');
+  if(adg2) adg2.style.display='none';
+  const ci=document.getElementById('cargoInput');
+  if(ci) ci.closest('.fg').style.display='';
+  const pht2=document.getElementById('permisoHorasToggle');
+  const phg2=document.getElementById('permisoHorasGroup');
+  if(pht2) pht2.style.display='none';
+  if(phg2) phg2.style.display='none';
+  // Restore btn rows
+  const rows=document.querySelectorAll('.btn-row');
+  rows.forEach(r=>r.style.display='');
+  closeModal();
+}
+
+function saveTurno(){
+  const nombre = document.getElementById('turnoNombre').value.trim();
+  if(!nombre){ showToast('⚠️ Ingrese un nombre','#f97316'); return; }
+  const tipo = document.getElementById('turnoTipo').value;
+  const sel = Array.from(document.getElementById('turnoMiembros').selectedOptions).map(o=>({memberId:o.value}));
+  const esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  turnos2.push({id:uid(), nombre, tipo, escuadra:esc, miembros:sel, historial:[]});
+  sv('g9_turnos2',turnos2);
+  cancelTurnoModal();
+  showTab('minuta2', document.querySelector('.tab-btn[onclick*="minuta2"]'));
+  showToast('✅ Tarea rotativa creada');
+}
+
+function editTurnoMembers(tId){
+  showToast('💡 Elimine y recree el turno para cambiar miembros','#3b82f6');
+}
+
+//
+//  REPORTES
+//
+function populateTurnoSelect(){
+  const sel = document.getElementById('repTurno');
+  const cur = sel.value;
+  sel.innerHTML='<option value="">— Seleccione turno —</option>';
+  turnos2.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.nombre+' ('+t.escuadra+')'; sel.appendChild(o); });
+  if(cur) sel.value=cur;
+}
+
+function renderReportes(){
+  populateTurnoSelect();
+  const tipo = document.getElementById('repTipo').value;
+  const turnoSel = document.getElementById('repTurno');
+  turnoSel.style.display = tipo==='__turno__'?'block':'none';
+  const escFilt = document.getElementById('repEsc').value;
+
+  // Special: turno historial
+  if(tipo==='__turno__'){
+    const tId = document.getElementById('repTurno').value;
+    const t = turnos2.find(x=>x.id===tId);
+    if(!t){ document.getElementById('reportesSummary').innerHTML=''; document.getElementById('reportesList').innerHTML='<div class="empty"><div class="ei">🔄</div><p>Seleccione un turno</p></div>'; return; }
+    document.getElementById('reportesSummary').innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><strong style="color:var(--gold2)">${t.nombre}</strong> · ${t.tipo} · ${t.escuadra}</div>`;
+    const hist = [...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+    document.getElementById('reportesList').innerHTML = hist.length?'<div class="hist-list">'+hist.map(h=>{
+      const m=members.find(x=>x.id===h.memberId);
+      return `<div class="hist-card"><div class="hist-entry" style="padding:0"><span class="hist-date">📅 ${fmtDate(h.fecha)}</span><span style="font-size:12px;font-weight:600;color:var(--text)">${m?m.rank+' '+m.name:'—'}</span>${h.obs?`<span class="hist-obs">· ${h.obs}</span>`:''}</div></div>`;
+    }).join('')+'</div>':'<div class="empty"><div class="ei">📋</div><p>Sin registros aún</p></div>';
+    return;
+  }
+
+  const entries = historial.filter(h=>{
+    // Permiso agrupa: Permiso, PermisoGUDMO, PermisoDEI
+    var statusMatch = h.status===tipo;
+    if(!statusMatch && tipo==='Permiso') statusMatch = ['Permiso','PermisoGUDMO','PermisoDEI'].includes(h.status);
+    if(!statusMatch) return false;
+    if(escFilt && h.escuadra!==escFilt) return false;
+    return true;
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+
+  // Summary by person
+  const byPerson = {};
+  entries.forEach(e=>{
+    if(!byPerson[e.memberId]) byPerson[e.memberId]={
+      name:e.memberName, rank:e.memberRank, escuadra:e.escuadra, count:0, entries:[]
+    };
+    byPerson[e.memberId].count++;
+    byPerson[e.memberId].entries.push(e);
+  });
+  const sorted = Object.values(byPerson).sort((a,b)=>b.count-a.count);
+
+  document.getElementById('reportesSummary').innerHTML=
+    `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;gap:16px;flex-wrap:wrap">
+      <div><span style="font-size:28px;font-weight:900;color:var(--gold2)">${entries.length}</span><div style="font-size:10px;color:var(--muted)">Registros totales</div></div>
+      <div><span style="font-size:28px;font-weight:900;color:var(--cyan)">${sorted.length}</span><div style="font-size:10px;color:var(--muted)">Funcionarios</div></div>
+      <div><span style="font-size:28px;font-weight:900;color:var(--green)">${sorted[0]?.count||0}</span><div style="font-size:10px;color:var(--muted)">Máximo por persona</div></div>
+    </div>`;
+
+  if(!sorted.length){
+    document.getElementById('reportesList').innerHTML=`<div class="empty" style="margin-top:20px"><div class="ei">📊</div><p>Sin registros de ${tipo} aún.</p></div>`;
+    return;
+  }
+
+  document.getElementById('reportesList').innerHTML='<div class="hist-list">'+sorted.map(p=>`
+    <div class="hist-card">
+      <div class="hist-top">
+        <div class="rank-badge" style="width:30px;height:30px;font-size:8px">${p.rank}</div>
+        <div style="flex:1">
+          <div class="hist-name">${p.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${p.escuadra}</div>
+        </div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold2)">${p.count}</div>
+      </div>
+      <div class="hist-entries">${p.entries.map(e=>`
+        <div class="hist-entry">
+          <span class="hist-date">📅 ${fmtDate(e.date)}</span>
+          ${e.fechaLlegada?`<span style="font-size:10px;color:var(--muted)">→ ${fmtDate(e.fechaLlegada)}</span>`:''}
+          ${e.obs?`<span class="hist-obs">· ${e.obs}</span>`:''}
+        </div>`).join('')}
+      </div>
+    </div>`).join('')+'</div>';
+}
+
+function exportReporteExcel(){
+  const tipo = document.getElementById('repTipo').value;
+  const escFilt = document.getElementById('repEsc').value;
+
+  // Special: turno historial
+  if(tipo==='__turno__'){
+    const tId = document.getElementById('repTurno').value;
+    const t = turnos2.find(x=>x.id===tId);
+    if(!t){ document.getElementById('reportesSummary').innerHTML=''; document.getElementById('reportesList').innerHTML='<div class="empty"><div class="ei">🔄</div><p>Seleccione un turno</p></div>'; return; }
+    document.getElementById('reportesSummary').innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><strong style="color:var(--gold2)">${t.nombre}</strong> · ${t.tipo} · ${t.escuadra}</div>`;
+    const hist = [...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+    document.getElementById('reportesList').innerHTML = hist.length?'<div class="hist-list">'+hist.map(h=>{
+      const m=members.find(x=>x.id===h.memberId);
+      return `<div class="hist-card"><div class="hist-entry" style="padding:0"><span class="hist-date">📅 ${fmtDate(h.fecha)}</span><span style="font-size:12px;font-weight:600;color:var(--text)">${m?m.rank+' '+m.name:'—'}</span>${h.obs?`<span class="hist-obs">· ${h.obs}</span>`:''}</div></div>`;
+    }).join('')+'</div>':'<div class="empty"><div class="ei">📋</div><p>Sin registros aún</p></div>';
+    return;
+  }
+
+  const entries = historial.filter(h=>{
+    if(h.status!==tipo) return false;
+    if(escFilt && h.escuadra!==escFilt) return false;
+    return true;
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+
+  if(!entries.length){ showToast('⚠️ Sin datos para exportar','#f97316'); return; }
+
+  // Build CSV
+  const rows = [['Grado','Nombre','Escuadra','Estado','Fecha Inicio','Fecha Regreso','Observación']];
+  entries.forEach(e=>{
+    rows.push([e.memberRank,e.memberName,e.escuadra||'',e.status,e.date,e.fechaLlegada||'',e.obs||'']);
+  });
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`GUDMO9_${tipo}_${localDateStr()}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('📥 Exportando CSV...');
+}
+
+
+//
+//  ZONAS DE ASEO
+//
+
+
+function todayAseo(){
+  const today = localDateStr();
+  return aseoData.find(a=>a.fecha===today)||null;
+}
+
+function renderAseo(){
+  const today = localDateStr();
+  document.getElementById('aseoFechaLabel').textContent = fmtDate(today);
+  
+  // Populate selects for historial
+  populateAseoSelects();
+  
+  const current = todayAseo();
+  const grid = document.getElementById('aseoGrid');
+
+  // Get PT/PP members in service from current escuadra
+  const pts = escMembers().filter(m=>['PT','PP','PA'].includes(m.rank)&&m.status==='Servicio');
+
+  if(!current){
+    grid.innerHTML=`<div style="background:var(--card);border:1px dashed var(--border);border-radius:9px;padding:20px;text-align:center">
+      <div style="font-size:32px;margin-bottom:8px">🧹</div>
+      <div style="font-size:13px;color:var(--muted2);margin-bottom:12px">No hay asignación para hoy.<br>Pulse <strong>Auto-asignar</strong> para distribuir automáticamente.</div>
+    </div>`;
+    renderAseoHist();
+    return;
+  }
+
+  grid.innerHTML='<div style="display:flex;flex-direction:column;gap:6px">'+
+    ZONAS_ASEO.map(zona=>{
+      const asig = current.asignaciones.find(a=>a.zona===zona);
+      const m = asig?members.find(x=>x.id===asig.memberId):null;
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:11px;font-weight:600;color:var(--text);flex:1;min-width:0">${zonaIcon(zona)} ${zona}</div>
+        <select onchange="cambiarAseoZona('${zona}',this.value)" style="background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px;max-width:160px">
+          <option value="">— Sin asignar —</option>
+          ${pts.map(p=>`<option value="${p.id}" ${asig&&asig.memberId===p.id?'selected':''}>${p.rank} ${p.name.split(' ')[0]} ${p.name.split(' ')[2]||''}</option>`).join('')}
+        </select>
+      </div>`;
+    }).join('')+'</div>';
+  renderAseoHist();
+}
+
+function zonaIcon(z){
+  const icons={'Guardia':'🔒','Auditorio':'🎤','Patio':'☀️','Escaleras':'🪜','Parqueadero':'🚗',
+    'Casino Patrulleros':'🍽️','Subida Tanquetas':'🚛','Entrada':'🚪','Zona Lavado':'🚿',
+    'Alojamiento Arranchados':'🛏️','Alojamiento Desarranchados':'🛌','Baños 1':'🚽','Baños 2':'🚽'};
+  return icons[z]||'🧹';
+}
+
+function cambiarAseoZona(zona, memberId){
+  const today = localDateStr();
+  let current = aseoData.find(a=>a.fecha===today);
+  if(!current){ current={fecha:today,asignaciones:[]}; aseoData.push(current); }
+  const idx = current.asignaciones.findIndex(a=>a.zona===zona);
+  if(idx>=0) current.asignaciones[idx].memberId=memberId;
+  else current.asignaciones.push({zona,memberId});
+  sv('g9_aseo',aseoData);
+}
+
+function autoAsignarZonas(){
+  const today = localDateStr();
+  const pts = escMembers().filter(m=>['PT','PP','PA'].includes(m.rank)&&m.status==='Servicio');
+  if(!pts.length){ showToast('⚠️ Sin patrulleros en servicio','#f97316'); return; }
+
+  // Smart rotation: find who worked least recently each zone
+  const asigs = [];
+  ZONAS_ASEO.forEach((zona,i)=>{
+    // Find last person who did this zone
+    let lastByZona={};
+    aseoData.forEach(d=>{
+      const a=d.asignaciones.find(x=>x.zona===zona);
+      if(a&&a.memberId) lastByZona[a.memberId]=(lastByZona[a.memberId]||0)+1;
+    });
+    // Pick PT who has done this zone least
+    const sorted=[...pts].sort((a,b)=>(lastByZona[a.id]||0)-(lastByZona[b.id]||0));
+    asigs.push({zona, memberId: sorted[i%sorted.length].id});
+  });
+
+  let current = aseoData.find(a=>a.fecha===today);
+  if(current) current.asignaciones=asigs;
+  else aseoData.push({fecha:today,asignaciones:asigs});
+  sv('g9_aseo',aseoData);
+  renderAseo();
+  showToast('✅ Zonas asignadas automáticamente');
+}
+
+function populateAseoSelects(){
+  const zSel=document.getElementById('aseoHistZona');
+  const pSel=document.getElementById('aseoHistPT');
+  zSel.innerHTML='<option value="">— Todas las zonas —</option>'+ZONAS_ASEO.map(z=>`<option value="${z}">${z}</option>`).join('');
+  const pts=escMembers().filter(m=>['PT','PP','PA'].includes(m.rank));
+  pSel.innerHTML='<option value="">— Todos los patrulleros —</option>'+pts.map(p=>`<option value="${p.id}">${p.rank} ${p.name}</option>`).join('');
+}
+
+function renderAseoHist(){
+  const zonaFilt=document.getElementById('aseoHistZona').value;
+  const ptFilt=document.getElementById('aseoHistPT').value;
+  const container=document.getElementById('aseoHistList');
+  
+  const rows=[];
+  [...aseoData].sort((a,b)=>b.fecha.localeCompare(a.fecha)).forEach(d=>{
+    d.asignaciones.forEach(a=>{
+      if(zonaFilt&&a.zona!==zonaFilt) return;
+      if(ptFilt&&a.memberId!==ptFilt) return;
+      if(!a.memberId) return;
+      rows.push({fecha:d.fecha,zona:a.zona,memberId:a.memberId});
+    });
+  });
+
+  if(!rows.length){
+    container.innerHTML='<div class="empty" style="margin-top:12px"><div class="ei">📋</div><p>Sin registros de aseo.</p></div>';
+    return;
+  }
+  container.innerHTML='<div class="hist-list">'+rows.map(r=>{
+    const m=members.find(x=>x.id===r.memberId);
+    return `<div class="hist-card"><div class="hist-entry" style="padding:0">
+      <span class="hist-date">📅 ${fmtDate(r.fecha)}</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text)">${zonaIcon(r.zona)} ${r.zona}</span>
+      <span style="font-size:11px;color:var(--muted2)">${m?m.rank+' '+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||''):'—'}</span>
+    </div></div>`;
+  }).join('')+'</div>';
+}
+
+function exportAseoExcel(){
+  const rows=[['Fecha','Zona','Grado','Nombre']];
+  [...aseoData].sort((a,b)=>b.fecha.localeCompare(a.fecha)).forEach(d=>{
+    d.asignaciones.forEach(a=>{
+      if(!a.memberId) return;
+      const m=members.find(x=>x.id===a.memberId);
+      rows.push([d.fecha,a.zona,m?m.rank:'',m?m.name:'']);
+    });
+  });
+  if(rows.length<=1){showToast('⚠️ Sin datos','#f97316');return;}
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`GUDMO9_Aseo_${localDateStr()}.csv`;
+  a.click();URL.revokeObjectURL(url);
+  showToast('📥 Exportando...');
+}
+
+
+//
+//  MISIONES
+//
+
+function saveMisiones(){ sv('g9_misiones', misionesData); }
+
+function setMision(tipo){
+  const btn = document.getElementById('mBtn-'+tipo);
+  const isActive = btn.style.borderColor.includes('255') || btn.dataset.active==='1';
+  // Toggle
+  if(tipo==='antimotines'){
+    misionesData.antimotines.activa = !misionesData.antimotines.activa;
+  } else {
+    misionesData.verde.activa = !misionesData.verde.activa;
+  }
+  saveMisiones();
+  renderMisiones();
+}
+
+function renderMisiones(){
+  // Update mission buttons style
+  const am = misionesData.antimotines.activa;
+  const vd = misionesData.verde.activa;
+
+  const amBtn = document.getElementById('mBtn-antimotines');
+  const vdBtn = document.getElementById('mBtn-verde');
+  if(amBtn){
+    amBtn.style.border = am?'2px solid var(--orange)':'2px solid var(--border)';
+    amBtn.style.background = am?'rgba(249,115,22,.1)':'transparent';
+    amBtn.dataset.active = am?'1':'0';
+    amBtn.querySelector('div:last-child').textContent = am?'● ACTIVA':'Equipo antimotines';
+    amBtn.querySelector('div:last-child').style.color = am?'var(--orange)':'var(--muted)';
+  }
+  if(vdBtn){
+    vdBtn.style.border = vd?'2px solid var(--green)':'2px solid var(--border)';
+    vdBtn.style.background = vd?'rgba(34,197,94,.1)':'transparent';
+    vdBtn.dataset.active = vd?'1':'0';
+    vdBtn.querySelector('div:last-child').textContent = vd?'● ACTIVA':'Apoyo vigilancia';
+    vdBtn.querySelector('div:last-child').style.color = vd?'var(--green)':'var(--muted)';
+  }
+
+  const content = document.getElementById('misionContent');
+  let out = '';
+
+  //
+  if(am){
+    const escPersonal = escMembers().filter(m=>m.status==='Servicio');
+    const selected = misionesData.antimotines.personal;
+    out += `<div style="background:var(--card);border:1px solid rgba(249,115,22,.3);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="font-size:18px">🛡️</div>
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--orange)">CONTROL DE DISTURBIOS</div>
+          <div style="font-size:10px;color:var(--muted)">${selected.length} efectivos asignados</div>
+        </div>
+        <button onclick="toggleTodosAntimotines()" style="margin-left:auto;background:rgba(249,115,22,.15);border:1px solid var(--orange);border-radius:6px;padding:5px 10px;color:var(--orange);font-size:10px;cursor:pointer;font-weight:700">
+          ${selected.length===escPersonal.length?'Quitar todos':'Todos'}
+        </button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        ${escPersonal.map(m=>{
+          const isIn = selected.includes(m.id);
+          return `<div onclick="toggleAntimotines('${m.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;cursor:pointer;
+            background:${isIn?'rgba(249,115,22,.12)':'rgba(255,255,255,.02)'};
+            border:1px solid ${isIn?'rgba(249,115,22,.4)':'var(--border)'}">
+            <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isIn?'var(--orange)':'var(--border)'};
+              background:${isIn?'var(--orange)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              ${isIn?'<span style="color:#000;font-size:12px;font-weight:900">✓</span>':''}
+            </div>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600;color:${isIn?'var(--text)':'var(--muted2)'}">${m.rank} ${m.name}</div>
+              ${m.cargo?`<div style="font-size:9.5px;color:var(--muted)">${cargoIcon(m.cargo)} ${m.cargo}</div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  //
+  if(vd){
+    const grupos = misionesData.verde.grupos;
+    const enServicio = escMembers().filter(m=>m.status==='Servicio');
+    const asignados = grupos.flatMap(g=>g.miembros);
+    const sinGrupo = enServicio.filter(m=>!asignados.includes(m.id));
+
+    out += `<div style="background:var(--card);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="font-size:18px">🟢</div>
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--green)">SERVICIO VERDE</div>
+          <div style="font-size:10px;color:var(--muted)">${grupos.length} grupos · ${asignados.length} asignados · ${sinGrupo.length} sin grupo</div>
+        </div>
+        <button onclick="crearGrupoVerde()" style="margin-left:auto;background:rgba(34,197,94,.15);border:1px solid var(--green);border-radius:6px;padding:5px 10px;color:var(--green);font-size:10px;cursor:pointer;font-weight:700">+ Grupo</button>
+      </div>
+
+      <!-- Grupos existentes -->
+      ${grupos.length?grupos.map((g,gi)=>{
+        const miembrosInfo = g.miembros.map(mid=>enServicio.find(m=>m.id===mid)).filter(Boolean);
+        return `<div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--green)">G${gi+1}</div>
+            <div style="flex:1">
+              <input value="${g.zona||''}" onchange="updateGrupoZona(${gi},this.value)" placeholder="Zona / sector asignado..."
+                style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:12px;width:100%;padding:2px 0;outline:none">
+            </div>
+            <button onclick="eliminarGrupo(${gi})" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer">🗑️</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
+            ${miembrosInfo.map(m=>`
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.04);border-radius:6px">
+                <div style="font-size:11px;font-weight:600;color:var(--text);flex:1">${m.rank} ${m.name}</div>
+                <button onclick="quitarDeGrupo(${gi},'${m.id}')" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer">✕</button>
+              </div>`).join('')}
+            ${miembrosInfo.length===0?'<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px">Sin miembros — agregue abajo</div>':''}
+          </div>
+          <!-- Add member to this group -->
+          <select onchange="agregarAGrupo(${gi},this.value);this.value=''"
+            style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:11px">
+            <option value="">+ Agregar miembro...</option>
+            ${sinGrupo.concat(miembrosInfo).map(m=>`<option value="${m.id}">${m.rank} ${m.name.split(' ')[0]} ${m.name.split(' ')[2]||''}</option>`).join('')}
+          </select>
+        </div>`;
+      }).join(''):'<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px">Pulse <strong>+ Grupo</strong> para crear el primer grupo</div>'}
+
+      <!-- Sin asignar -->
+      ${sinGrupo.length?`<div style="margin-top:10px;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed var(--border)">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Sin grupo asignado (${sinGrupo.length})</div>
+        ${sinGrupo.map(m=>`<div style="font-size:11px;color:var(--muted2);padding:3px 0">${m.rank} ${m.name}</div>`).join('')}
+      </div>`:'<div style="text-align:center;font-size:11px;color:var(--green);margin-top:8px">✅ Todo el personal asignado</div>'}
+    </div>`;
+  }
+
+  if(!am&&!vd){
+    out = `<div class="empty"><div class="ei">🎯</div><p>Seleccione una o ambas misiones activas arriba.</p></div>`;
+  }
+  content.innerHTML = out;
+}
+
+function toggleAntimotines(id){
+  const sel = misionesData.antimotines.personal;
+  const idx = sel.indexOf(id);
+  if(idx>=0) sel.splice(idx,1); else sel.push(id);
+  saveMisiones(); renderMisiones();
+}
+
+function toggleTodosAntimotines(){
+  const escPersonal = escMembers().filter(m=>m.status==='Servicio');
+  const sel = misionesData.antimotines.personal;
+  if(sel.length===escPersonal.length) misionesData.antimotines.personal=[];
+  else misionesData.antimotines.personal=escPersonal.map(m=>m.id);
+  saveMisiones(); renderMisiones();
+}
+
+function crearGrupoVerde(){
+  misionesData.verde.grupos.push({id:uid(), zona:'', miembros:[]});
+  saveMisiones(); renderMisiones();
+}
+
+function eliminarGrupo(gi){
+  if(!confirm('¿Eliminar este grupo?')) return;
+  misionesData.verde.grupos.splice(gi,1);
+  saveMisiones(); renderMisiones();
+}
+
+function updateGrupoZona(gi,val){
+  misionesData.verde.grupos[gi].zona=val;
+  saveMisiones();
+}
+
+function agregarAGrupo(gi,memberId){
+  if(!memberId) return;
+  // Remove from any other group first
+  misionesData.verde.grupos.forEach(g=>{ g.miembros=g.miembros.filter(id=>id!==memberId); });
+  misionesData.verde.grupos[gi].miembros.push(memberId);
+  saveMisiones(); renderMisiones();
+}
+
+function quitarDeGrupo(gi,memberId){
+  misionesData.verde.grupos[gi].miembros=misionesData.verde.grupos[gi].miembros.filter(id=>id!==memberId);
+  saveMisiones(); renderMisiones();
+}
+
+
+//
+//  CICLO LABORAL 25/5
+//
+
+function saveCiclo(){ sv('g9_ciclo', cicloConfig); }
+
+function renderCiclo(){
+  const bar = document.getElementById('cicloBar');
+  const fill = document.getElementById('cicloFill');
+  const info = document.getElementById('cicloInfo');
+  const label = document.getElementById('cicloLabel');
+  if(!cicloConfig.inicioLaboral){ 
+    if(info) info.textContent='Configure el ciclo ⚙️';
+    if(fill) fill.style.width='0%';
+    return; 
+  }
+  const inicio = new Date(cicloConfig.inicioLaboral+'T00:00:00');
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const diasTotales = cicloConfig.diasTrabajo + cicloConfig.diasDescanso;
+  const diasDesde = Math.floor((hoy-inicio)/(1000*60*60*24));
+  const diaEnCiclo = ((diasDesde % diasTotales) + diasTotales) % diasTotales;
+
+  if(diaEnCiclo < cicloConfig.diasTrabajo){
+    // En jornada laboral
+    const llevamos = diaEnCiclo + 1;
+    const restan = cicloConfig.diasTrabajo - llevamos;
+    const pct = (llevamos/cicloConfig.diasTrabajo)*100;
+    if(label) label.textContent='Días laborados';
+    if(fill){ fill.style.width=pct+'%'; fill.style.background=restan<=3?'var(--orange)':'var(--blue)'; }
+    if(info) info.innerHTML=`<span style="color:${restan<=3?'var(--orange)':'var(--text)'}"><strong>${llevamos}</strong>/${cicloConfig.diasTrabajo}</span> <span style="color:var(--muted);font-size:9px">(${restan} para descanso)</span>`;
+  } else {
+    // En descanso
+    const diaDescanso = diaEnCiclo - cicloConfig.diasTrabajo + 1;
+    const restanDesc = cicloConfig.diasDescanso - diaDescanso + 1;
+    const pct = ((diaDescanso)/cicloConfig.diasDescanso)*100;
+    if(label) label.textContent='Días descanso';
+    if(fill){ fill.style.width=pct+'%'; fill.style.background='var(--green)'; }
+    if(info) info.innerHTML=`<span style="color:var(--green)"><strong>${diaDescanso}</strong>/${cicloConfig.diasDescanso}</span> <span style="color:var(--muted);font-size:9px">(${restanDesc} para volver)</span>`;
+  }
+}
+
+
+// ── MOTOR MANDO DE SEMANA (clon de Bitácora) ──
+var turnos3 = ld('g9_turnos3', []);
+
+function renderTurnos3(){
+  var container = document.getElementById('turnosList3');
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var myTurnos = turnos3.filter(function(t){ return t.escuadra===esc||t.escuadra==='all'; });
+  if(!myTurnos.length){
+    container.innerHTML='<div class="empty"><div class="ei">🔄</div><p style="margin-bottom:12px">No hay tareas rotativas todavía.</p></div>';
+    return;
+  }
+  var out='';
+  myTurnos.forEach(function(t){
+    var siguiente = getSiguiente(t);
+    var lastH = t.historial.length ? [...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);})[0] : null;
+    var lastM = lastH ? members.find(function(m){return m.id===lastH.memberId;}) : null;
+
+    // Member list
+    var memberListHtml='';
+    t.miembros.forEach(function(mm,i){
+      var m=members.find(function(x){return x.id===mm.memberId;});
+      if(!m) return;
+      var dispInfo=getSiguienteDisponible(t);
+      var isNext=dispInfo&&dispInfo.member&&dispInfo.member.id===m.id;
+      var isLast=lastH&&lastH.memberId===m.id;
+      var lastEntry=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);}).find(function(h){return h.memberId===m.id;});
+      var totalVeces=t.historial.filter(function(h){return h.memberId===m.id;}).length;
+      var esPendiente=(t.pendientes||[]).find(function(p){return p.memberId===m.id;});
+      var AUSENTE=['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
+      var estaAusente=AUSENTE.includes(m.status);
+      var bgColor=isNext?'rgba(200,146,42,.12)':estaAusente?'rgba(99,102,241,.07)':'rgba(255,255,255,.02)';
+      var nameColor=isNext?'var(--gold2)':estaAusente?'var(--muted)':'var(--text)';
+      var estadoSpan=estaAusente?' <span style="font-size:9px;opacity:.7">('+m.status+')</span>':'';
+      var lastEntryHtml=lastEntry
+        ?('<div style="font-size:9.5px;color:var(--muted)">Último: 📅 '+fmtDate(lastEntry.fecha)
+          +(lastEntry.obs?'<span style="font-style:italic;color:var(--cyan)"> · '+lastEntry.obs+'</span>':'')
+          +'</div>')
+        :'<div style="font-size:9.5px;color:var(--muted)">Sin registros</div>';
+      var vecesHtml=totalVeces>0
+        ?'<div style="font-size:9px;color:var(--cyan);margin-top:1px">📋 Ha llevado: <strong>'+totalVeces+'</strong> '+(totalVeces!==1?'veces':'vez')+'</div>'
+        :'';
+      // Días transcurridos para quien TIENE la mando de semana ahora (el último en recibirla)
+      var diasActualHtml='';
+      if(lastH && lastH.memberId===m.id){
+        // Este funcionario es quien tiene la mando de semana actualmente
+        var _dt=getDiasLaboralesDesde(lastH.fecha);
+        var _dtTurno=t.diasLaboralesPorTurno||7;
+        var _dtFaltan=Math.max(0,_dtTurno-_dt);
+        var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
+        diasActualHtml='<div style="font-size:10px;margin-top:3px;padding:4px 8px;border-radius:6px;background:'+_dtColor+'18;border:1px solid '+_dtColor+'44;color:'+_dtColor+';font-weight:700">'
+          +'📖 TIENE LA BITÁCORA: '+_dt+' día'+(  _dt!==1?'s':'')+' laborado'+(  _dt!==1?'s':'')+' · '
+          +(_dtFaltan===0?'¡Toca entregar!':_dtFaltan+' día'+(_dtFaltan!==1?'s':'')+' restante'+(_dtFaltan!==1?'s':''))
+          +'</div>';
+      }
+      var pendHtml=esPendiente
+        ?'<div style="font-size:9px;color:var(--yellow);margin-top:1px">⏳ Pendiente al regresar de '+esPendiente.motivo+'</div>'
+        :'';
+      var badgeNext=isNext?'<div style="font-size:9px;font-weight:700;color:var(--gold2);background:rgba(200,146,42,.2);padding:2px 7px;border-radius:8px">PRÓXIMO</div>':'';
+      var badgePend=(esPendiente&&!isNext)?'<div style="font-size:9px;color:var(--yellow);background:rgba(251,191,36,.15);padding:2px 7px;border-radius:8px">PENDIENTE</div>':'';
+      var badgeLast=(isLast&&!isNext&&!esPendiente)?'<div style="font-size:9px;color:var(--muted);padding:2px 7px">último</div>':'';
+      memberListHtml+='<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:3px;background:'+bgColor+';">'
+        +'<div style="font-size:14px;color:var(--muted);width:18px;text-align:center">'+(i+1)+'</div>'
+        +'<div style="flex:1">'
+        +'<div style="font-size:12px;font-weight:600;color:'+nameColor+'">'+m.rank+' '+m.name+estadoSpan+'</div>'
+        +lastEntryHtml+vecesHtml+diasActualHtml+pendHtml
+        +'</div>'
+        +badgeNext+badgePend+badgeLast
+        +'</div>';
+    });
+
+    // Próximo banner
+    var diasR = t.tipo==='semanal_laboral'?getDiasRestantes(t):null;
+    var enPerm = members.filter(function(m){return m.escuadra===t.escuadra&&m.status==='Permiso';}).length>3;
+    var diasMsg='';
+    var fechaEnt = t.tipo==='semanal_laboral'?getFechaEntregaEstimada(t):null;
+    if(diasR!==null){
+      if(enPerm){
+        diasMsg='<div style="font-size:10px;color:var(--yellow);margin-top:3px">⏸️ Contador pausado — en permiso</div>';
+        if(fechaEnt) diasMsg+='<div style="font-size:10px;color:var(--muted);margin-top:2px">📅 Entrega estimada: '+fmtDate(fechaEnt)+'</div>';
+      } else if(diasR===0){
+        diasMsg='<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:3px">🔔 ¡Toca entregar hoy!</div>';
+      } else {
+        diasMsg='<div style="font-size:10px;color:var(--muted);margin-top:3px">📅 '+diasR+' día'+(diasR!==1?'s':'')+' laborable'+(diasR!==1?'s':'')+' restante'+(diasR!==1?'s':'');
+        if(fechaEnt) diasMsg+=' · entrega est. '+fmtDate(fechaEnt);
+        diasMsg+='</div>';
+      }
+    }
+
+    var proximoBanner='';
+    // Usar el siguiente disponible (salta vacaciones/ausencias)
+    var dispBanner=getSiguienteDisponible(t);
+    var sigDisp=dispBanner?dispBanner.member:siguiente;
+    var saltadosBanner=dispBanner?dispBanner.saltados:0;
+    var pendientesBanner=(t.pendientes||[]).map(function(p){
+      var mp=members.find(function(x){return x.id===p.memberId;});
+      return mp?mp.name.split(' ')[0]:null;
+    }).filter(Boolean);
+
+    if(!sigDisp){
+      proximoBanner='<div style="font-size:12px;color:var(--muted);margin-bottom:10px">⚠️ Sin miembros configurados</div>';
+    } else {
+      var _saltAviso=saltadosBanner>0
+        ?'<div style="font-size:9.5px;color:var(--yellow);margin-top:3px">⏭️ Se omiten '+saltadosBanner+' por ausencia</div>'
+        :'';
+      var _pendAviso=pendientesBanner.length>0
+        ?'<div style="font-size:9.5px;color:var(--yellow);margin-top:2px">⏳ Pendientes: '+pendientesBanner.join(', ')+'</div>'
+        :'';
+      proximoBanner='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="font-size:24px">👤</div>'
+        +'<div style="flex:1">'
+        +(lastM&&lastM.id!==sigDisp.id?'<div style="font-size:10px;color:var(--muted)">Tiene ahora: <strong>'+lastM.rank+' '+lastM.name.split(' ')[0]+'</strong></div>':'')
+        +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Próximo</div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--green)">'+sigDisp.rank+' '+sigDisp.name+'</div>'
+        +_saltAviso+_pendAviso
+        +diasMsg
+        +'</div>'
+        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='marcarCumplido(this.dataset.tid)'>✅ Entregar</button>"
+        +'</div>'
+        +'</div>';
+    }
+
+    // Historial de entregas
+    var histHtml='';
+    if(t.historial.length){
+      var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+
+      if(t.tipo==='semanal_laboral'){
+        // MATRIZ VIEW — igual que el Excel de guardia
+        // Columnas: persona × turno recibido
+        var miembrosOrden = t.miembros.map(function(mm){
+          return members.find(function(x){return x.id===mm.memberId;});
+        }).filter(Boolean);
+
+        histHtml='<div style="margin-top:10px">'
+          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📊 Registro de entregas</div>'
+          +'<div style="overflow-x:auto">'
+          +'<table style="width:100%;border-collapse:collapse;font-size:10px">'
+          +'<thead><tr>'
+          +'<th style="background:var(--navy);padding:5px 8px;text-align:left;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:100px">FUNCIONARIO</th>';
+
+        // Column per delivery
+        sorted.forEach(function(h,i){
+          histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:55px">T'+(i+1)+'<br><span style="font-size:8px;font-weight:400">'+fmtDate(h.fecha)+'</span></th>';
+        });
+        histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--gold2);font-size:9px;border:1px solid var(--border);min-width:36px">TOT</th>'
+          +'</tr></thead><tbody>';
+
+        miembrosOrden.forEach(function(m){
+          var total=0;
+          var nomCorto=m.name.split(' ').slice(0,2).join(' ');
+          var row='<tr><td style="padding:5px 8px;border:1px solid var(--border);color:var(--text)">'
+            +'<span style="font-size:8px;color:var(--muted);margin-right:3px">'+m.rank+'</span>'+nomCorto+'</td>';
+          sorted.forEach(function(h){
+            var esSuyo=h.memberId===m.id;
+            if(esSuyo) total++;
+            row+='<td style="text-align:center;padding:5px 2px;border:1px solid var(--border);'
+              +'background:'+(esSuyo?'rgba(34,197,94,.15)':'transparent')+';'
+              +'color:'+(esSuyo?'var(--green)':'var(--muted)')+';font-weight:'+(esSuyo?'700':'400')+'">'
+              +(esSuyo?'<span title="'+fmtDate(h.fecha)+(h.obs?' · '+h.obs:'')+'">✓<br><span style="font-size:7px;font-weight:400;color:var(--muted)">'+fmtDate(h.fecha).slice(0,5)+'</span></span>':'-')+'</td>';
+          });
+          row+='<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?'var(--gold2)':'var(--muted)')+';font-weight:700">'+(total||'-')+'</td></tr>';
+          histHtml+=row;
+        });
+
+        // Fila de acciones: editar y borrar cada entrega
+        histHtml+='<tfoot><tr><td style="padding:4px 8px;border:1px solid var(--border);font-size:9px;color:var(--muted)">ACCIONES</td>';
+        sorted.forEach(function(h,idx_h){
+          var hm=members.find(function(x){return x.id===h.memberId;});
+          var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
+          histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
+            +'<button onclick="editarEntregaBitacora(\''+t.id+'\','+idx_h+')" '
+            +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
+            +'<button onclick="borrarEntregaBitacora(\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
+            +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
+            +'</td>';
+        });
+        histHtml+='<td style="border:1px solid var(--border)"></td></tr></tfoot>';
+        histHtml+='</tbody></table></div></div>';
+
+      } else {
+        // Lista simple para otros tipos de turno
+        histHtml='<div style="margin-top:10px">'
+          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Historial</div>'
+          +'<div style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">';
+        sorted.reverse().forEach(function(h){
+          var hm=members.find(function(x){return x.id===h.memberId;});
+          histHtml+='<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)">'
+            +'<div style="font-size:10px;color:var(--muted);min-width:70px">'+fmtDate(h.fecha)+'</div>'
+            +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+(hm?hm.rank+' '+hm.name:'Desconocido')+'</div>'
+            +'</div>';
+        });
+        histHtml+='</div></div>';
+      }
+    }
+
+    out+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+      +'<div style="font-size:22px">'+(t.tipo==='semanal_laboral'?'📖':t.tipo==='semanal'?'📅':'📆')+'</div>'
+      +'<div style="flex:1">'
+      +'<div style="font-size:17px;font-weight:700;letter-spacing:1px;color:var(--gold2)">'+t.nombre+'</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+t.escuadra+' · '+t.miembros.length+' personas</div>'
+      +'</div>'
+      +"<button data-tid='"+t.id+"' onclick='reordenarTurno(this.dataset.tid)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
+      +"<button data-tid='"+t.id+"' onclick='deleteTurno(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
+      +'</div>'
+      +proximoBanner
+      +'<div style="margin-bottom:4px">'
+      +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Orden del turno</div>'
+      +(memberListHtml||'<div style="font-size:11px;color:var(--muted)">Sin miembros</div>')
+      +'</div>'
+      +histHtml
+      +((t.pendientes&&t.pendientes.length)
+        ?'<div style="margin-top:10px;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:10px 12px">'
+          +'<div style="font-size:10px;color:var(--yellow);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-weight:700">⏳ Pendientes al regresar</div>'
+          +t.pendientes.map(function(p){
+            var mp=members.find(function(x){return x.id===p.memberId;});
+            return mp
+              ?'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(251,191,36,.1)">'
+                +'<div style="font-size:11px;color:var(--text);flex:1">'+mp.rank+' '+mp.name+'</div>'
+                +'<div style="font-size:9px;color:var(--muted)">'+p.motivo+'</div>'
+                +'<button onclick="quitarPendiente(\''+t.id+'\',\''+mp.id+'\')" style="background:none;border:none;font-size:11px;cursor:pointer;color:var(--muted);padding:0 4px" title="Ya cumplió">✅</button>'
+                +'</div>'
+              :'';
+          }).join('')
+          +'</div>'
+        :'')
+      +'</div>';
+  });
+  container.innerHTML=out;
+}
+
+function getDiasLaboralesDesde(fechaStr){
+  // Cuenta dias laborables desde fechaStr hasta hoy
+  // Excluye periodos en que el DEI estaba de permiso masivo (presente o pasado)
+  if(!fechaStr) return 0;
+  var desde = new Date(fechaStr+'T00:00:00');
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  if(desde >= hoy) return 0;
+  var dias = 0;
+  var cur = new Date(desde);
+  cur.setDate(cur.getDate()+1); // dia SIGUIENTE a la recepcion
+
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  // Pausas explícitas del bloque operacional
+  var pausas = [];
+  var bd = bloqueData[esc];
+  if(bd && bd.pausas) bd.pausas.forEach(function(p){ if(p.inicio) pausas.push(p); });
+
+  // Construir mapa de periodos de permiso masivo desde historial
+  // Agrupar por fechaSalida/fechaFin de permisos donde >60% del DEI estuvo de permiso
+  // Primero obtener todos los periodos de permiso del personal del DEI
+  var escPersonal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
+  var totalPersonal = escPersonal.length;
+
+  // Recopilar todos los periodos de permiso desde historial
+  var periodosPermiso = []; // {inicio, fin}
+  historial.forEach(function(h){
+    if(!escPersonal.find(function(m){ return m.id===h.memberId; })) return;
+    var statusPermiso = ['Permiso','PermisoGUDMO','PermisoDEI','Vacaciones','Luto','LeyMaria'].includes(h.status);
+    if(!statusPermiso) return;
+    if(h.fechaSalida && h.fechaFin) periodosPermiso.push({id:h.memberId, ini:h.fechaSalida, fin:h.fechaFin});
+  });
+  // Permiso actual del personal
+  escPersonal.forEach(function(m){
+    var sp = ['Permiso','PermisoGUDMO','PermisoDEI','Vacaciones','Luto','LeyMaria'].includes(m.status);
+    if(sp && m.fechaSalida) periodosPermiso.push({id:m.id, ini:m.fechaSalida, fin:m.fechaFin||'9999-12-31'});
+  });
+
+  while(cur <= hoy){
+    var dStr = cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+
+    // Pausa 1: bloque operacional
+    var enPausa = pausas.some(function(p){
+      return dStr >= p.inicio && (!p.fin || dStr < p.fin);
+    });
+
+    // Pausa 2: permiso masivo — cuántos miembros del DEI estaban de permiso ese día
+    if(!enPausa && totalPersonal > 0){
+      var enPermisoDia = periodosPermiso.filter(function(p){
+        return dStr >= p.ini && dStr < p.fin;
+      });
+      // Contar únicos (evitar duplicados del mismo miembro)
+      var unicos = {};
+      enPermisoDia.forEach(function(p){ unicos[p.id]=true; });
+      var countPerm = Object.keys(unicos).length;
+      if(countPerm/totalPersonal > 0.6) enPausa = true;
+    }
+
+    if(!enPausa) dias++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return dias;
+}
+function getDiasRestantes(turno){
+  if(!turno.historial.length) return null;
+  var sorted = [...turno.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var last = sorted[0];
+  var diasTurno = turno.diasLaboralesPorTurno || 7;
+  var diasTranscurridos = getDiasLaboralesDesde(last.fecha);
+  return Math.max(0, diasTurno - diasTranscurridos);
+}
+
+function getFechaEntregaEstimada(turno){
+  // Calcula la fecha estimada de entrega (diasTurno días laborables desde recepción)
+  if(!turno.historial.length) return null;
+  var sorted = [...turno.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var last = sorted[0];
+  var diasTurno = turno.diasLaboralesPorTurno || 7;
+  var esc = turno.escuadra||'DEI 2';
+  var bd = bloqueData[esc];
+  var pausas = (bd&&bd.pausas)||[];
+
+  var diasContados = 0;
+  var cur = new Date(last.fecha+'T00:00:00');
+  cur.setDate(cur.getDate()+1);
+  var limite = new Date(); limite.setMonth(limite.getMonth()+6); // max 6 meses
+
+  while(diasContados < diasTurno && cur <= limite){
+    var dStr = cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
+    var enPausa = pausas.some(function(p){ return dStr>=p.inicio&&(!p.fin||dStr<p.fin); });
+    if(!enPausa){
+      var escPersonal = members.filter(function(m){ return m.escuadra===esc; });
+      var enPermiso = escPersonal.filter(function(m){
+        return m.status==='Permiso'&&m.fechaSalida&&m.fechaFin&&dStr>=m.fechaSalida&&dStr<m.fechaFin;
+      }).length;
+      if(escPersonal.length>0&&(enPermiso/escPersonal.length)>0.6) enPausa=true;
+    }
+    if(!enPausa) diasContados++;
+    if(diasContados===diasTurno) return dStr;
+    cur.setDate(cur.getDate()+1);
+  }
+  return null;
+}
+
+function getSiguiente(turno){
+  // Devuelve el próximo según el historial (sin filtrar por estado)
+  // Usado para saber quién sería el "natural" siguiente
+  if(!turno.miembros.length) return null;
+  if(!turno.historial.length) return members.find(m=>m.id===turno.miembros[0].memberId)||null;
+  const last = [...turno.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
+  const lastIdx = turno.miembros.findIndex(m=>m.memberId===last.memberId);
+  const nextIdx = (lastIdx+1) % turno.miembros.length;
+  return members.find(m=>m.id===turno.miembros[nextIdx].memberId)||null;
+}
+
+function getSiguienteDisponible(turno){
+  // Devuelve el próximo que NO está en vacaciones/permiso/incapacidad/guardia
+  // y que NO tiene cargo de mando (excluidos de llevar mando de semana)
+  if(!turno.miembros.length) return null;
+  const ESTADOS_NO_DISP = ['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
+  // Cargos que NO llevan mando de semana (primero y segundo al mando)
+  // Cargos que NO llevan mando de semana: Comandante y Comandante de DEI
+  const CARGOS_MANDO = turno.cargosExcluidos || ['Cte. Escuadra','Cte. DEI'];
+
+  // Calcular índice de inicio
+  var startIdx = 0;
+  if(turno.historial.length){
+    const last = [...turno.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha))[0];
+    const lastIdx = turno.miembros.findIndex(m=>m.memberId===last.memberId);
+    startIdx = (lastIdx+1) % turno.miembros.length;
+  }
+
+  // Buscar el primero disponible a partir de startIdx
+  for(var i=0; i<turno.miembros.length; i++){
+    const idx = (startIdx+i) % turno.miembros.length;
+    const m = members.find(x=>x.id===turno.miembros[idx].memberId);
+    if(!m) continue;
+    if(ESTADOS_NO_DISP.includes(m.status)) continue;
+    // Excluir cargos de mando
+    if(m.cargo && CARGOS_MANDO.some(function(c){ return m.cargo.toLowerCase().includes(c.toLowerCase()); })) continue;
+    return {member:m, saltados:i, idxEnTurno:idx};
+  }
+  // Todos no disponibles/mando — retornar el natural igual
+  const m = members.find(x=>x.id===turno.miembros[startIdx].memberId);
+  return m ? {member:m, saltados:0, idxEnTurno:startIdx, todosOcupados:true} : null;
+}
+
+function getPendienteBitacora(turno){
+  // Retorna lista de miembros que estaban en vacaciones/ausencia cuando les tocaba
+  // y quedaron "pendientes" para cuando regresen
+  var ESTADOS_NO_DISP = ['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','ComisionFuera','ComisionRegion','ComisionErradicacion','Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso','LeyMaria','PermisoCumple'];
+  var pendientes = (turno.pendientes||[]);
+  return pendientes.map(function(p){
+    var m = members.find(x=>x.id===p.memberId);
+    return m ? {member:m, fechaProgramada:p.fechaProgramada, motivo:p.motivo} : null;
+  }).filter(Boolean);
+}
+
+function marcarCumplido(tId){
+  const t = turnos3.find(x=>x.id===tId);
+  if(!t) return;
+  if(!t.miembros.length){ showToast('⚠️ Sin miembros configurados','#f97316'); return; }
+
+  // Construir select con todos los miembros del turno
+  var optsHtml = t.miembros.map(function(mm){
+    var m = members.find(function(x){return x.id===mm.memberId;});
+    return m ? '<option value="'+m.id+'">'+m.rank+' '+m.name+(m.status!=='Servicio'?' ('+m.status+')':'')+'</option>' : '';
+  }).join('');
+
+  document.getElementById('mTitle').textContent='🎖️ Entregar Mando de Semana';
+  document.getElementById('mSubtitle').textContent=t.nombre;
+  document.getElementById('statusGrid').innerHTML=`
+    <div class="fg" style="grid-column:1/-1">
+      <label>¿A quién le entrego la mando de semana?</label>
+      <select id="bitaDestinatario" style="font-size:13px;padding:8px">${optsHtml}</select>
+    </div>
+    <div class="fg" style="grid-column:1/-1">
+      <label>Fecha de entrega</label>
+      <input type="date" id="bitaFecha" value="${localDateStr()}">
+    </div>
+    <div class="fg" style="grid-column:1/-1">
+      <label>Observación <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+      <textarea id="mando3Obs" rows="2" placeholder="Ej: Mando de Semana al día, novedad pendiente..." style="resize:none;font-size:12px"></textarea>
+    </div>`;
+
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+
+  document.querySelectorAll('.btn-row')[0].innerHTML=`
+    <button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="confirmarEntregaBitacora('${tId}')">✅ Confirmar entrega</button>`;
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function confirmarEntregaBitacora3(tId){
+  const t = turnos3.find(x=>x.id===tId);
+  if(!t) return;
+
+  var selEl = document.getElementById('bitaDestinatario');
+  var obsEl = document.getElementById('mando3Obs');
+  var fechaEl = document.getElementById('bitaFecha');
+  if(!selEl){ cancelTurnoModal(); return; }
+
+  var memberId = selEl.value;
+  var obs = obsEl ? obsEl.value.trim() : '';
+  var fecha = fechaEl ? fechaEl.value : localDateStr();
+
+  if(!memberId){ showToast('⚠️ Selecciona un funcionario','#f97316'); return; }
+
+  // Guardar en historial
+  t.historial.push({memberId: memberId, fecha: fecha, obs: obs});
+  sv('g9_turnos3', turnos3);
+  cancelTurnoModal();
+  renderTurnos3();
+  var m = members.find(x=>x.id===memberId);
+  showToast('✅ Mando de Semana entregada a '+(m?m.rank+' '+m.name.split(' ')[0]:'funcionario'));
+}
+
+
+function verHistTurno(tId){
+  // Navigate to Reportes and pre-select this turno
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-reportes').classList.add('active');
+  const repBtn=document.querySelector('.tab-btn[onclick*="reportes"]');
+  if(repBtn) repBtn.classList.add('active');
+  document.getElementById('repTipo').value='__turno__';
+  populateTurnoSelect();
+  document.getElementById('repTurno').style.display='block';
+  document.getElementById('repTurno').value=tId;
+  renderReportes();
+}
+
+function deleteTurno(id){
+  if(!confirm('¿Eliminar esta tarea rotativa?')) return;
+  turnos3 = turnos3.filter(t=>t.id!==id);
+  sv('g9_turnos3',turnos3);
+  renderTurnos3();
+}
+
+// Modal para crear turno
+function showAddTurno3(){
+  const esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  const escMems = members.filter(m=>m.escuadra===esc);
+  // Build NE members list for mando de semana type
+  const neMems = escMems.filter(m=>['IJ','IN','IT','SI'].includes(m.rank));
+  
+  const opts = escMems.map(m=>`<option value="${m.id}">${m.rank} ${m.name}</option>`).join('');
+  
+  document.getElementById('mTitle').textContent='Nueva Tarea Rotativa';
+  document.getElementById('mSubtitle').textContent=esc;
+  document.getElementById('statusGrid').innerHTML=`
+    <div class="fg" style="grid-column:1/-1">
+      <label>Nombre de la tarea</label>
+      <input type="text" id="turnoNombre" placeholder="Ej: Fondo del DEI, Mando de Semana física...">
+    </div>
+    <div class="fg" style="grid-column:1/-1">
+      <label>Frecuencia</label>
+      <select id="turnoTipo">
+        <option value="mensual">Mensual</option>
+        <option value="semanal">Semanal</option>
+      </select>
+    </div>
+    <div class="fg" style="grid-column:1/-1">
+      <label>Miembros en el turno (seleccione varios)</label>
+      <select id="turnoMiembros" multiple style="height:120px">${opts}</select>
+      <div style="font-size:9.5px;color:var(--muted);margin-top:3px">Mantenga presionado para seleccionar varios · El orden es el turno</div>
+    </div>`;
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+  document.querySelectorAll('.btn-row')[0].innerHTML=`
+    <button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveTurno()">Guardar</button>`;
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function cancelTurnoModal(){
+  // Restore all hidden fields
+  const obs=document.getElementById('obsInput');
+  const fechaGrp=document.getElementById('fechaFinGroup');
+  const histGrp=document.getElementById('histDateGroup');
+  if(obs) obs.style.display='';
+  if(fechaGrp) fechaGrp.style.display='';
+  if(histGrp) histGrp.style.display='';
+  const tpg2=document.getElementById('tipoPermisoGroup');
+  if(tpg2) tpg2.style.display='none';
+  const adg2=document.getElementById('anexoDestinoGroup');
+  if(adg2) adg2.style.display='none';
+  const ci=document.getElementById('cargoInput');
+  if(ci) ci.closest('.fg').style.display='';
+  const pht2=document.getElementById('permisoHorasToggle');
+  const phg2=document.getElementById('permisoHorasGroup');
+  if(pht2) pht2.style.display='none';
+  if(phg2) phg2.style.display='none';
+  // Restore btn rows
+  const rows=document.querySelectorAll('.btn-row');
+  rows.forEach(r=>r.style.display='');
+  closeModal();
+}
+
+function saveTurno(){
+  const nombre = document.getElementById('turnoNombre').value.trim();
+  if(!nombre){ showToast('⚠️ Ingrese un nombre','#f97316'); return; }
+  const tipo = document.getElementById('turnoTipo').value;
+  const sel = Array.from(document.getElementById('turnoMiembros').selectedOptions).map(o=>({memberId:o.value}));
+  const esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  turnos3.push({id:uid(), nombre, tipo, escuadra:esc, miembros:sel, historial:[]});
+  sv('g9_turnos3',turnos3);
+  cancelTurnoModal();
+  showTab('mando', document.querySelector('.tab-btn[onclick*="mando"]'));
+  showToast('✅ Tarea rotativa creada');
+}
+
+function editTurnoMembers(tId){
+  showToast('💡 Elimine y recree el turno para cambiar miembros','#3b82f6');
+}
+
+//
+//  REPORTES
+//
+function populateTurnoSelect(){
+  const sel = document.getElementById('repTurno');
+  const cur = sel.value;
+  sel.innerHTML='<option value="">— Seleccione turno —</option>';
+  turnos3.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.nombre+' ('+t.escuadra+')'; sel.appendChild(o); });
+  if(cur) sel.value=cur;
+}
+
+function renderReportes(){
+  populateTurnoSelect();
+  const tipo = document.getElementById('repTipo').value;
+  const turnoSel = document.getElementById('repTurno');
+  turnoSel.style.display = tipo==='__turno__'?'block':'none';
+  const escFilt = document.getElementById('repEsc').value;
+
+  // Special: turno historial
+  if(tipo==='__turno__'){
+    const tId = document.getElementById('repTurno').value;
+    const t = turnos3.find(x=>x.id===tId);
+    if(!t){ document.getElementById('reportesSummary').innerHTML=''; document.getElementById('reportesList').innerHTML='<div class="empty"><div class="ei">🔄</div><p>Seleccione un turno</p></div>'; return; }
+    document.getElementById('reportesSummary').innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><strong style="color:var(--gold2)">${t.nombre}</strong> · ${t.tipo} · ${t.escuadra}</div>`;
+    const hist = [...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+    document.getElementById('reportesList').innerHTML = hist.length?'<div class="hist-list">'+hist.map(h=>{
+      const m=members.find(x=>x.id===h.memberId);
+      return `<div class="hist-card"><div class="hist-entry" style="padding:0"><span class="hist-date">📅 ${fmtDate(h.fecha)}</span><span style="font-size:12px;font-weight:600;color:var(--text)">${m?m.rank+' '+m.name:'—'}</span>${h.obs?`<span class="hist-obs">· ${h.obs}</span>`:''}</div></div>`;
+    }).join('')+'</div>':'<div class="empty"><div class="ei">📋</div><p>Sin registros aún</p></div>';
+    return;
+  }
+
+  const entries = historial.filter(h=>{
+    // Permiso agrupa: Permiso, PermisoGUDMO, PermisoDEI
+    var statusMatch = h.status===tipo;
+    if(!statusMatch && tipo==='Permiso') statusMatch = ['Permiso','PermisoGUDMO','PermisoDEI'].includes(h.status);
+    if(!statusMatch) return false;
+    if(escFilt && h.escuadra!==escFilt) return false;
+    return true;
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+
+  // Summary by person
+  const byPerson = {};
+  entries.forEach(e=>{
+    if(!byPerson[e.memberId]) byPerson[e.memberId]={
+      name:e.memberName, rank:e.memberRank, escuadra:e.escuadra, count:0, entries:[]
+    };
+    byPerson[e.memberId].count++;
+    byPerson[e.memberId].entries.push(e);
+  });
+  const sorted = Object.values(byPerson).sort((a,b)=>b.count-a.count);
+
+  document.getElementById('reportesSummary').innerHTML=
+    `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;gap:16px;flex-wrap:wrap">
+      <div><span style="font-size:28px;font-weight:900;color:var(--gold2)">${entries.length}</span><div style="font-size:10px;color:var(--muted)">Registros totales</div></div>
+      <div><span style="font-size:28px;font-weight:900;color:var(--cyan)">${sorted.length}</span><div style="font-size:10px;color:var(--muted)">Funcionarios</div></div>
+      <div><span style="font-size:28px;font-weight:900;color:var(--green)">${sorted[0]?.count||0}</span><div style="font-size:10px;color:var(--muted)">Máximo por persona</div></div>
+    </div>`;
+
+  if(!sorted.length){
+    document.getElementById('reportesList').innerHTML=`<div class="empty" style="margin-top:20px"><div class="ei">📊</div><p>Sin registros de ${tipo} aún.</p></div>`;
+    return;
+  }
+
+  document.getElementById('reportesList').innerHTML='<div class="hist-list">'+sorted.map(p=>`
+    <div class="hist-card">
+      <div class="hist-top">
+        <div class="rank-badge" style="width:30px;height:30px;font-size:8px">${p.rank}</div>
+        <div style="flex:1">
+          <div class="hist-name">${p.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${p.escuadra}</div>
+        </div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold2)">${p.count}</div>
+      </div>
+      <div class="hist-entries">${p.entries.map(e=>`
+        <div class="hist-entry">
+          <span class="hist-date">📅 ${fmtDate(e.date)}</span>
+          ${e.fechaLlegada?`<span style="font-size:10px;color:var(--muted)">→ ${fmtDate(e.fechaLlegada)}</span>`:''}
+          ${e.obs?`<span class="hist-obs">· ${e.obs}</span>`:''}
+        </div>`).join('')}
+      </div>
+    </div>`).join('')+'</div>';
+}
+
+function exportReporteExcel(){
+  const tipo = document.getElementById('repTipo').value;
+  const escFilt = document.getElementById('repEsc').value;
+
+  // Special: turno historial
+  if(tipo==='__turno__'){
+    const tId = document.getElementById('repTurno').value;
+    const t = turnos3.find(x=>x.id===tId);
+    if(!t){ document.getElementById('reportesSummary').innerHTML=''; document.getElementById('reportesList').innerHTML='<div class="empty"><div class="ei">🔄</div><p>Seleccione un turno</p></div>'; return; }
+    document.getElementById('reportesSummary').innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px"><strong style="color:var(--gold2)">${t.nombre}</strong> · ${t.tipo} · ${t.escuadra}</div>`;
+    const hist = [...t.historial].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+    document.getElementById('reportesList').innerHTML = hist.length?'<div class="hist-list">'+hist.map(h=>{
+      const m=members.find(x=>x.id===h.memberId);
+      return `<div class="hist-card"><div class="hist-entry" style="padding:0"><span class="hist-date">📅 ${fmtDate(h.fecha)}</span><span style="font-size:12px;font-weight:600;color:var(--text)">${m?m.rank+' '+m.name:'—'}</span>${h.obs?`<span class="hist-obs">· ${h.obs}</span>`:''}</div></div>`;
+    }).join('')+'</div>':'<div class="empty"><div class="ei">📋</div><p>Sin registros aún</p></div>';
+    return;
+  }
+
+  const entries = historial.filter(h=>{
+    if(h.status!==tipo) return false;
+    if(escFilt && h.escuadra!==escFilt) return false;
+    return true;
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+
+  if(!entries.length){ showToast('⚠️ Sin datos para exportar','#f97316'); return; }
+
+  // Build CSV
+  const rows = [['Grado','Nombre','Escuadra','Estado','Fecha Inicio','Fecha Regreso','Observación']];
+  entries.forEach(e=>{
+    rows.push([e.memberRank,e.memberName,e.escuadra||'',e.status,e.date,e.fechaLlegada||'',e.obs||'']);
+  });
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`GUDMO9_${tipo}_${localDateStr()}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('📥 Exportando CSV...');
+}
+
+
+//
+//  ZONAS DE ASEO
+//
+
+
+function todayAseo(){
+  const today = localDateStr();
+  return aseoData.find(a=>a.fecha===today)||null;
+}
+
+function renderAseo(){
+  const today = localDateStr();
+  document.getElementById('aseoFechaLabel').textContent = fmtDate(today);
+  
+  // Populate selects for historial
+  populateAseoSelects();
+  
+  const current = todayAseo();
+  const grid = document.getElementById('aseoGrid');
+
+  // Get PT/PP members in service from current escuadra
+  const pts = escMembers().filter(m=>['PT','PP','PA'].includes(m.rank)&&m.status==='Servicio');
+
+  if(!current){
+    grid.innerHTML=`<div style="background:var(--card);border:1px dashed var(--border);border-radius:9px;padding:20px;text-align:center">
+      <div style="font-size:32px;margin-bottom:8px">🧹</div>
+      <div style="font-size:13px;color:var(--muted2);margin-bottom:12px">No hay asignación para hoy.<br>Pulse <strong>Auto-asignar</strong> para distribuir automáticamente.</div>
+    </div>`;
+    renderAseoHist();
+    return;
+  }
+
+  grid.innerHTML='<div style="display:flex;flex-direction:column;gap:6px">'+
+    ZONAS_ASEO.map(zona=>{
+      const asig = current.asignaciones.find(a=>a.zona===zona);
+      const m = asig?members.find(x=>x.id===asig.memberId):null;
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:11px;font-weight:600;color:var(--text);flex:1;min-width:0">${zonaIcon(zona)} ${zona}</div>
+        <select onchange="cambiarAseoZona('${zona}',this.value)" style="background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:11px;max-width:160px">
+          <option value="">— Sin asignar —</option>
+          ${pts.map(p=>`<option value="${p.id}" ${asig&&asig.memberId===p.id?'selected':''}>${p.rank} ${p.name.split(' ')[0]} ${p.name.split(' ')[2]||''}</option>`).join('')}
+        </select>
+      </div>`;
+    }).join('')+'</div>';
+  renderAseoHist();
+}
+
+function zonaIcon(z){
+  const icons={'Guardia':'🔒','Auditorio':'🎤','Patio':'☀️','Escaleras':'🪜','Parqueadero':'🚗',
+    'Casino Patrulleros':'🍽️','Subida Tanquetas':'🚛','Entrada':'🚪','Zona Lavado':'🚿',
+    'Alojamiento Arranchados':'🛏️','Alojamiento Desarranchados':'🛌','Baños 1':'🚽','Baños 2':'🚽'};
+  return icons[z]||'🧹';
+}
+
+function cambiarAseoZona(zona, memberId){
+  const today = localDateStr();
+  let current = aseoData.find(a=>a.fecha===today);
+  if(!current){ current={fecha:today,asignaciones:[]}; aseoData.push(current); }
+  const idx = current.asignaciones.findIndex(a=>a.zona===zona);
+  if(idx>=0) current.asignaciones[idx].memberId=memberId;
+  else current.asignaciones.push({zona,memberId});
+  sv('g9_aseo',aseoData);
+}
+
+function autoAsignarZonas(){
+  const today = localDateStr();
+  const pts = escMembers().filter(m=>['PT','PP','PA'].includes(m.rank)&&m.status==='Servicio');
+  if(!pts.length){ showToast('⚠️ Sin patrulleros en servicio','#f97316'); return; }
+
+  // Smart rotation: find who worked least recently each zone
+  const asigs = [];
+  ZONAS_ASEO.forEach((zona,i)=>{
+    // Find last person who did this zone
+    let lastByZona={};
+    aseoData.forEach(d=>{
+      const a=d.asignaciones.find(x=>x.zona===zona);
+      if(a&&a.memberId) lastByZona[a.memberId]=(lastByZona[a.memberId]||0)+1;
+    });
+    // Pick PT who has done this zone least
+    const sorted=[...pts].sort((a,b)=>(lastByZona[a.id]||0)-(lastByZona[b.id]||0));
+    asigs.push({zona, memberId: sorted[i%sorted.length].id});
+  });
+
+  let current = aseoData.find(a=>a.fecha===today);
+  if(current) current.asignaciones=asigs;
+  else aseoData.push({fecha:today,asignaciones:asigs});
+  sv('g9_aseo',aseoData);
+  renderAseo();
+  showToast('✅ Zonas asignadas automáticamente');
+}
+
+function populateAseoSelects(){
+  const zSel=document.getElementById('aseoHistZona');
+  const pSel=document.getElementById('aseoHistPT');
+  zSel.innerHTML='<option value="">— Todas las zonas —</option>'+ZONAS_ASEO.map(z=>`<option value="${z}">${z}</option>`).join('');
+  const pts=escMembers().filter(m=>['PT','PP','PA'].includes(m.rank));
+  pSel.innerHTML='<option value="">— Todos los patrulleros —</option>'+pts.map(p=>`<option value="${p.id}">${p.rank} ${p.name}</option>`).join('');
+}
+
+function renderAseoHist(){
+  const zonaFilt=document.getElementById('aseoHistZona').value;
+  const ptFilt=document.getElementById('aseoHistPT').value;
+  const container=document.getElementById('aseoHistList');
+  
+  const rows=[];
+  [...aseoData].sort((a,b)=>b.fecha.localeCompare(a.fecha)).forEach(d=>{
+    d.asignaciones.forEach(a=>{
+      if(zonaFilt&&a.zona!==zonaFilt) return;
+      if(ptFilt&&a.memberId!==ptFilt) return;
+      if(!a.memberId) return;
+      rows.push({fecha:d.fecha,zona:a.zona,memberId:a.memberId});
+    });
+  });
+
+  if(!rows.length){
+    container.innerHTML='<div class="empty" style="margin-top:12px"><div class="ei">📋</div><p>Sin registros de aseo.</p></div>';
+    return;
+  }
+  container.innerHTML='<div class="hist-list">'+rows.map(r=>{
+    const m=members.find(x=>x.id===r.memberId);
+    return `<div class="hist-card"><div class="hist-entry" style="padding:0">
+      <span class="hist-date">📅 ${fmtDate(r.fecha)}</span>
+      <span style="font-size:11px;font-weight:600;color:var(--text)">${zonaIcon(r.zona)} ${r.zona}</span>
+      <span style="font-size:11px;color:var(--muted2)">${m?m.rank+' '+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||''):'—'}</span>
+    </div></div>`;
+  }).join('')+'</div>';
+}
+
+function exportAseoExcel(){
+  const rows=[['Fecha','Zona','Grado','Nombre']];
+  [...aseoData].sort((a,b)=>b.fecha.localeCompare(a.fecha)).forEach(d=>{
+    d.asignaciones.forEach(a=>{
+      if(!a.memberId) return;
+      const m=members.find(x=>x.id===a.memberId);
+      rows.push([d.fecha,a.zona,m?m.rank:'',m?m.name:'']);
+    });
+  });
+  if(rows.length<=1){showToast('⚠️ Sin datos','#f97316');return;}
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`GUDMO9_Aseo_${localDateStr()}.csv`;
+  a.click();URL.revokeObjectURL(url);
+  showToast('📥 Exportando...');
+}
+
+
+//
+//  MISIONES
+//
+
+function saveMisiones(){ sv('g9_misiones', misionesData); }
+
+function setMision(tipo){
+  const btn = document.getElementById('mBtn-'+tipo);
+  const isActive = btn.style.borderColor.includes('255') || btn.dataset.active==='1';
+  // Toggle
+  if(tipo==='antimotines'){
+    misionesData.antimotines.activa = !misionesData.antimotines.activa;
+  } else {
+    misionesData.verde.activa = !misionesData.verde.activa;
+  }
+  saveMisiones();
+  renderMisiones();
+}
+
+function renderMisiones(){
+  // Update mission buttons style
+  const am = misionesData.antimotines.activa;
+  const vd = misionesData.verde.activa;
+
+  const amBtn = document.getElementById('mBtn-antimotines');
+  const vdBtn = document.getElementById('mBtn-verde');
+  if(amBtn){
+    amBtn.style.border = am?'2px solid var(--orange)':'2px solid var(--border)';
+    amBtn.style.background = am?'rgba(249,115,22,.1)':'transparent';
+    amBtn.dataset.active = am?'1':'0';
+    amBtn.querySelector('div:last-child').textContent = am?'● ACTIVA':'Equipo antimotines';
+    amBtn.querySelector('div:last-child').style.color = am?'var(--orange)':'var(--muted)';
+  }
+  if(vdBtn){
+    vdBtn.style.border = vd?'2px solid var(--green)':'2px solid var(--border)';
+    vdBtn.style.background = vd?'rgba(34,197,94,.1)':'transparent';
+    vdBtn.dataset.active = vd?'1':'0';
+    vdBtn.querySelector('div:last-child').textContent = vd?'● ACTIVA':'Apoyo vigilancia';
+    vdBtn.querySelector('div:last-child').style.color = vd?'var(--green)':'var(--muted)';
+  }
+
+  const content = document.getElementById('misionContent');
+  let out = '';
+
+  //
+  if(am){
+    const escPersonal = escMembers().filter(m=>m.status==='Servicio');
+    const selected = misionesData.antimotines.personal;
+    out += `<div style="background:var(--card);border:1px solid rgba(249,115,22,.3);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="font-size:18px">🛡️</div>
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--orange)">CONTROL DE DISTURBIOS</div>
+          <div style="font-size:10px;color:var(--muted)">${selected.length} efectivos asignados</div>
+        </div>
+        <button onclick="toggleTodosAntimotines()" style="margin-left:auto;background:rgba(249,115,22,.15);border:1px solid var(--orange);border-radius:6px;padding:5px 10px;color:var(--orange);font-size:10px;cursor:pointer;font-weight:700">
+          ${selected.length===escPersonal.length?'Quitar todos':'Todos'}
+        </button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        ${escPersonal.map(m=>{
+          const isIn = selected.includes(m.id);
+          return `<div onclick="toggleAntimotines('${m.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;cursor:pointer;
+            background:${isIn?'rgba(249,115,22,.12)':'rgba(255,255,255,.02)'};
+            border:1px solid ${isIn?'rgba(249,115,22,.4)':'var(--border)'}">
+            <div style="width:20px;height:20px;border-radius:5px;border:2px solid ${isIn?'var(--orange)':'var(--border)'};
+              background:${isIn?'var(--orange)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              ${isIn?'<span style="color:#000;font-size:12px;font-weight:900">✓</span>':''}
+            </div>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:600;color:${isIn?'var(--text)':'var(--muted2)'}">${m.rank} ${m.name}</div>
+              ${m.cargo?`<div style="font-size:9.5px;color:var(--muted)">${cargoIcon(m.cargo)} ${m.cargo}</div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  //
+  if(vd){
+    const grupos = misionesData.verde.grupos;
+    const enServicio = escMembers().filter(m=>m.status==='Servicio');
+    const asignados = grupos.flatMap(g=>g.miembros);
+    const sinGrupo = enServicio.filter(m=>!asignados.includes(m.id));
+
+    out += `<div style="background:var(--card);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="font-size:18px">🟢</div>
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--green)">SERVICIO VERDE</div>
+          <div style="font-size:10px;color:var(--muted)">${grupos.length} grupos · ${asignados.length} asignados · ${sinGrupo.length} sin grupo</div>
+        </div>
+        <button onclick="crearGrupoVerde()" style="margin-left:auto;background:rgba(34,197,94,.15);border:1px solid var(--green);border-radius:6px;padding:5px 10px;color:var(--green);font-size:10px;cursor:pointer;font-weight:700">+ Grupo</button>
+      </div>
+
+      <!-- Grupos existentes -->
+      ${grupos.length?grupos.map((g,gi)=>{
+        const miembrosInfo = g.miembros.map(mid=>enServicio.find(m=>m.id===mid)).filter(Boolean);
+        return `<div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--green)">G${gi+1}</div>
+            <div style="flex:1">
+              <input value="${g.zona||''}" onchange="updateGrupoZona(${gi},this.value)" placeholder="Zona / sector asignado..."
+                style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:12px;width:100%;padding:2px 0;outline:none">
+            </div>
+            <button onclick="eliminarGrupo(${gi})" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer">🗑️</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
+            ${miembrosInfo.map(m=>`
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.04);border-radius:6px">
+                <div style="font-size:11px;font-weight:600;color:var(--text);flex:1">${m.rank} ${m.name}</div>
+                <button onclick="quitarDeGrupo(${gi},'${m.id}')" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer">✕</button>
+              </div>`).join('')}
+            ${miembrosInfo.length===0?'<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px">Sin miembros — agregue abajo</div>':''}
+          </div>
+          <!-- Add member to this group -->
+          <select onchange="agregarAGrupo(${gi},this.value);this.value=''"
+            style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:7px;color:var(--text);font-size:11px">
+            <option value="">+ Agregar miembro...</option>
+            ${sinGrupo.concat(miembrosInfo).map(m=>`<option value="${m.id}">${m.rank} ${m.name.split(' ')[0]} ${m.name.split(' ')[2]||''}</option>`).join('')}
+          </select>
+        </div>`;
+      }).join(''):'<div style="font-size:12px;color:var(--muted);text-align:center;padding:12px">Pulse <strong>+ Grupo</strong> para crear el primer grupo</div>'}
+
+      <!-- Sin asignar -->
+      ${sinGrupo.length?`<div style="margin-top:10px;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px dashed var(--border)">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Sin grupo asignado (${sinGrupo.length})</div>
+        ${sinGrupo.map(m=>`<div style="font-size:11px;color:var(--muted2);padding:3px 0">${m.rank} ${m.name}</div>`).join('')}
+      </div>`:'<div style="text-align:center;font-size:11px;color:var(--green);margin-top:8px">✅ Todo el personal asignado</div>'}
+    </div>`;
+  }
+
+  if(!am&&!vd){
+    out = `<div class="empty"><div class="ei">🎯</div><p>Seleccione una o ambas misiones activas arriba.</p></div>`;
+  }
+  content.innerHTML = out;
+}
+
+function toggleAntimotines(id){
+  const sel = misionesData.antimotines.personal;
+  const idx = sel.indexOf(id);
+  if(idx>=0) sel.splice(idx,1); else sel.push(id);
+  saveMisiones(); renderMisiones();
+}
+
+function toggleTodosAntimotines(){
+  const escPersonal = escMembers().filter(m=>m.status==='Servicio');
+  const sel = misionesData.antimotines.personal;
+  if(sel.length===escPersonal.length) misionesData.antimotines.personal=[];
+  else misionesData.antimotines.personal=escPersonal.map(m=>m.id);
+  saveMisiones(); renderMisiones();
+}
+
+function crearGrupoVerde(){
+  misionesData.verde.grupos.push({id:uid(), zona:'', miembros:[]});
+  saveMisiones(); renderMisiones();
+}
+
+function eliminarGrupo(gi){
+  if(!confirm('¿Eliminar este grupo?')) return;
+  misionesData.verde.grupos.splice(gi,1);
+  saveMisiones(); renderMisiones();
+}
+
+function updateGrupoZona(gi,val){
+  misionesData.verde.grupos[gi].zona=val;
+  saveMisiones();
+}
+
+function agregarAGrupo(gi,memberId){
+  if(!memberId) return;
+  // Remove from any other group first
+  misionesData.verde.grupos.forEach(g=>{ g.miembros=g.miembros.filter(id=>id!==memberId); });
+  misionesData.verde.grupos[gi].miembros.push(memberId);
+  saveMisiones(); renderMisiones();
+}
+
+function quitarDeGrupo(gi,memberId){
+  misionesData.verde.grupos[gi].miembros=misionesData.verde.grupos[gi].miembros.filter(id=>id!==memberId);
+  saveMisiones(); renderMisiones();
+}
+
+
+//
+//  CICLO LABORAL 25/5
+//
+
+function saveCiclo(){ sv('g9_ciclo', cicloConfig); }
+
+function renderCiclo(){
+  const bar = document.getElementById('cicloBar');
+  const fill = document.getElementById('cicloFill');
+  const info = document.getElementById('cicloInfo');
+  const label = document.getElementById('cicloLabel');
+  if(!cicloConfig.inicioLaboral){ 
+    if(info) info.textContent='Configure el ciclo ⚙️';
+    if(fill) fill.style.width='0%';
+    return; 
+  }
+  const inicio = new Date(cicloConfig.inicioLaboral+'T00:00:00');
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const diasTotales = cicloConfig.diasTrabajo + cicloConfig.diasDescanso;
+  const diasDesde = Math.floor((hoy-inicio)/(1000*60*60*24));
+  const diaEnCiclo = ((diasDesde % diasTotales) + diasTotales) % diasTotales;
+
+  if(diaEnCiclo < cicloConfig.diasTrabajo){
+    // En jornada laboral
+    const llevamos = diaEnCiclo + 1;
+    const restan = cicloConfig.diasTrabajo - llevamos;
+    const pct = (llevamos/cicloConfig.diasTrabajo)*100;
+    if(label) label.textContent='Días laborados';
+    if(fill){ fill.style.width=pct+'%'; fill.style.background=restan<=3?'var(--orange)':'var(--blue)'; }
+    if(info) info.innerHTML=`<span style="color:${restan<=3?'var(--orange)':'var(--text)'}"><strong>${llevamos}</strong>/${cicloConfig.diasTrabajo}</span> <span style="color:var(--muted);font-size:9px">(${restan} para descanso)</span>`;
+  } else {
+    // En descanso
+    const diaDescanso = diaEnCiclo - cicloConfig.diasTrabajo + 1;
+    const restanDesc = cicloConfig.diasDescanso - diaDescanso + 1;
+    const pct = ((diaDescanso)/cicloConfig.diasDescanso)*100;
+    if(label) label.textContent='Días descanso';
+    if(fill){ fill.style.width=pct+'%'; fill.style.background='var(--green)'; }
+    if(info) info.innerHTML=`<span style="color:var(--green)"><strong>${diaDescanso}</strong>/${cicloConfig.diasDescanso}</span> <span style="color:var(--muted);font-size:9px">(${restanDesc} para volver)</span>`;
+  }
+}
+
 
 
 //
@@ -7884,43 +9995,100 @@ function dashOcultarNovedadDetalle(){
 function dashDrawCiclo(){
   var el = document.getElementById('dashCiclo');
   if(!el) return;
-  // Mostrar días del bloque del DEI activo (igual que pestaña Bloque)
   var esc = (typeof curEscuadra!=='undefined' && curEscuadra!=='all') ? curEscuadra : 'DEI 2';
   var d = bloqueData[esc];
   if(!d || !d.fechaInicio){
     el.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Sin bloque iniciado</div>'; return;
   }
+
   var diasBloque = calcDiasBloque(esc);
   var diasBase   = calcDiasBase(esc);
-  var enPausaB   = d.pausas.some(function(p){return p.inicio&&!p.fin;});
   var cumplido   = d.cumplido || diasBloque >= DIAS_BLOQUE_TOTAL;
-  var pct        = Math.min(100, Math.round(diasBloque / DIAS_BLOQUE_TOTAL * 100));
-  var color, fase;
-  if(cumplido)        { color='#22c55e'; fase='✅ COMPLETADO'; }
-  else if(enPausaB)   { color='#f97316'; fase='⏸️ EN PERMISO'; }
-  else if(d.activo)   { color='#3b82f6'; fase='🔵 EN CURSO'; }
-  else                { color='var(--muted)'; fase='⚪ INACTIVO'; }
-  el.innerHTML=
-    '<div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:4px">'
-    +'<div style="font-size:32px;font-weight:900;color:'+color+';line-height:1">'+diasBloque+'</div>'
-    +'<div style="font-size:12px;color:var(--muted);padding-bottom:4px">/'+DIAS_BLOQUE_TOTAL+'</div>'
-    +'<div style="flex:1"></div>'
-    +'<div style="font-size:9px;font-weight:700;color:'+color+';padding:2px 7px;border-radius:10px;background:'+color+'22">'+fase+'</div>'
-    +'</div>'
-    +'<div style="font-size:9px;color:var(--muted);margin-bottom:5px">días de bloque búsqueda · '+esc+'</div>'
-    +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:5px">'
-    +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px;transition:width .5s"></div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">'
-    +'<div style="text-align:center;padding:4px 0;background:rgba(239,68,68,.1);border-radius:6px">'
-    +'<div style="font-size:15px;font-weight:900;color:#f87171">'+diasBloque+'</div>'
-    +'<div style="font-size:8px;color:var(--muted)">🔴 Búsqueda</div>'
-    +'</div>'
-    +'<div style="text-align:center;padding:4px 0;background:rgba(59,130,246,.1);border-radius:6px">'
-    +'<div style="font-size:15px;font-weight:900;color:#60a5fa">'+diasBase+'</div>'
-    +'<div style="font-size:8px;color:var(--muted)">🔵 Base</div>'
-    +'</div>'
-    +'</div>';
+  var enPausaB   = d.pausas.some(function(p){return p.inicio&&!p.fin;});
+  var dbData     = baseData[esc] || {activo:false, fechaInicio:'', pausas:[], diasAjuste:0};
+  var enPausaBase= (dbData.pausas||[]).some(function(p){return p.inicio&&!p.fin;});
+
+  if(cumplido){
+    // ── MODO NEGRO: mostrar días en Base con ciclo 25/5 ──
+    var DIAS_TRABAJO = cicloConfig.diasTrabajo || 25;
+    var DIAS_PERMISO = cicloConfig.diasDescanso || 5;
+    var cicloTotal   = DIAS_TRABAJO + DIAS_PERMISO;
+    // Posición dentro del ciclo laboral actual (basado en diasBase)
+    var diaEnCiclo   = diasBase > 0 ? ((diasBase - 1) % cicloTotal) : 0;
+    var enLaboral    = diaEnCiclo < DIAS_TRABAJO;
+    var numCiclo     = enLaboral ? diaEnCiclo + 1 : diaEnCiclo - DIAS_TRABAJO + 1;
+    var maxCiclo     = enLaboral ? DIAS_TRABAJO : DIAS_PERMISO;
+    var pctCiclo     = Math.min(100, Math.round(numCiclo / maxCiclo * 100));
+    var fase, color;
+    if(enPausaBase)       { color='#f97316'; fase='⏸️ EN PERMISO'; }
+    else if(enLaboral)    { color='#3b82f6'; fase='🔵 EN NEGRO'; }
+    else                  { color='#22c55e'; fase='🟢 PERMISO'; }
+
+    el.innerHTML=
+      '<div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Disponible en base · '+esc+'</div>'
+      +'<div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:4px">'
+      +'<div style="font-size:36px;font-weight:900;color:'+color+';line-height:1">'+diasBase+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);padding-bottom:5px">días en base</div>'
+      +'<div style="flex:1"></div>'
+      +'<div style="font-size:9px;font-weight:700;color:'+color+';padding:2px 7px;border-radius:10px;background:'+color+'22">'+fase+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">'
+      +'<div style="font-size:10px;color:var(--muted)">Ciclo laboral:</div>'
+      +'<div style="font-size:12px;font-weight:700;color:'+color+'">'+numCiclo+'/'+maxCiclo+'</div>'
+      +'<div style="font-size:9px;color:var(--muted)">'+(enLaboral?'laborados':'descanso')+'</div>'
+      +'</div>'
+      +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:4px">'
+      +'<div style="height:100%;width:'+pctCiclo+'%;background:'+color+';border-radius:3px;transition:width .5s"></div>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:8px;color:var(--muted)">'
+      +'<span>Ciclo '+DIAS_TRABAJO+'/'+DIAS_PERMISO+'</span>'
+      +'<span>'+pctCiclo+'% del ciclo</span>'
+      +'</div>';
+
+  } else {
+    // ── MODO BLOQUE DE BÚSQUEDA: mostrar progreso sobre 35 ──
+    var pct = Math.min(100, Math.round(diasBloque / DIAS_BLOQUE_TOTAL * 100));
+    var color, fase;
+    if(enPausaB)        { color='#f97316'; fase='⏸️ EN PERMISO'; }
+    else if(d.activo)   { color='#ef4444'; fase='🔴 EN BLOQUE'; }
+    else                { color='var(--muted)'; fase='⚪ INACTIVO'; }
+
+    el.innerHTML=
+      '<div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Bloque de búsqueda · '+esc+'</div>'
+      +'<div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:4px">'
+      +'<div style="font-size:36px;font-weight:900;color:'+color+';line-height:1">'+diasBloque+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);padding-bottom:5px">/'+DIAS_BLOQUE_TOTAL+' días</div>'
+      +'<div style="flex:1"></div>'
+      +'<div style="font-size:9px;font-weight:700;color:'+color+';padding:2px 7px;border-radius:10px;background:'+color+'22">'+fase+'</div>'
+      +'</div>'
+      +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:4px">'
+      +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px;transition:width .5s"></div>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:8px;color:var(--muted);margin-bottom:6px">'
+      +'<span>'+(DIAS_BLOQUE_TOTAL - diasBloque > 0 ? (DIAS_BLOQUE_TOTAL - diasBloque)+' días para completar' : '¡Bloque listo!')+'</span>'
+      +'<span>'+pct+'%</span>'
+      +'</div>'
+      // mini indicador ciclo laboral durante bloque
+      +(cicloConfig.inicioLaboral ? (function(){
+          var DIAS_TRAB = cicloConfig.diasTrabajo||25;
+          var DIAS_DESC = cicloConfig.diasDescanso||5;
+          var cicloTot  = DIAS_TRAB + DIAS_DESC;
+          var inicio    = new Date(cicloConfig.inicioLaboral+'T00:00:00');
+          var hoy       = new Date(); hoy.setHours(0,0,0,0);
+          var desde     = Math.floor((hoy - inicio)/(1000*60*60*24));
+          var diaEn     = ((desde % cicloTot) + cicloTot) % cicloTot;
+          var enLab     = diaEn < DIAS_TRAB;
+          var nLab      = enLab ? diaEn+1 : diaEn-DIAS_TRAB+1;
+          var mxLab     = enLab ? DIAS_TRAB : DIAS_DESC;
+          var cLab      = enLab ? '#3b82f6' : '#22c55e';
+          return '<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;background:rgba(255,255,255,.04);border-radius:6px">'
+            +'<span style="font-size:8px;color:var(--muted)">Ciclo laboral:</span>'
+            +'<span style="font-size:10px;font-weight:700;color:'+cLab+'">'+nLab+'/'+mxLab+'</span>'
+            +'<span style="font-size:8px;color:var(--muted)">'+(enLab?'laborados':'descanso')+'</span>'
+            +'</div>';
+        })() : '')
+      ;
+  }
 }
 
 function dashDrawBloque(){
@@ -8137,21 +10305,34 @@ function initData(){
   // Si no hay datos guardados, cargar desde el Excel importado
   // members already loaded above at variable declaration
 
-  // Pre-load minuta turno if not already present
-  var minutas = ld('g9_minutas', []);
-  if(!minutas.find(function(t){ return t.id==='minuta001'; })){
-    minutas.unshift({
-      id:'minuta001',
+  // Pre-load Minuta turno (usa mismo motor que bitácora)
+  var turnos2 = ld('g9_turnos2', []);
+  if(!turnos2.find(function(t){ return t.id==='min001'; })){
+    turnos2.unshift({
+      id:'min001',
       nombre:'Minuta DEI 2',
       tipo:'semanal_laboral',
       escuadra:'DEI 2',
-      soloRango:['SI'],
       miembros:[],
       historial:[],
-      pendientes:[],
       diasLaboralesPorTurno:7
     });
-    sv('g9_minutas', minutas);
+    sv('g9_turnos2', turnos2);
+  }
+
+  // Pre-load Mando de Semana turno
+  var turnos3 = ld('g9_turnos3', []);
+  if(!turnos3.find(function(t){ return t.id==='mando001'; })){
+    turnos3.unshift({
+      id:'mando001',
+      nombre:'Mando de Semana DEI 2',
+      tipo:'semanal_laboral',
+      escuadra:'DEI 2',
+      miembros:[],
+      historial:[],
+      diasLaboralesPorTurno:7
+    });
+    sv('g9_turnos3', turnos3);
   }
 
   // Pre-load bitácora turno if not already present
