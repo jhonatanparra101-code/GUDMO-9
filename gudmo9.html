@@ -2058,6 +2058,31 @@ let bloqueData = ld('g9_bloque', {
   'DEI 3': { activo:false, fechaInicio:'', diasAjuste:0, pausas:[], comisiones:[] },
 });
 
+// Datos del período "Disponible en Base" — contador independiente del bloque
+let baseData = ld('g9_base', {
+  'DEI 1': { activo:false, fechaInicio:'', pausas:[], diasAjuste:0 },
+  'DEI 2': { activo:false, fechaInicio:'', pausas:[], diasAjuste:0 },
+  'DEI 3': { activo:false, fechaInicio:'', pausas:[], diasAjuste:0 }
+});
+function saveBase(){ sv('g9_base', baseData); }
+
+function calcDiasBase(dei){
+  var d = baseData[dei];
+  if(!d || !d.fechaInicio) return 0;
+  var inicio = new Date(d.fechaInicio+'T00:00:00');
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var totalDias = Math.floor((hoy - inicio)/(1000*60*60*24)) + (d.activo?1:0);
+  (d.pausas||[]).forEach(function(p){
+    if(!p.inicio) return;
+    var pi = new Date(p.inicio+'T00:00:00');
+    var pf = p.fin ? new Date(p.fin+'T00:00:00') : (d.activo?hoy:new Date());
+    var diff = Math.max(0, Math.floor((pf-pi)/(1000*60*60*24)));
+    totalDias -= diff;
+  });
+  return Math.max(0, totalDias + (d.diasAjuste||0));
+}
+
+
 let misionesData = ld('g9_misiones', {
   activaMision: null,
   antimotines: { activa: false, personal: [] },
@@ -3238,15 +3263,16 @@ function renderMinuta(){
       var mp=members.find(function(x){return x.id===p.memberId;}); return mp?mp.name.split(' ')[0]:null;
     }).filter(Boolean);
 
-    // Días restantes
+    // Días transcurridos/restantes
     var diasR=null; var diasMsg=''; var fechaEnt=null;
     if(t.historial.length && t.tipo==='semanal_laboral'){
       var sortedH=[...t.historial].sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
       var diasTurno=t.diasLaboralesPorTurno||7;
       var trans=getDiasLaboralesDesde(sortedH[0].fecha);
       diasR=Math.max(0,diasTurno-trans);
-      if(diasR===0) diasMsg='<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:3px">🔔 ¡Toca entregar hoy!</div>';
-      else diasMsg='<div style="font-size:10px;color:var(--muted);margin-top:3px">📅 '+diasR+' día'+(diasR!==1?'s':'')+' laborable'+(diasR!==1?'s':'')+' restante'+(diasR!==1?'s':'')+'</div>';
+      var _mColor=diasR===0?'var(--red)':trans>=Math.floor(diasTurno*0.7)?'var(--yellow)':'var(--green)';
+      if(diasR===0) diasMsg='<div style="font-size:10px;color:var(--red);font-weight:700;margin-top:3px">🔔 ¡Toca entregar! ('+trans+' días laborados)</div>';
+      else diasMsg='<div style="font-size:10px;color:'+_mColor+';font-weight:600;margin-top:3px">⏱️ '+trans+' día'+(trans!==1?'s':'')+' laborado'+(trans!==1?'s':'')+' · faltan '+diasR+'</div>';
     }
 
     // Lista miembros
@@ -4850,41 +4876,81 @@ function renderBloque(){
       :'<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Sin comisiones registradas este año</div>'}
     </div>
 
-    <!-- Registro diario Bloque/Base -->
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">
-      <div style="display:flex;align-items:center;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:700;color:var(--text)">📅 Registro diario de operación</div>
-        <button onclick="agregarDiaDiario('${dei}')" style="margin-left:auto;background:rgba(200,146,42,.15);border:1px solid var(--gold);border-radius:6px;padding:4px 10px;color:var(--gold2);font-size:10px;cursor:pointer;font-weight:700">+ Agregar día</button>
-      </div>
-      ${(()=>{
-        if(!d.diasDiario||!Object.keys(d.diasDiario).length) return '<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px">Sin registros. Toca "+ Agregar día" para registrar días pasados o de hoy.</div>';
-        var allEntries=Object.entries(d.diasDiario).sort(function(a,b){return b[0].localeCompare(a[0]);});
-        var busqCount=Object.values(d.diasDiario).filter(function(v){return v==='busqueda';}).length;
-        var baseCount=Object.values(d.diasDiario).filter(function(v){return v==='base';}).length;
-        var summary='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
-          +'<div style="text-align:center;padding:8px;background:rgba(239,68,68,.1);border-radius:8px">'
-          +'<div style="font-size:22px;font-weight:900;color:#f87171">'+busqCount+'</div>'
-          +'<div style="font-size:9px;color:var(--muted)">🔴 Bloque Búsqueda</div>'
-          +'</div>'
-          +'<div style="text-align:center;padding:8px;background:rgba(59,130,246,.1);border-radius:8px">'
-          +'<div style="font-size:22px;font-weight:900;color:#60a5fa">'+baseCount+'</div>'
-          +'<div style="font-size:9px;color:var(--muted)">🔵 Disponible Base</div>'
-          +'</div>'
+    <!-- Disponible en Base — contador independiente -->
+    ${(()=>{
+      var db = baseData[dei]||{activo:false,fechaInicio:'',pausas:[],diasAjuste:0};
+      var diasBase = calcDiasBase(dei);
+      var enPausaBase = (db.pausas||[]).some(function(p){return p.inicio&&!p.fin;});
+      var bColor = db.activo ? '#3b82f6' : 'var(--muted)';
+      var bEstado = db.activo ? (enPausaBase?'⏸️ PAUSADO':'🔵 EN CURSO') : '⚪ INACTIVO';
+
+      // Generar mini-calendario de los últimos 35 días
+      var hoy = localDateStr();
+      var calDays = [];
+      for(var ci=34; ci>=0; ci--){
+        var d2 = new Date(); d2.setDate(d2.getDate()-ci);
+        var ds = d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0')+'-'+String(d2.getDate()).padStart(2,'0');
+        var enPausaDia = (db.pausas||[]).some(function(p){
+          return p.inicio && ds>=p.inicio && (!p.fin || ds<p.fin);
+        });
+        var esDia = db.fechaInicio && ds>=db.fechaInicio && (db.activo||ds<=hoy);
+        calDays.push({ds:ds, dia:d2.getDate(), activo:esDia&&!enPausaDia, pausa:esDia&&enPausaDia, futuro:ds>hoy});
+      }
+
+      var calHtml = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:8px 0">'
+        + calDays.map(function(c){
+            var bg = c.futuro ? 'transparent'
+              : c.activo ? 'rgba(59,130,246,.35)'
+              : c.pausa  ? 'rgba(249,115,22,.25)'
+              : 'rgba(255,255,255,.04)';
+            var col = c.futuro ? 'var(--border)'
+              : c.activo ? '#60a5fa'
+              : c.pausa  ? '#f97316'
+              : 'var(--muted)';
+            return '<div style="text-align:center;padding:3px 0;border-radius:4px;background:'+bg+';font-size:9px;color:'+col+';font-weight:'+(c.activo?'700':'400')+'">'
+              +c.dia+'</div>';
+          }).join('')
+        + '</div>';
+
+      var pausasHtml = '';
+      if(db.pausas&&db.pausas.length){
+        pausasHtml = '<div style="margin-top:6px">'
+          +'<div style="font-size:9px;color:var(--muted);margin-bottom:4px">Pausas registradas:</div>'
+          + db.pausas.map(function(p,pi){
+              return '<div style="display:flex;align-items:center;gap:6px;font-size:10px;padding:3px 0">'
+                +'<span style="color:var(--muted)">📅 '+fmtDate(p.inicio)+' → '+(p.fin?fmtDate(p.fin):'<span style="color:var(--yellow)">en curso</span>')+'</span>'
+                +'<button onclick="eliminarPausaBase(\''+dei+'\','+pi+')" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px">✕</button>'
+                +'</div>';
+            }).join('')
           +'</div>';
-        var _d2=dei;
-        var rows=allEntries.map(function(e){
-          var tipo=e[1]==='busqueda'?'🔴 Búsqueda':'🔵 Base';
-          var col=e[1]==='busqueda'?'#f87171':'#60a5fa';
-          return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">'
-            +'<span style="color:var(--muted);min-width:75px">'+fmtDate(e[0])+'</span>'
-            +'<span style="color:'+col+';font-weight:700;flex:1">'+tipo+'</span>'
-            +'<button onclick="toggleTipoDia(&quot;'+_d2+'&quot;,&quot;'+e[0]+'&quot;)" style="background:rgba(200,146,42,.15);border:1px solid var(--gold);border-radius:4px;padding:1px 7px;color:var(--gold2);font-size:9px;cursor:pointer;margin-right:4px">↔️</button>'
-            +'<button onclick="quitarDiaDiario(&quot;'+_d2+'&quot;,&quot;'+e[0]+'&quot;)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">✕</button>'
-            +'</div>';
-        }).join('');
-        return summary+rows;
-      })()}
-    </div>
+      }
+
+      return '<div style="background:var(--card);border:2px solid '+bColor+';border-radius:10px;padding:12px;margin-bottom:12px">'
+        +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+        +'<div style="flex:1">'
+        +'<div style="font-size:14px;font-weight:700;color:'+bColor+'">🔵 Disponible en Base — '+bEstado+'</div>'
+        +(db.fechaInicio?'<div style="font-size:10px;color:var(--muted)">Desde: '+fmtDate(db.fechaInicio)+'</div>':'<div style="font-size:10px;color:var(--muted)">Sin iniciar</div>')
+        +'</div>'
+        +'<div style="font-size:32px;font-weight:900;color:'+bColor+';line-height:1">'+diasBase+'</div>'
+        +'<div style="font-size:9px;color:var(--muted)">días</div>'
+        +'</div>'
+        + calHtml
+        +'<div style="font-size:8px;color:var(--muted);display:flex;gap:10px;margin-bottom:8px">'
+        +'<span>🔵 Activo</span><span>🟠 Pausado</span><span>⬜ Fuera</span>'
+        +'</div>'
+        + pausasHtml
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">'
+        +(!db.activo?'<button onclick="iniciarBase(\''+dei+'\')" class="btn btn-primary" style="grid-column:1/-1;background:rgba(59,130,246,.2);border:1px solid #3b82f6;color:#60a5fa">🚀 '+(db.fechaInicio?'Reanudar base':'Iniciar disponible en base')+'</button>'
+          :(enPausaBase
+            ?'<button onclick="reanudarBase(\''+dei+'\')" class="btn btn-primary" style="background:rgba(59,130,246,.2);border:1px solid #3b82f6;color:#60a5fa">▶️ Reanudar base</button>'
+            :'<button onclick="pausarBase(\''+dei+'\')" class="btn" style="background:rgba(249,115,22,.15);color:#f97316;border:1px solid #f97316">⏸️ Pausar (turno/feriado)</button>'
+           )
+        )
+        +(db.activo||db.fechaInicio?'<button onclick="ajustarDiasBase(\''+dei+'\')" class="btn btn-ghost" style="font-size:10px">✏️ Corregir días</button>':'')
+        +(db.fechaInicio?'<button onclick="reiniciarBase(\''+dei+'\')" class="btn btn-ghost" style="font-size:10px;color:var(--red)">🔄 Reiniciar</button>':'')
+        +'</div>'
+        +'</div>';
+    })()}
 
         <!-- Resumen 3 DEI -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px">
@@ -4976,6 +5042,70 @@ function toggleTipoDia(dei, fecha){
   bloqueData[dei].diasDiario[fecha] = actual==='busqueda' ? 'base' : 'busqueda';
   saveBloque(); renderBloque();
   showToast('↔️ Cambiado a '+(bloqueData[dei].diasDiario[fecha]==='busqueda'?'Búsqueda':'Base'));
+}
+
+function iniciarBase(dei){
+  var d = baseData[dei]||(baseData[dei]={activo:false,fechaInicio:'',pausas:[],diasAjuste:0});
+  var fecha = prompt('¿Desde qué fecha están disponibles en base?\n(AAAA-MM-DD)', d.fechaInicio||localDateStr());
+  if(!fecha) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ showToast('⚠️ Formato: AAAA-MM-DD','#f97316'); return; }
+  d.fechaInicio = fecha;
+  d.activo = true;
+  // Si había una pausa activa, cerrarla
+  var pausaAbierta = (d.pausas||[]).find(function(p){return !p.fin;});
+  if(pausaAbierta) pausaAbierta.fin = localDateStr();
+  saveBase(); renderBloque();
+  showToast('🔵 Disponible en Base desde '+fmtDate(fecha),'#3b82f6');
+}
+
+function pausarBase(dei){
+  var d = baseData[dei]||(baseData[dei]={activo:false,fechaInicio:'',pausas:[],diasAjuste:0});
+  if(!d.pausas) d.pausas=[];
+  var fecha = prompt('¿Desde qué fecha se pausa?\n(AAAA-MM-DD)', localDateStr());
+  if(!fecha) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ showToast('⚠️ Formato: AAAA-MM-DD','#f97316'); return; }
+  d.pausas.push({inicio: fecha, fin: ''});
+  saveBase(); renderBloque();
+  showToast('⏸️ Pausado desde '+fmtDate(fecha),'#f97316');
+}
+
+function reanudarBase(dei){
+  var d = baseData[dei];
+  if(!d) return;
+  var pausa = (d.pausas||[]).find(function(p){return !p.fin;});
+  if(!pausa){ showToast('⚠️ No hay pausa activa','#f97316'); return; }
+  var fecha = prompt('¿En qué fecha se reanuda?\n(AAAA-MM-DD)', localDateStr());
+  if(!fecha) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ showToast('⚠️ Formato: AAAA-MM-DD','#f97316'); return; }
+  pausa.fin = fecha;
+  saveBase(); renderBloque();
+  showToast('▶️ Base reanudada desde '+fmtDate(fecha),'#3b82f6');
+}
+
+function eliminarPausaBase(dei, idx){
+  var d = baseData[dei];
+  if(!d||!d.pausas) return;
+  if(!confirm('¿Eliminar esta pausa?')) return;
+  d.pausas.splice(idx,1);
+  saveBase(); renderBloque();
+}
+
+function ajustarDiasBase(dei){
+  var actual = calcDiasBase(dei);
+  var nuevo = prompt('Días actuales en base: '+actual+'\nIngrese el número correcto:', actual);
+  if(!nuevo||isNaN(nuevo)) return;
+  var diff = parseInt(nuevo) - actual;
+  if(!baseData[dei]) baseData[dei]={activo:false,fechaInicio:'',pausas:[],diasAjuste:0};
+  baseData[dei].diasAjuste = (baseData[dei].diasAjuste||0) + diff;
+  saveBase(); renderBloque();
+  showToast('✅ Corregido a '+nuevo+' días en base');
+}
+
+function reiniciarBase(dei){
+  if(!confirm('¿Reiniciar el contador de Disponible en Base para '+dei+'?')) return;
+  baseData[dei] = {activo:false, fechaInicio:'', pausas:[], diasAjuste:0};
+  saveBase(); renderBloque();
+  showToast('🔄 Contador base reiniciado');
 }
 
 function marcarDiaBusqueda(dei){
@@ -7613,9 +7743,9 @@ function dashDrawBloque(){
 
   // Contar días por tipo desde diasDiario
   var dd = d.diasDiario||{};
-  var diasBusqueda = Object.values(dd).filter(function(v){return v==='busqueda';}).length;
-  var diasBase     = Object.values(dd).filter(function(v){return v==='base';}).length;
-  var diasSinTipo  = Math.max(0, dias - diasBusqueda - diasBase);
+  var diasBusqueda = dias; // El bloque de búsqueda = días calculados
+  var diasBase     = calcDiasBase(esc); // Contador independiente de base
+  var diasSinTipo  = 0;
 
   // Disponibilidad actual
   var escPersonal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
@@ -7653,7 +7783,7 @@ function dashDrawBloque(){
     +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin:8px 0 4px">'
     +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px;transition:width .5s"></div>'
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:6px">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px">'
     +'<div style="text-align:center;padding:5px 0;background:rgba(239,68,68,.1);border-radius:6px">'
     +'<div style="font-size:16px;font-weight:900;color:#f87171">'+diasBusqueda+'</div>'
     +'<div style="font-size:8px;color:var(--muted)">🔴 Búsqueda</div>'
@@ -7662,10 +7792,7 @@ function dashDrawBloque(){
     +'<div style="font-size:16px;font-weight:900;color:#60a5fa">'+diasBase+'</div>'
     +'<div style="font-size:8px;color:var(--muted)">🔵 Base</div>'
     +'</div>'
-    +'<div style="text-align:center;padding:5px 0;background:rgba(255,255,255,.04);border-radius:6px">'
-    +'<div style="font-size:16px;font-weight:900;color:var(--muted)">'+diasSinTipo+'</div>'
-    +'<div style="font-size:8px;color:var(--muted)">Sin tipo</div>'
-    +'</div>'
+
     +'</div>'
     +'<div style="display:flex;align-items:center;gap:5px;margin-top:6px;padding:4px 8px;background:'+dispColor+'18;border-radius:6px">'
     +'<span style="font-size:9px;color:'+dispColor+';font-weight:700">'+pctDisp+'% disponible</span>'
