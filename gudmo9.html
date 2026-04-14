@@ -750,10 +750,11 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <div class="sh">🔍 Bloque de Búsqueda</div>
 
   <!-- DEI selector for bloque -->
-  <div style="display:flex;gap:6px;margin-bottom:12px">
+  <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
     <button class="fb active-f" id="bqBtn-DEI1" onclick="setBloqueView('DEI 1',this)" style="color:var(--cyan);border-color:var(--cyan)">DEI 1</button>
     <button class="fb" id="bqBtn-DEI2" onclick="setBloqueView('DEI 2',this)" style="color:var(--purple);border-color:var(--purple)">DEI 2</button>
     <button class="fb" id="bqBtn-DEI3" onclick="setBloqueView('DEI 3',this)" style="color:var(--orange);border-color:var(--orange)">DEI 3</button>
+    <button onclick="abrirAlmanaque(bloqueViewDEI,'bloque')" style="margin-left:auto;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:6px 12px;color:#f87171;cursor:pointer;font-size:11px;font-weight:700">📅 Almanaque Búsqueda</button>
   </div>
 
   <div id="bloqueContent"></div>
@@ -1276,6 +1277,18 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <button onclick="navGuardarEdicion()" style="flex:1;background:var(--cyan);color:#000;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:13px;cursor:pointer">Guardar</button>
       <button onclick="navCerrarEditar()" style="flex:1;background:var(--card);color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;cursor:pointer">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<!-- ALMANAQUE MODAL -->
+<div class="modal-overlay" id="almanacModal" style="z-index:1100">
+  <div class="modal" style="max-width:420px;width:95vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;padding:0 2px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:var(--text)">📅 ALMANAQUE</div>
+      <button onclick="cerrarAlmanaque()" style="background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--muted);cursor:pointer;font-size:13px">✕ Cerrar</button>
+    </div>
+    <div id="almanacContent" style="padding-top:8px"></div>
   </div>
 </div>
 
@@ -4782,18 +4795,14 @@ function renderBloque(){
   const dias = calcDiasBloque(dei);
   const restantes = Math.max(0, DIAS_BLOQUE_TOTAL - dias);
   const pct = Math.min(100, (dias/DIAS_BLOQUE_TOTAL)*100);
-  const completo = dias >= DIAS_BLOQUE_TOTAL;
+  const completo = d.cumplido || dias >= DIAS_BLOQUE_TOTAL;
   const enPausa = d.pausas.some(p=>p.inicio&&!p.fin);
 
-  // Color by state
   const color = completo ? 'var(--green)' : enPausa ? 'var(--yellow)' : d.activo ? 'var(--blue)' : 'var(--muted)';
   const estadoLabel = completo ? '✅ COMPLETADO' : enPausa ? '⏸️ EN PERMISO' : d.activo ? '🔵 EN CURSO' : '⚪ INACTIVO';
-
-  // Comisiones summary
   const totalComDias = d.comisiones.reduce((s,c)=>s+(parseInt(c.dias)||0),0);
 
   content.innerHTML = `
-    <!-- Estado principal -->
     <div style="background:var(--card);border:2px solid ${color};border-radius:12px;padding:16px;margin-bottom:12px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <div style="flex:1">
@@ -4805,8 +4814,6 @@ function renderBloque(){
           <div style="font-size:10px;color:var(--muted)">de ${DIAS_BLOQUE_TOTAL} días</div>
         </div>
       </div>
-
-      <!-- Progress bar -->
       <div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden;margin-bottom:10px">
         <div style="height:100%;width:${pct}%;background:${color};border-radius:5px;transition:width .4s"></div>
       </div>
@@ -4814,38 +4821,21 @@ function renderBloque(){
         <span>${completo?'¡Bloque completado!':restantes+' días para completar'}</span>
         <span>${Math.round(pct)}%</span>
       </div>
-
-      <!-- Action buttons -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        ${!d.activo&&!completo?`
-          <button onclick="iniciarBloque('${dei}')" class="btn btn-primary" style="grid-column:1/-1">
-            🚀 ${d.fechaInicio?'Reanudar bloque':'Iniciar bloque'}
-          </button>`:''
-        }
+        ${!d.activo&&!completo?`<button onclick="iniciarBloque('${dei}')" class="btn btn-primary" style="grid-column:1/-1">🚀 ${d.fechaInicio?'Reanudar bloque':'Iniciar bloque'}</button>`:''}
         ${d.activo&&!enPausa&&!completo?`
-          <button onclick="pausarBloque('${dei}')" class="btn" style="background:rgba(240,192,64,.15);color:var(--yellow);border:1px solid var(--yellow)">
-            ⏸️ Salir a permiso
-          </button>
-          <button onclick="ajustarDias('${dei}')" class="btn btn-ghost">✏️ Corregir días</button>`:''
-        }
+          <button onclick="pausarBloque('${dei}')" class="btn" style="background:rgba(240,192,64,.15);color:var(--yellow);border:1px solid var(--yellow)">⏸️ Salir a permiso</button>
+          <button onclick="ajustarDias('${dei}')" class="btn btn-ghost">✏️ Corregir días</button>
+          <button onclick="marcarBloqueCumplido('${dei}')" class="btn" style="background:rgba(34,197,94,.15);color:var(--green);border:1px solid var(--green);grid-column:1/-1">✅ Marcar bloque como cumplido</button>`:''}
         ${enPausa?`
-          <button onclick="reanudarBloque('${dei}')" class="btn btn-primary">
-            ▶️ Regresar de permiso
-          </button>
-          <button onclick="ajustarDias('${dei}')" class="btn btn-ghost">✏️ Corregir días</button>`:''
-        }
-        ${completo?`
-          <button onclick="reiniciarBloque('${dei}')" class="btn" style="background:rgba(34,197,94,.15);color:var(--green);border:1px solid var(--green);grid-column:1/-1">
-            🔄 Iniciar nuevo bloque
-          </button>`:''
-        }
-        ${d.activo||completo?`
-          <button onclick="ajustarDias('${dei}')" class="btn btn-ghost" style="${!d.activo||enPausa||completo?'':'grid-column:1'}">✏️ Corregir días</button>`:''
-        }
+          <button onclick="reanudarBloque('${dei}')" class="btn btn-primary">▶️ Regresar de permiso</button>
+          <button onclick="ajustarDias('${dei}')" class="btn btn-ghost">✏️ Corregir días</button>
+          <button onclick="marcarBloqueCumplido('${dei}')" class="btn" style="background:rgba(34,197,94,.15);color:var(--green);border:1px solid var(--green);grid-column:1/-1">✅ Marcar bloque como cumplido</button>`:''}
+        ${completo?`<button onclick="reiniciarBloque('${dei}')" class="btn" style="background:rgba(34,197,94,.15);color:var(--green);border:1px solid var(--green);grid-column:1/-1">🔄 Iniciar nuevo bloque</button>`:''}
+        ${(d.activo||completo)&&!enPausa&&!completo?'':`${d.activo||completo?`<button onclick="ajustarDias('${dei}')" class="btn btn-ghost">✏️ Corregir días</button>`:''}`}
       </div>
     </div>
 
-    <!-- Pausas (permisos) -->
     ${d.pausas.length?`
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">📋 Períodos de permiso</div>
@@ -4853,13 +4843,12 @@ function renderBloque(){
         <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">
           <span style="color:var(--muted)">📅 ${fmtDate(p.inicio)}</span>
           <span style="color:var(--muted)">→</span>
-          <span style="color:${p.fin?'var(--text)':'var(--yellow)'}">${p.fin?fmtDate(p.fin):'en curso'}</span>
+          <span style="color:${p.fin?'var(--text)':'var(--yellow)'}"> ${p.fin?fmtDate(p.fin):'en curso'}</span>
           ${p.fin?`<span style="margin-left:auto;color:var(--muted);font-size:10px">${Math.floor((new Date(p.fin+'T00:00:00')-new Date(p.inicio+'T00:00:00'))/(1000*60*60*24))} días</span>`:''}
           <button onclick="eliminarPausa('${dei}',${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;margin-left:auto">✕</button>
         </div>`).join('')}
     </div>`:''}
 
-    <!-- Comisiones -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="display:flex;align-items:center;margin-bottom:10px">
         <div style="font-size:11px;font-weight:700;color:var(--text)">📌 Comisiones del año — <span style="color:var(--gold2)">${d.comisiones.length} salidas · ${totalComDias} días</span></div>
@@ -4876,89 +4865,14 @@ function renderBloque(){
       :'<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Sin comisiones registradas este año</div>'}
     </div>
 
-    <!-- Disponible en Base — contador independiente -->
-    ${(()=>{
-      var db = baseData[dei]||{activo:false,fechaInicio:'',pausas:[],diasAjuste:0};
-      var diasBase = calcDiasBase(dei);
-      var enPausaBase = (db.pausas||[]).some(function(p){return p.inicio&&!p.fin;});
-      var bColor = db.activo ? '#3b82f6' : 'var(--muted)';
-      var bEstado = db.activo ? (enPausaBase?'⏸️ PAUSADO':'🔵 EN CURSO') : '⚪ INACTIVO';
+    ${renderDisponibleBase(dei)}
 
-      // Generar mini-calendario de los últimos 35 días
-      var hoy = localDateStr();
-      var calDays = [];
-      for(var ci=34; ci>=0; ci--){
-        var d2 = new Date(); d2.setDate(d2.getDate()-ci);
-        var ds = d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0')+'-'+String(d2.getDate()).padStart(2,'0');
-        var enPausaDia = (db.pausas||[]).some(function(p){
-          return p.inicio && ds>=p.inicio && (!p.fin || ds<p.fin);
-        });
-        var esDia = db.fechaInicio && ds>=db.fechaInicio && (db.activo||ds<=hoy);
-        calDays.push({ds:ds, dia:d2.getDate(), activo:esDia&&!enPausaDia, pausa:esDia&&enPausaDia, futuro:ds>hoy});
-      }
-
-      var calHtml = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:8px 0">'
-        + calDays.map(function(c){
-            var bg = c.futuro ? 'transparent'
-              : c.activo ? 'rgba(59,130,246,.35)'
-              : c.pausa  ? 'rgba(249,115,22,.25)'
-              : 'rgba(255,255,255,.04)';
-            var col = c.futuro ? 'var(--border)'
-              : c.activo ? '#60a5fa'
-              : c.pausa  ? '#f97316'
-              : 'var(--muted)';
-            return '<div style="text-align:center;padding:3px 0;border-radius:4px;background:'+bg+';font-size:9px;color:'+col+';font-weight:'+(c.activo?'700':'400')+'">'
-              +c.dia+'</div>';
-          }).join('')
-        + '</div>';
-
-      var pausasHtml = '';
-      if(db.pausas&&db.pausas.length){
-        pausasHtml = '<div style="margin-top:6px">'
-          +'<div style="font-size:9px;color:var(--muted);margin-bottom:4px">Pausas registradas:</div>'
-          + db.pausas.map(function(p,pi){
-              return '<div style="display:flex;align-items:center;gap:6px;font-size:10px;padding:3px 0">'
-                +'<span style="color:var(--muted)">📅 '+fmtDate(p.inicio)+' → '+(p.fin?fmtDate(p.fin):'<span style="color:var(--yellow)">en curso</span>')+'</span>'
-                +'<button onclick="eliminarPausaBase(\''+dei+'\','+pi+')" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px">✕</button>'
-                +'</div>';
-            }).join('')
-          +'</div>';
-      }
-
-      return '<div style="background:var(--card);border:2px solid '+bColor+';border-radius:10px;padding:12px;margin-bottom:12px">'
-        +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
-        +'<div style="flex:1">'
-        +'<div style="font-size:14px;font-weight:700;color:'+bColor+'">🔵 Disponible en Base — '+bEstado+'</div>'
-        +(db.fechaInicio?'<div style="font-size:10px;color:var(--muted)">Desde: '+fmtDate(db.fechaInicio)+'</div>':'<div style="font-size:10px;color:var(--muted)">Sin iniciar</div>')
-        +'</div>'
-        +'<div style="font-size:32px;font-weight:900;color:'+bColor+';line-height:1">'+diasBase+'</div>'
-        +'<div style="font-size:9px;color:var(--muted)">días</div>'
-        +'</div>'
-        + calHtml
-        +'<div style="font-size:8px;color:var(--muted);display:flex;gap:10px;margin-bottom:8px">'
-        +'<span>🔵 Activo</span><span>🟠 Pausado</span><span>⬜ Fuera</span>'
-        +'</div>'
-        + pausasHtml
-        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">'
-        +(!db.activo?'<button onclick="iniciarBase(\''+dei+'\')" class="btn btn-primary" style="grid-column:1/-1;background:rgba(59,130,246,.2);border:1px solid #3b82f6;color:#60a5fa">🚀 '+(db.fechaInicio?'Reanudar base':'Iniciar disponible en base')+'</button>'
-          :(enPausaBase
-            ?'<button onclick="reanudarBase(\''+dei+'\')" class="btn btn-primary" style="background:rgba(59,130,246,.2);border:1px solid #3b82f6;color:#60a5fa">▶️ Reanudar base</button>'
-            :'<button onclick="pausarBase(\''+dei+'\')" class="btn" style="background:rgba(249,115,22,.15);color:#f97316;border:1px solid #f97316">⏸️ Pausar (turno/feriado)</button>'
-           )
-        )
-        +(db.activo||db.fechaInicio?'<button onclick="ajustarDiasBase(\''+dei+'\')" class="btn btn-ghost" style="font-size:10px">✏️ Corregir días</button>':'')
-        +(db.fechaInicio?'<button onclick="reiniciarBase(\''+dei+'\')" class="btn btn-ghost" style="font-size:10px;color:var(--red)">🔄 Reiniciar</button>':'')
-        +'</div>'
-        +'</div>';
-    })()}
-
-        <!-- Resumen 3 DEI -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px">
       <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">📊 Resumen rotación GUDMO-9</div>
       ${['DEI 1','DEI 2','DEI 3'].map(d2=>{
         const dd=bloqueData[d2], dd_dias=calcDiasBloque(d2);
         const dd_pct=Math.min(100,(dd_dias/DIAS_BLOQUE_TOTAL)*100);
-        const dd_col=dd_dias>=DIAS_BLOQUE_TOTAL?'var(--green)':dd.activo?'var(--blue)':'var(--muted)';
+        const dd_col=(dd.cumplido||dd_dias>=DIAS_BLOQUE_TOTAL)?'var(--green)':dd.activo?'var(--blue)':'var(--muted)';
         return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
           <div style="font-size:11px;font-weight:700;color:${dd_col};min-width:40px">${d2.replace('DEI ','D')}</div>
           <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
@@ -4971,11 +4885,301 @@ function renderBloque(){
   `;
 }
 
+// ── ALMANAQUE PREMIUM ──────────────────────────────────────────────────────────
+// Renders a full monthly calendar for bloque or base, with range selection & pauses
+var almanaqueDEI = null;
+var almanaqueTipo = null; // 'bloque' | 'base'
+var almanaqueMes = null;  // { year, month }
+
+function abrirAlmanaque(dei, tipo){
+  almanaqueDEI = dei;
+  almanaqueTipo = tipo;
+  var hoy = new Date();
+  almanaqueMes = { year: hoy.getFullYear(), month: hoy.getMonth() };
+  _renderAlmanaque();
+  document.getElementById('almanacModal').classList.add('open');
+}
+
+function cerrarAlmanaque(){
+  document.getElementById('almanacModal').classList.remove('open');
+  renderBloque();
+}
+
+function _navAlmanaque(delta){
+  almanaqueMes.month += delta;
+  if(almanaqueMes.month > 11){ almanaqueMes.month=0; almanaqueMes.year++; }
+  if(almanaqueMes.month < 0){ almanaqueMes.month=11; almanaqueMes.year--; }
+  _renderAlmanaque();
+}
+
+function _renderAlmanaque(){
+  var el = document.getElementById('almanacContent');
+  if(!el) return;
+  var dei = almanaqueDEI;
+  var tipo = almanaqueTipo;
+  var Y = almanaqueMes.year, M = almanaqueMes.month;
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var todayStr = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+
+  // Get data source
+  var data = tipo==='bloque' ? bloqueData[dei] : (baseData[dei]||{activo:false,fechaInicio:'',pausas:[],diasAjuste:0});
+  var inicio = data.fechaInicio || '';
+  var pausas = data.pausas || [];
+  var cumplido = tipo==='bloque' ? (data.cumplido||false) : false;
+
+  var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var diasSem = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+  // Build month grid
+  var firstDay = new Date(Y, M, 1);
+  var lastDay  = new Date(Y, M+1, 0);
+  var startWd  = firstDay.getDay(); // 0=Sun
+  var totalCells = Math.ceil((startWd + lastDay.getDate()) / 7) * 7;
+
+  var cells = [];
+  for(var i=0; i<totalCells; i++){
+    var dayNum = i - startWd + 1;
+    if(dayNum < 1 || dayNum > lastDay.getDate()){ cells.push(null); continue; }
+    var ds = Y+'-'+String(M+1).padStart(2,'0')+'-'+String(dayNum).padStart(2,'0');
+    var isHoy = ds === todayStr;
+    var isInicio = ds === inicio;
+    var enPausaDia = pausas.some(function(p){
+      return p.inicio && ds>=p.inicio && (!p.fin || ds<p.fin);
+    });
+    var esActivo = inicio && ds>=inicio && ds<=todayStr && !enPausaDia;
+    var esFuturo = ds > todayStr;
+    cells.push({ dayNum:dayNum, ds:ds, isHoy:isHoy, isInicio:isInicio, enPausaDia:enPausaDia, esActivo:esActivo, esFuturo:esFuturo });
+  }
+
+  // Legend counts
+  var cActivos=0, cPausas=0;
+  cells.forEach(function(c){ if(!c) return; if(c.esActivo) cActivos++; if(c.enPausaDia) cPausas++; });
+
+  var color = tipo==='bloque' ? 'var(--blue)' : '#3b82f6';
+  var colorPause = '#f97316';
+  var label = tipo==='bloque' ? '🔴 Bloque Búsqueda' : '🔵 Disponible en Base';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <button onclick="_navAlmanaque(-1)" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);cursor:pointer;font-size:16px">‹</button>
+      <div style="text-align:center">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:${color}">${meses[M]} ${Y}</div>
+        <div style="font-size:10px;color:var(--muted)">${label} — ${almanaqueDEI}</div>
+      </div>
+      <button onclick="_navAlmanaque(1)" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);cursor:pointer;font-size:16px">›</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
+      ${diasSem.map(function(d){return '<div style="text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:4px 0">'+d+'</div>';}).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px" id="almanacGrid">
+      ${cells.map(function(c){
+        if(!c) return '<div></div>';
+        var bg, col, fw='400', ring='', dot='';
+        if(c.isHoy){ ring='box-shadow:0 0 0 2px #fff,0 0 0 4px '+color+';'; }
+        if(c.esFuturo){ bg='transparent'; col='rgba(255,255,255,0.15)'; }
+        else if(c.isInicio){ bg=color; col='#fff'; fw='700'; dot='<div style="width:4px;height:4px;border-radius:50%;background:#fff;margin:1px auto 0"></div>'; }
+        else if(c.enPausaDia){ bg='rgba(249,115,22,.25)'; col=colorPause; fw='600'; }
+        else if(c.esActivo){ bg='rgba(59,130,246,.25)'; col='#93c5fd'; fw='600'; }
+        else { bg='rgba(255,255,255,.03)'; col='rgba(255,255,255,.3)'; }
+        return '<div onclick="_almanacDayClick(\''+c.ds+'\')" style="cursor:pointer;text-align:center;padding:6px 2px;border-radius:6px;background:'+bg+';color:'+col+';font-size:12px;font-weight:'+fw+';'+ring+'transition:transform .1s;user-select:none" onmouseover="this.style.transform=\'scale(1.15)\'" onmouseout="this.style.transform=\'\'">'+c.dayNum+dot+'</div>';
+      }).join('')}
+    </div>
+
+    <div style="background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-bottom:12px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:700">LEYENDA</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:10px">
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:rgba(59,130,246,.25)"></div><span style="color:#93c5fd">Día activo (${cActivos})</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:rgba(249,115,22,.25)"></div><span style="color:${colorPause}">Pausado (${cPausas})</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;background:${color}"></div><span style="color:#fff">Fecha inicio</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:12px;height:12px;border-radius:3px;border:2px solid ${color}"></div><span style="color:var(--muted)">Hoy</span></div>
+      </div>
+    </div>
+
+    ${inicio?`
+    <div style="background:rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:8px">ACCIONES RÁPIDAS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        ${tipo==='bloque'?`
+          <button onclick="_almanacCambiarInicio()" class="btn btn-ghost" style="font-size:10px">✏️ Cambiar fecha inicio</button>
+          ${!cumplido?`<button onclick="_almanacMarcarCumplido()" class="btn" style="background:rgba(34,197,94,.15);color:var(--green);border:1px solid var(--green);font-size:10px">✅ Marcar cumplido</button>`:''}
+          <button onclick="_almanacAgregarPausa()" class="btn" style="background:rgba(240,192,64,.15);color:var(--yellow);border:1px solid var(--yellow);font-size:10px">⏸️ Agregar pausa</button>
+          ${pausas.filter(function(p){return !p.fin;}).length?`<button onclick="_almanacCerrarPausa()" class="btn btn-primary" style="font-size:10px">▶️ Cerrar pausa activa</button>`:''}`
+        :`
+          <button onclick="_almanacCambiarInicio()" class="btn btn-ghost" style="font-size:10px">✏️ Cambiar fecha inicio</button>
+          <button onclick="_almanacAgregarPausa()" class="btn" style="background:rgba(240,192,64,.15);color:var(--yellow);border:1px solid var(--yellow);font-size:10px">⏸️ Agregar pausa</button>
+          ${pausas.filter(function(p){return !p.fin;}).length?`<button onclick="_almanacCerrarPausa()" class="btn btn-primary" style="font-size:10px">▶️ Cerrar pausa activa</button>`:''}`
+        }
+      </div>
+      ${pausas.length?`
+      <div style="margin-top:10px">
+        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;font-weight:700">PAUSAS REGISTRADAS</div>
+        ${pausas.map(function(p,pi){
+          return '<div style="display:flex;align-items:center;gap:6px;font-size:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)">'
+            +'<span style="color:'+colorPause+'">⏸</span>'
+            +'<span style="color:var(--text)">'+fmtDate(p.inicio)+' → '+(p.fin?fmtDate(p.fin):'<span style="color:var(--yellow)">activa</span>')+'</span>'
+            +(p.fin?'<span style="font-size:9px;color:var(--muted);margin-left:auto">'+Math.floor((new Date(p.fin+'T00:00:00')-new Date(p.inicio+'T00:00:00'))/(1000*60*60*24))+'d</span>':'')
+            +'<button onclick="_almanacEliminarPausa('+pi+')" style="background:none;border:none;color:var(--muted);cursor:pointer;margin-left:auto;font-size:12px">✕</button>'
+            +'</div>';
+        }).join('')}
+      </div>`:''}
+    </div>`
+    :`<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">
+      Toca un día en el almanaque para establecerlo como fecha de inicio
+    </div>`}
+  `;
+}
+
+function _almanacDayClick(ds){
+  var data = almanaqueTipo==='bloque' ? bloqueData[almanaqueDEI] : (baseData[almanaqueDEI]||{activo:false,fechaInicio:'',pausas:[],diasAjuste:0});
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var todayStr = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+  if(ds > todayStr){ showToast('⚠️ No puedes seleccionar fechas futuras','#f97316'); return; }
+  if(!data.fechaInicio){
+    if(confirm('¿Establecer el '+fmtDate(ds)+' como fecha de inicio?')){
+      data.fechaInicio = ds;
+      data.activo = true;
+      _saveAlmanacData();
+      _renderAlmanaque();
+      showToast('✅ Fecha de inicio establecida: '+fmtDate(ds));
+    }
+    return;
+  }
+  var enPausaDia = (data.pausas||[]).some(function(p){ return p.inicio && ds>=p.inicio && (!p.fin||ds<p.fin); });
+  if(enPausaDia){
+    showToast('ℹ️ Este día está marcado como pausa');
+    return;
+  }
+  // Show context menu for the day
+  var opts = ['⏸️ Agregar pausa desde este día'];
+  if(ds === data.fechaInicio) opts.push('✏️ Cambiar fecha de inicio');
+  var msg = 'Día: '+fmtDate(ds)+'\n\n';
+  opts.forEach(function(o,i){ msg += (i+1)+'. '+o+'\n'; });
+  var sel = prompt(msg+'(escribe 1 o 2)', '1');
+  if(sel==='1'){
+    (data.pausas||(data.pausas=[])).push({inicio:ds, fin:''});
+    _saveAlmanacData();
+    _renderAlmanaque();
+    showToast('⏸️ Pausa iniciada desde '+fmtDate(ds),'#f97316');
+  } else if(sel==='2'){
+    data.fechaInicio = ds;
+    _saveAlmanacData();
+    _renderAlmanaque();
+    showToast('✅ Fecha de inicio movida a '+fmtDate(ds));
+  }
+}
+
+function _saveAlmanacData(){
+  if(almanaqueTipo==='bloque') saveBloque();
+  else saveBase();
+}
+
+function _almanacCambiarInicio(){
+  var data = almanaqueTipo==='bloque' ? bloqueData[almanaqueDEI] : (baseData[almanaqueDEI]||{});
+  var nueva = prompt('Nueva fecha de inicio (AAAA-MM-DD):', data.fechaInicio||localDateStr());
+  if(!nueva) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(nueva)){ showToast('⚠️ Formato: AAAA-MM-DD','#f97316'); return; }
+  data.fechaInicio = nueva;
+  data.activo = true;
+  _saveAlmanacData();
+  _renderAlmanaque();
+  showToast('✅ Fecha de inicio actualizada: '+fmtDate(nueva));
+}
+
+function _almanacMarcarCumplido(){
+  if(!confirm('¿Marcar el bloque de '+almanaqueDEI+' como CUMPLIDO?')) return;
+  bloqueData[almanaqueDEI].cumplido = true;
+  bloqueData[almanaqueDEI].activo = false;
+  saveBloque();
+  _renderAlmanaque();
+  showToast('✅ Bloque marcado como cumplido','var(--green)');
+}
+
+function _almanacAgregarPausa(){
+  var data = almanaqueTipo==='bloque' ? bloqueData[almanaqueDEI] : (baseData[almanaqueDEI]||{activo:false,fechaInicio:'',pausas:[],diasAjuste:0});
+  if(!data.pausas) data.pausas=[];
+  var fecha = prompt('¿Desde qué fecha inicia la pausa? (AAAA-MM-DD)', localDateStr());
+  if(!fecha) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ showToast('⚠️ Formato: AAAA-MM-DD','#f97316'); return; }
+  data.pausas.push({inicio:fecha, fin:''});
+  _saveAlmanacData();
+  _renderAlmanaque();
+  showToast('⏸️ Pausa registrada desde '+fmtDate(fecha),'#f97316');
+}
+
+function _almanacCerrarPausa(){
+  var data = almanaqueTipo==='bloque' ? bloqueData[almanaqueDEI] : (baseData[almanaqueDEI]||{});
+  var pausa = (data.pausas||[]).find(function(p){return !p.fin;});
+  if(!pausa){ showToast('⚠️ No hay pausa activa','#f97316'); return; }
+  var fecha = prompt('¿En qué fecha termina la pausa? (AAAA-MM-DD)', localDateStr());
+  if(!fecha) return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ showToast('⚠️ Formato: AAAA-MM-DD','#f97316'); return; }
+  pausa.fin = fecha;
+  _saveAlmanacData();
+  _renderAlmanaque();
+  showToast('▶️ Pausa cerrada el '+fmtDate(fecha));
+}
+
+function _almanacEliminarPausa(idx){
+  var data = almanaqueTipo==='bloque' ? bloqueData[almanaqueDEI] : (baseData[almanaqueDEI]||{});
+  if(!confirm('¿Eliminar esta pausa?')) return;
+  data.pausas.splice(idx,1);
+  _saveAlmanacData();
+  _renderAlmanaque();
+  showToast('🗑️ Pausa eliminada');
+}
+
+// ── DISPONIBLE EN BASE renderer ───────────────────────────────────────────────
+function renderDisponibleBase(dei){
+  var db = baseData[dei]||(baseData[dei]={activo:false,fechaInicio:'',pausas:[],diasAjuste:0});
+  var diasBase = calcDiasBase(dei);
+  var enPausaBase = (db.pausas||[]).some(function(p){return p.inicio&&!p.fin;});
+  var bColor = db.activo ? '#3b82f6' : 'var(--muted)';
+  var bEstado = db.activo ? (enPausaBase?'⏸️ PAUSADO':'🔵 EN CURSO') : '⚪ INACTIVO';
+
+  var pausasHtml = '';
+  if(db.pausas&&db.pausas.length){
+    pausasHtml = '<div style="margin-top:6px">'
+      +'<div style="font-size:9px;color:var(--muted);margin-bottom:4px">Pausas:</div>'
+      + db.pausas.map(function(p,pi){
+          return '<div style="display:flex;align-items:center;gap:6px;font-size:10px;padding:3px 0">'
+            +'<span style="color:var(--muted)">📅 '+fmtDate(p.inicio)+' → '+(p.fin?fmtDate(p.fin):'<span style="color:var(--yellow)">en curso</span>')+'</span>'
+            +'<button onclick="eliminarPausaBase(\''+dei+'\','+pi+')" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px">✕</button>'
+            +'</div>';
+        }).join('')
+      +'</div>';
+  }
+
+  return '<div style="background:var(--card);border:2px solid '+bColor+';border-radius:10px;padding:12px;margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+    +'<div style="flex:1">'
+    +'<div style="font-size:14px;font-weight:700;color:'+bColor+'">🔵 Disponible en Base — '+bEstado+'</div>'
+    +(db.fechaInicio?'<div style="font-size:10px;color:var(--muted)">Desde: '+fmtDate(db.fechaInicio)+'</div>':'<div style="font-size:10px;color:var(--muted)">Sin iniciar</div>')
+    +'</div>'
+    +'<div style="text-align:right">'
+    +'<div style="font-size:32px;font-weight:900;color:'+bColor+';line-height:1">'+diasBase+'</div>'
+    +'<div style="font-size:9px;color:var(--muted)">días</div>'
+    +'</div>'
+    +'</div>'
+    + pausasHtml
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">'
+    +'<button onclick="abrirAlmanaque(\''+dei+'\',\'base\')" class="btn" style="grid-column:1/-1;background:rgba(59,130,246,.15);border:1px solid #3b82f6;color:#60a5fa;font-weight:700">📅 Ver Almanaque</button>'
+    +(!db.activo?'<button onclick="iniciarBase(\''+dei+'\')" class="btn btn-primary" style="background:rgba(59,130,246,.2);border:1px solid #3b82f6;color:#60a5fa">🚀 '+(db.fechaInicio?'Reanudar base':'Iniciar base')+'</button>'
+      :(enPausaBase
+        ?'<button onclick="reanudarBase(\''+dei+'\')" class="btn btn-primary" style="background:rgba(59,130,246,.2);border:1px solid #3b82f6;color:#60a5fa">▶️ Reanudar</button>'
+        :'<button onclick="pausarBase(\''+dei+'\')" class="btn" style="background:rgba(249,115,22,.15);color:#f97316;border:1px solid #f97316">⏸️ Pausar</button>'
+       )
+    )
+    +(db.activo||db.fechaInicio?'<button onclick="ajustarDiasBase(\''+dei+'\')" class="btn btn-ghost" style="font-size:10px">✏️ Corregir días</button>':'')
+    +(db.fechaInicio?'<button onclick="reiniciarBase(\''+dei+'\')" class="btn btn-ghost" style="font-size:10px;color:var(--red)">🔄 Reiniciar</button>':'')
+    +'</div>'
+    +'</div>';
+}
+
 function agregarDiaDiario(dei){
-  // Modal para registrar un día (hoy o pasado) como Búsqueda o Base
   var d = bloqueData[dei];
   if(!d.diasDiario) d.diasDiario={};
-
   document.getElementById('mTitle').textContent='📅 Registrar día de operación';
   document.getElementById('mSubtitle').textContent=dei;
   document.getElementById('statusGrid').innerHTML=
@@ -5010,13 +5214,11 @@ function selTipoDiario(tipo){
   if(tipo==='busqueda'){
     btnB.style.borderColor='#ef4444'; btnB.style.background='rgba(239,68,68,.25)'; btnB.style.color='#f87171';
     btnBase.style.borderColor='rgba(59,130,246,.4)'; btnBase.style.background='rgba(59,130,246,.08)'; btnBase.style.color='var(--muted)';
-    msg.textContent='✅ Bloque de Búsqueda seleccionado';
-    msg.style.color='#f87171';
+    msg.textContent='✅ Bloque de Búsqueda seleccionado'; msg.style.color='#f87171';
   } else {
     btnBase.style.borderColor='#3b82f6'; btnBase.style.background='rgba(59,130,246,.25)'; btnBase.style.color='#60a5fa';
     btnB.style.borderColor='rgba(239,68,68,.4)'; btnB.style.background='rgba(239,68,68,.08)'; btnB.style.color='var(--muted)';
-    msg.textContent='✅ Disponible en Base seleccionado';
-    msg.style.color='#60a5fa';
+    msg.textContent='✅ Disponible en Base seleccionado'; msg.style.color='#60a5fa';
   }
 }
 
@@ -5024,8 +5226,7 @@ function guardarDiaDiario(dei){
   var fechaEl = document.getElementById('ddFecha');
   var tipoEl  = document.getElementById('ddTipo');
   if(!fechaEl||!tipoEl) return;
-  var fecha = fechaEl.value;
-  var tipo  = tipoEl.value;
+  var fecha = fechaEl.value, tipo = tipoEl.value;
   if(!fecha){ showToast('⚠️ Selecciona una fecha','#f97316'); return; }
   if(!tipo){ showToast('⚠️ Selecciona el tipo de operación','#f97316'); return; }
   if(!bloqueData[dei].diasDiario) bloqueData[dei].diasDiario={};
@@ -5049,9 +5250,7 @@ function iniciarBase(dei){
   var fecha = prompt('¿Desde qué fecha están disponibles en base?\n(AAAA-MM-DD)', d.fechaInicio||localDateStr());
   if(!fecha) return;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ showToast('⚠️ Formato: AAAA-MM-DD','#f97316'); return; }
-  d.fechaInicio = fecha;
-  d.activo = true;
-  // Si había una pausa activa, cerrarla
+  d.fechaInicio = fecha; d.activo = true;
   var pausaAbierta = (d.pausas||[]).find(function(p){return !p.fin;});
   if(pausaAbierta) pausaAbierta.fin = localDateStr();
   saveBase(); renderBloque();
@@ -5070,8 +5269,7 @@ function pausarBase(dei){
 }
 
 function reanudarBase(dei){
-  var d = baseData[dei];
-  if(!d) return;
+  var d = baseData[dei]; if(!d) return;
   var pausa = (d.pausas||[]).find(function(p){return !p.fin;});
   if(!pausa){ showToast('⚠️ No hay pausa activa','#f97316'); return; }
   var fecha = prompt('¿En qué fecha se reanuda?\n(AAAA-MM-DD)', localDateStr());
@@ -5083,8 +5281,7 @@ function reanudarBase(dei){
 }
 
 function eliminarPausaBase(dei, idx){
-  var d = baseData[dei];
-  if(!d||!d.pausas) return;
+  var d = baseData[dei]; if(!d||!d.pausas) return;
   if(!confirm('¿Eliminar esta pausa?')) return;
   d.pausas.splice(idx,1);
   saveBase(); renderBloque();
@@ -5098,7 +5295,6 @@ function ajustarDiasBase(dei){
   if(!baseData[dei]) baseData[dei]={activo:false,fechaInicio:'',pausas:[],diasAjuste:0};
   baseData[dei].diasAjuste = (baseData[dei].diasAjuste||0) + diff;
   saveBase(); renderBloque();
-  showToast('✅ Corregido a '+nuevo+' días en base');
 }
 
 function reiniciarBase(dei){
@@ -5108,26 +5304,12 @@ function reiniciarBase(dei){
   showToast('🔄 Contador base reiniciado');
 }
 
-function marcarDiaBusqueda(dei){
-  if(!bloqueData[dei].diasDiario) bloqueData[dei].diasDiario={};
-  var hoy=localDateStr();
-  bloqueData[dei].diasDiario[hoy]='busqueda';
+function marcarBloqueCumplido(dei){
+  if(!confirm('¿Marcar el bloque de '+dei+' como CUMPLIDO?\nEsto forzará el estado a completado independientemente del conteo.')) return;
+  bloqueData[dei].cumplido = true;
+  bloqueData[dei].activo = false;
   saveBloque(); renderBloque();
-  showToast('🔴 '+dei+' — Bloque de Búsqueda registrado','#ef4444');
-}
-
-function marcarDiaBase(dei){
-  if(!bloqueData[dei].diasDiario) bloqueData[dei].diasDiario={};
-  var hoy=localDateStr();
-  bloqueData[dei].diasDiario[hoy]='base';
-  saveBloque(); renderBloque();
-  showToast('🔵 '+dei+' — Disponible en Base registrado','#3b82f6');
-}
-
-function quitarDiaDiario(dei, fecha){
-  if(!bloqueData[dei].diasDiario) return;
-  delete bloqueData[dei].diasDiario[fecha];
-  saveBloque(); renderBloque();
+  showToast('✅ Bloque de '+dei+' marcado como cumplido','var(--green)');
 }
 
 function iniciarBloque(dei){
@@ -5137,6 +5319,7 @@ function iniciarBloque(dei){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)){ showToast('⚠️ Formato: AAAA-MM-DD','#f97316'); return; }
   d.fechaInicio = fecha;
   d.activo = true;
+  d.cumplido = false;
   if(!d.diasAjuste) d.diasAjuste = 0;
   saveBloque(); renderBloque();
   showToast(`✅ Bloque ${dei} iniciado`);
@@ -5169,7 +5352,7 @@ function ajustarDias(dei){
 
 function reiniciarBloque(dei){
   if(!confirm(`¿Iniciar nuevo bloque para ${dei}? Se borrarán los datos del bloque anterior.`)) return;
-  bloqueData[dei] = { activo:false, fechaInicio:'', diasAjuste:0, pausas:[], comisiones:[], diasDiario:{} };
+  bloqueData[dei] = { activo:false, fechaInicio:'', diasAjuste:0, pausas:[], comisiones:[], diasDiario:{}, cumplido:false };
   saveBloque(); renderBloque();
 }
 
@@ -5195,6 +5378,7 @@ function eliminarComision(dei,idx){
   bloqueData[dei].comisiones.splice(idx,1);
   saveBloque(); renderBloque();
 }
+
 
 
 //
