@@ -398,6 +398,8 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
     </div>
     <div id="dashFormacionPanel" style="display:none">
       <div id="dashFormacion"></div>
+      <!-- EQUIPOS A/B — drag & drop -->
+      <div id="dashEquiposPanel" style="margin-top:10px"></div>
     </div>
   </div>
 
@@ -9753,7 +9755,6 @@ function renderFormacionTactica(){
     return enSvc.filter(function(m){ return m.cargo===cargo; });
   }
 
-  // Muñequito SVG
   function muneco(cargo, label, m, w){
     var ok = m !== null;
     var color = ok ? '#22c55e' : '#ef4444';
@@ -9780,7 +9781,6 @@ function renderFormacionTactica(){
       +'</div>';
   }
 
-  // ── Obtener TODOS los miembros de cada cargo (sin límite fijo) ──
   var cte1     = getCargo('Cte. DEI');
   var cte2     = getCargo('Cte. Escuadra');
   var cte3     = getCargo('Lider Escuderos');
@@ -9793,88 +9793,184 @@ function renderFormacionTactica(){
   var escuderos= getCargoAll('Escudero');
   var medTec   = getCargoAll('Medios Técnicos');
 
-  // Cargos ya cubiertos en la formación
   var cargosEnFormacion = new Set(['Cte. DEI','Cte. Escuadra','Lider Escuderos','Op. Taser',
     'Enfermero','Operador 37','Operador 40','Op. Lanzadora','SPI','Escudero','Medios Técnicos']);
 
-  var fila = 'display:flex;align-items:flex-end;justify-content:center;gap:3px;margin-bottom:8px;flex-wrap:wrap;';
+  var filaC = 'display:flex;align-items:flex-end;justify-content:center;gap:3px;margin-bottom:6px;flex-wrap:wrap;';
 
-  var html2 = '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:10px 4px;overflow-x:auto">';
-  html2 += '<div style="text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+esc+' - Dispositivo Táctico</div>';
+  var html2 = '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:10px 4px 8px">';
+  html2 += '<div style="text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+esc+' — Dispositivo Táctico</div>';
 
-  // ── FILA 1: Todos los OP-37 | CTE DEI | Todos los OP-40 + Lanzadoras ──
-  html2 += '<div style="'+fila+'">';
+  // ── FILA 0: CTE DEI centrado arriba solo ──
+  html2 += '<div style="'+filaC+'">';
+  html2 += muneco('Cte. DEI','CTE DEI', cte1, 56);
+  html2 += '</div>';
+
+  // ── separador ──
+  html2 += '<div style="border-top:1px dashed rgba(255,255,255,.08);margin:4px 8px 6px"></div>';
+
+  // ── FILA 1: OP-37s | CTE-ESC | OP-40s (6 en línea) ──
+  html2 += '<div style="'+filaC+'">';
   ops37.forEach(function(m){ html2 += muneco('Operador 37','OP-37', m, 44); });
-  if(!ops37.length) html2 += muneco('Operador 37','OP-37', null, 44); // al menos 1 slot vacío
+  if(!ops37.length) html2 += muneco('Operador 37','OP-37', null, 44);
   opLanzs.slice(0, Math.ceil(opLanzs.length/2)||1).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 44); });
   if(!opLanzs.length) html2 += muneco('Op. Lanzadora','LANZ', null, 44);
-  html2 += '<div style="min-width:6px"></div>';
-  html2 += muneco('Cte. DEI','CTE DEI', cte1, 52);
-  html2 += '<div style="min-width:6px"></div>';
+  html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 52);
   ops40.forEach(function(m){ html2 += muneco('Operador 40','OP-40', m, 44); });
   if(!ops40.length) html2 += muneco('Operador 40','OP-40', null, 44);
   opLanzs.slice(Math.ceil(opLanzs.length/2)).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 44); });
   html2 += '</div>';
 
-  // ── FILA 2: Medios Técnicos | CTE Escuadra | Medios Técnicos ──
-  html2 += '<div style="'+fila+'">';
-  var mt1 = medTec.slice(0, Math.ceil(medTec.length/2));
-  var mt2 = medTec.slice(Math.ceil(medTec.length/2));
-  if(!mt1.length) mt1 = [null];
-  if(!mt2.length) mt2 = [null];
-  mt1.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 52); });
-  html2 += '<div style="min-width:16px"></div>';
-  html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 56);
-  html2 += '<div style="min-width:16px"></div>';
-  mt2.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 52); });
-  html2 += '</div>';
-
-  // ── FILA 3: Todos los SPI | TASER | Enfermero ──
-  html2 += '<div style="'+fila+'">';
+  // ── FILA 2: Medios Técnicos | SPI | TASER | Enfermero ──
+  html2 += '<div style="'+filaC+'">';
+  medTec.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 48); });
+  if(!medTec.length){ html2 += muneco('Medios Técnicos','M.TEC', null, 48); html2 += muneco('Medios Técnicos','M.TEC', null, 48); }
   spis.forEach(function(m){ html2 += muneco('SPI','SPI', m, 44); });
   if(!spis.length) html2 += muneco('SPI','SPI', null, 44);
-  html2 += '<div style="min-width:4px"></div>';
   html2 += muneco('Op. Taser','TASER', taser, 48);
   if(enfer) html2 += muneco('Enfermero','ENFER', enfer, 48);
   html2 += '</div>';
 
-  // ── FILA 4: Lider Escuderos + TODOS los Escuderos ──
-  html2 += '<div style="'+fila+'margin-top:4px;align-items:flex-end">';
+  // ── FILA 3: L-ESC encima de su línea ──
+  html2 += '<div style="'+filaC+'margin-bottom:2px">';
   html2 += muneco('Lider Escuderos','L-ESC', cte3, 48);
-  html2 += '<div style="min-width:4px"></div>';
-  escuderos.forEach(function(m, i){ html2 += muneco('Escudero','E'+(i+1), m, 40); });
-  if(!escuderos.length){
-    for(var i=0;i<6;i++) html2 += muneco('Escudero','E'+(i+1), null, 40);
-  }
   html2 += '</div>';
 
-  // ── FILA EXTRA: Cargos no mapeados que estén en servicio ──
+  // ── FILA 4: Escuderos en línea ──
+  html2 += '<div style="'+filaC+'">';
+  escuderos.forEach(function(m, i){ html2 += muneco('Escudero','E'+(i+1), m, 40); });
+  if(!escuderos.length){ for(var i=0;i<6;i++) html2 += muneco('Escudero','E'+(i+1), null, 40); }
+  html2 += '</div>';
+
+  // ── EXTRAS ──
   var extras = enSvc.filter(function(m){ return !cargosEnFormacion.has(m.cargo); });
   if(extras.length){
-    html2 += '<div style="border-top:1px solid rgba(255,255,255,.06);margin-top:6px;padding-top:6px">';
-    html2 += '<div style="text-align:center;font-size:8px;color:var(--muted);margin-bottom:4px">OTROS EN SERVICIO</div>';
-    html2 += '<div style="'+fila+'">';
-    extras.forEach(function(m){
-      html2 += muneco(m.cargo, (m.cargo||'').substring(0,6), m, 48);
-    });
+    html2 += '<div style="border-top:1px solid rgba(255,255,255,.06);margin-top:6px;padding-top:6px">'
+      +'<div style="text-align:center;font-size:8px;color:var(--muted);margin-bottom:4px">OTROS EN SERVICIO</div>'
+      +'<div style="'+filaC+'">';
+    extras.forEach(function(m){ html2 += muneco(m.cargo,(m.cargo||'').substring(0,6),m,48); });
     html2 += '</div></div>';
   }
 
-  // ── Totales dinámicos ──
-  var totalEnFormacion = enSvc.filter(function(m){ return cargosEnFormacion.has(m.cargo); }).length;
-  var totalPersonal = personal.length;
-  var totalSvc = enSvc.length;
-
   html2 += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)">'
     +'<div style="display:flex;gap:10px">'
-    +'<span style="font-size:9px;color:#22c55e">● En servicio</span>'
+    +'<span style="font-size:9px;color:#22c55e">● Servicio</span>'
     +'<span style="font-size:9px;color:#ef4444">● Fuera</span>'
     +'</div>'
-    +'<div style="font-size:9px;color:var(--muted)">'+totalSvc+'/'+totalPersonal+' en servicio</div>'
+    +'<div style="font-size:9px;color:var(--muted)">'+enSvc.length+'/'+personal.length+' en servicio</div>'
     +'</div>';
 
   html2 += '</div>';
   el.innerHTML = html2;
+
+  // Render equipos A/B after formacion
+  renderEquiposAB(esc, enSvc);
+}
+
+// ── EQUIPOS A/B ─────────────────────────────────────────────────────────────
+// Persiste en localStorage por escuadra
+function _equiposKey(esc){ return 'g9_equipos_'+esc.replace(' ','_'); }
+function _loadEquipos(esc){
+  try{ return JSON.parse(localStorage.getItem(_equiposKey(esc)))||{A:[],B:[],pool:[]}; }catch(e){ return {A:[],B:[],pool:[]}; }
+}
+function _saveEquipos(esc, data){
+  try{ localStorage.setItem(_equiposKey(esc), JSON.stringify(data)); }catch(e){}
+}
+
+function renderEquiposAB(esc, enSvc){
+  var el = document.getElementById('dashEquiposPanel');
+  if(!el) return;
+
+  var saved = _loadEquipos(esc);
+  var svcIds = enSvc.map(function(m){return m.id;});
+
+  // Sync: remove departed members, add new ones to pool
+  saved.A    = (saved.A||[]).filter(function(id){ return svcIds.includes(id); });
+  saved.B    = (saved.B||[]).filter(function(id){ return svcIds.includes(id); });
+  saved.pool = (saved.pool||[]).filter(function(id){ return svcIds.includes(id); });
+  var assigned = saved.A.concat(saved.B, saved.pool);
+  svcIds.forEach(function(id){ if(!assigned.includes(id)) saved.pool.push(id); });
+  _saveEquipos(esc, saved);
+
+  function chipHtml(memberId, zona){
+    var m = members.find(function(x){return x.id===memberId;});
+    if(!m) return '';
+    var nombre = m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||m.name.split(' ')[1]||'');
+    var bg = zona==='A' ? 'rgba(59,130,246,.2)' : zona==='B' ? 'rgba(249,115,22,.2)' : 'rgba(255,255,255,.06)';
+    var bc = zona==='A' ? '#3b82f6' : zona==='B' ? '#f97316' : 'rgba(255,255,255,.15)';
+    var col= zona==='A' ? '#93c5fd' : zona==='B' ? '#fdba74' : 'var(--muted)';
+    return '<div draggable="true" data-id="'+memberId+'" data-zona="'+zona+'" '
+      +'ondragstart="equipoDragStart(event)" '
+      +'style="display:inline-flex;align-items:center;gap:4px;background:'+bg+';border:1px solid '+bc+';'
+      +'border-radius:20px;padding:3px 8px 3px 4px;cursor:grab;user-select:none;margin:2px;white-space:nowrap">'
+      +'<div style="width:16px;height:16px;border-radius:50%;background:'+bc+'33;border:1px solid '+bc+';'
+      +'display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;color:'+col+'">'+m.rank+'</div>'
+      +'<span style="font-size:10px;color:'+col+';font-weight:600">'+nombre.substring(0,12)+'</span>'
+      +'</div>';
+  }
+
+  function zonaHtml(zona, ids, label, color, bg){
+    var chips = ids.map(function(id){return chipHtml(id,zona);}).join('');
+    return '<div data-zona="'+zona+'" ondragover="equipoDragOver(event)" ondrop="equipoDrop(event,\''+zona+'\',\''+esc+'\')" '
+      +'style="flex:1;min-height:54px;background:'+bg+';border:2px dashed '+color+'44;border-radius:10px;padding:6px 8px">'
+      +'<div style="font-size:9px;font-weight:700;color:'+color+';margin-bottom:4px;letter-spacing:.5px">'+label+'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:2px;min-height:28px">'+chips+'</div>'
+      +'</div>';
+  }
+
+  var poolChips = saved.pool.map(function(id){return chipHtml(id,'pool');}).join('');
+  var html2 = '<div style="border-top:1px solid rgba(255,255,255,.06);padding-top:10px;margin-top:2px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+    +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px">⚡ Equipos de Reacción</div>'
+    +'<button onclick="equiposAutoDistribuir(\''+esc+'\')" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:3px 8px;color:var(--muted);cursor:pointer;font-size:9px">⚡ Auto</button>'
+    +'</div>'
+    // Pool
+    +(saved.pool.length ? '<div data-zona="pool" ondragover="equipoDragOver(event)" ondrop="equipoDrop(event,\'pool\',\''+esc+'\')" '
+      +'style="background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1);border-radius:8px;padding:5px 8px;margin-bottom:6px;min-height:36px">'
+      +'<div style="font-size:8px;color:var(--muted);margin-bottom:3px">SIN ASIGNAR — arrastra hacia A o B</div>'
+      +'<div style="display:flex;flex-wrap:wrap">'+poolChips+'</div>'
+      +'</div>' : '')
+    // A y B
+    +'<div style="display:flex;gap:6px">'
+    + zonaHtml('A', saved.A, '🔵 EQUIPO A', '#3b82f6', 'rgba(59,130,246,.06)')
+    + zonaHtml('B', saved.B, '🟠 EQUIPO B', '#f97316', 'rgba(249,115,22,.06)')
+    +'</div>'
+    +'</div>';
+
+  el.innerHTML = html2;
+}
+
+function equipoDragStart(ev){
+  ev.dataTransfer.setData('memberId', ev.target.dataset.id);
+  ev.dataTransfer.setData('fromZona', ev.target.dataset.zona);
+}
+function equipoDragOver(ev){ ev.preventDefault(); }
+function equipoDrop(ev, toZona, esc){
+  ev.preventDefault();
+  var id = ev.dataTransfer.getData('memberId');
+  var from = ev.dataTransfer.getData('fromZona');
+  if(!id || from === toZona) return;
+  var saved = _loadEquipos(esc);
+  ['A','B','pool'].forEach(function(z){ saved[z] = (saved[z]||[]).filter(function(x){return x!==id;}); });
+  (saved[toZona]||(saved[toZona]=[])).push(id);
+  _saveEquipos(esc, saved);
+  var enSvc = members.filter(function(m){
+    var escActual = (typeof curEscuadra!=='undefined'&&curEscuadra!=='all')?curEscuadra:'DEI 2';
+    return m.escuadra===escActual && !m.esEspejo && m.status==='Servicio';
+  });
+  renderEquiposAB(esc, enSvc);
+}
+function equiposAutoDistribuir(esc){
+  var saved = _loadEquipos(esc);
+  var todos = saved.A.concat(saved.B, saved.pool);
+  var mid = Math.ceil(todos.length/2);
+  saved.A = todos.slice(0, mid);
+  saved.B = todos.slice(mid);
+  saved.pool = [];
+  _saveEquipos(esc, saved);
+  var enSvc = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo && m.status==='Servicio'; });
+  renderEquiposAB(esc, enSvc);
+  showToast('⚡ Distribuido automáticamente A:'+saved.A.length+' / B:'+saved.B.length);
 }
 
 //
@@ -10068,27 +10164,29 @@ function dashDrawCiclo(){
       +'<span>'+(DIAS_BLOQUE_TOTAL - diasBloque > 0 ? (DIAS_BLOQUE_TOTAL - diasBloque)+' días para completar' : '¡Bloque listo!')+'</span>'
       +'<span>'+pct+'%</span>'
       +'</div>'
-      // mini indicador ciclo laboral durante bloque
-      +(cicloConfig.inicioLaboral ? (function(){
-          var DIAS_TRAB = cicloConfig.diasTrabajo||25;
-          var DIAS_DESC = cicloConfig.diasDescanso||5;
-          var cicloTot  = DIAS_TRAB + DIAS_DESC;
-          var inicio    = new Date(cicloConfig.inicioLaboral+'T00:00:00');
-          var hoy       = new Date(); hoy.setHours(0,0,0,0);
-          var desde     = Math.floor((hoy - inicio)/(1000*60*60*24));
-          var diaEn     = ((desde % cicloTot) + cicloTot) % cicloTot;
-          var enLab     = diaEn < DIAS_TRAB;
-          var nLab      = enLab ? diaEn+1 : diaEn-DIAS_TRAB+1;
-          var mxLab     = enLab ? DIAS_TRAB : DIAS_DESC;
-          var cLab      = enLab ? '#3b82f6' : '#22c55e';
-          return '<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;background:rgba(255,255,255,.04);border-radius:6px">'
-            +'<span style="font-size:8px;color:var(--muted)">Ciclo laboral:</span>'
-            +'<span style="font-size:10px;font-weight:700;color:'+cLab+'">'+nLab+'/'+mxLab+'</span>'
-            +'<span style="font-size:8px;color:var(--muted)">'+(enLab?'laborados':'descanso')+'</span>'
-            +'</div>';
-        })() : '')
+      + _miniCicloHtml()
       ;
   }
+}
+
+function _miniCicloHtml(){
+  if(!cicloConfig.inicioLaboral) return '';
+  var DIAS_TRAB = cicloConfig.diasTrabajo||25;
+  var DIAS_DESC = cicloConfig.diasDescanso||5;
+  var cicloTot  = DIAS_TRAB + DIAS_DESC;
+  var inicio    = new Date(cicloConfig.inicioLaboral+'T00:00:00');
+  var hoy       = new Date(); hoy.setHours(0,0,0,0);
+  var desde     = Math.floor((hoy - inicio)/(1000*60*60*24));
+  var diaEn     = ((desde % cicloTot) + cicloTot) % cicloTot;
+  var enLab     = diaEn < DIAS_TRAB;
+  var nLab      = enLab ? diaEn+1 : diaEn-DIAS_TRAB+1;
+  var mxLab     = enLab ? DIAS_TRAB : DIAS_DESC;
+  var cLab      = enLab ? '#3b82f6' : '#22c55e';
+  return '<div style="display:flex;align-items:center;gap:6px;padding:4px 6px;background:rgba(255,255,255,.04);border-radius:6px;margin-top:4px">'
+    +'<span style="font-size:8px;color:var(--muted)">Ciclo laboral:</span>'
+    +'<span style="font-size:10px;font-weight:700;color:'+cLab+'">'+nLab+'/'+mxLab+'</span>'
+    +'<span style="font-size:8px;color:var(--muted)">'+(enLab?'laborados':'descanso')+'</span>'
+    +'</div>';
 }
 
 function dashDrawBloque(){
@@ -10166,26 +10264,74 @@ function dashDrawAlertas(){
   var el = document.getElementById('dashAlertas');
   if(!el) return;
   var hoy=localDateStr(), man=localDateAdd(1);
+
+  // Retornos de permiso/vacaciones
   var hoy_ret=members.filter(function(m){return m.fechaFin===hoy&&m.status!=='Servicio'&&!m.esEspejo;});
   var man_ret=members.filter(function(m){return m.fechaFin===man&&m.status!=='Servicio'&&!m.esEspejo;});
-  if(!hoy_ret.length&&!man_ret.length){el.innerHTML='';return;}
-  var html2='<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px">'
-    +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⏰ Retornos próximos</div>';
-  hoy_ret.forEach(function(m){
-    html2+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">'
-      +'<div class="rank-badge" style="width:24px;height:24px;font-size:7px">'+m.rank+'</div>'
-      +'<div style="flex:1;font-size:11px;font-weight:600">'+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||'')+'</div>'
-      +'<span style="font-size:9px;background:rgba(34,197,94,.15);color:#22c55e;padding:2px 7px;border-radius:10px;font-weight:700">HOY</span>'
-      +'</div>';
+
+  // Permisos por horas activos hoy
+  var perHoras=members.filter(function(m){
+    return m.permisoHoras && m.permisoHoras.fecha===hoy && !m.esEspejo;
   });
-  man_ret.forEach(function(m){
-    html2+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">'
-      +'<div class="rank-badge" style="width:24px;height:24px;font-size:7px">'+m.rank+'</div>'
-      +'<div style="flex:1;font-size:11px;font-weight:600">'+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||'')+'</div>'
-      +'<span style="font-size:9px;background:rgba(249,115,22,.15);color:#f97316;padding:2px 7px;border-radius:10px;font-weight:700">MAÑANA</span>'
-      +'</div>';
-  });
-  html2+='</div>';
+
+  if(!hoy_ret.length && !man_ret.length && !perHoras.length){ el.innerHTML=''; return; }
+
+  var html2='';
+
+  // ── Permisos por horas — alertas con hora ──
+  if(perHoras.length){
+    html2+='<div style="background:var(--card);border:1px solid rgba(59,130,246,.3);border-radius:12px;padding:12px;margin-bottom:8px">'
+      +'<div style="font-size:9px;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⏱️ Permisos por horas — hoy</div>';
+    perHoras.forEach(function(m){
+      var ph = m.permisoHoras;
+      var nombre = m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||m.name.split(' ')[1]||'');
+      var motivo = ph.motivo ? ' · '+ph.motivo : '';
+      var regreso = ph.regreso ? ph.regreso : null;
+      // Determine if already returned (current time > regreso)
+      var ahora = new Date();
+      var horaActual = ahora.getHours()*60 + ahora.getMinutes();
+      var yaRegreso = false;
+      if(regreso){
+        var rParts = regreso.split(':');
+        var rMin = parseInt(rParts[0])*60 + parseInt(rParts[1]||0);
+        yaRegreso = horaActual >= rMin;
+      }
+      var estadoColor = yaRegreso ? '#22c55e' : '#60a5fa';
+      var estadoTxt   = yaRegreso ? '✅ Ya regresó' : (regreso ? 'Regresa '+regreso : 'Sin hora regreso');
+      html2+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)">'
+        +'<div class="rank-badge" style="width:24px;height:24px;font-size:7px">'+m.rank+'</div>'
+        +'<div style="flex:1">'
+        +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+nombre+'</div>'
+        +'<div style="font-size:9px;color:var(--muted)">Sale: '+ph.salida+motivo+'</div>'
+        +'</div>'
+        +'<span style="font-size:9px;background:'+estadoColor+'22;color:'+estadoColor+';padding:2px 7px;border-radius:10px;font-weight:700;white-space:nowrap">'+estadoTxt+'</span>'
+        +'</div>';
+    });
+    html2+='</div>';
+  }
+
+  // ── Retornos de permiso/vacaciones ──
+  if(hoy_ret.length || man_ret.length){
+    html2+='<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px">'
+      +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⏰ Retornos próximos</div>';
+    hoy_ret.forEach(function(m){
+      var horaP = m.horaPresentacion ? ' · '+m.horaPresentacion : '';
+      html2+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">'
+        +'<div class="rank-badge" style="width:24px;height:24px;font-size:7px">'+m.rank+'</div>'
+        +'<div style="flex:1;font-size:11px;font-weight:600">'+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||'')+'<span style="font-size:9px;color:var(--muted);font-weight:400">'+horaP+'</span></div>'
+        +'<span style="font-size:9px;background:rgba(34,197,94,.15);color:#22c55e;padding:2px 7px;border-radius:10px;font-weight:700">HOY</span>'
+        +'</div>';
+    });
+    man_ret.forEach(function(m){
+      html2+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">'
+        +'<div class="rank-badge" style="width:24px;height:24px;font-size:7px">'+m.rank+'</div>'
+        +'<div style="flex:1;font-size:11px;font-weight:600">'+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||'')+'</div>'
+        +'<span style="font-size:9px;background:rgba(249,115,22,.15);color:#f97316;padding:2px 7px;border-radius:10px;font-weight:700">MAÑANA</span>'
+        +'</div>';
+    });
+    html2+='</div>';
+  }
+
   el.innerHTML=html2;
 }
 
