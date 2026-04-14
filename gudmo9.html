@@ -7635,7 +7635,6 @@ function renderFormacionTactica(){
   var personal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
   var enSvc = personal.filter(function(m){ return m.status==='Servicio'; });
 
-  // Buscar quien tiene cada cargo en servicio
   function getCargo(cargo){
     return enSvc.find(function(m){ return m.cargo===cargo; }) || null;
   }
@@ -7643,27 +7642,22 @@ function renderFormacionTactica(){
     return enSvc.filter(function(m){ return m.cargo===cargo; });
   }
 
-  // Muñequito SVG — verde=cubierto, rojo=falta
+  // Muñequito SVG
   function muneco(cargo, label, m, w){
     var ok = m !== null;
     var color = ok ? '#22c55e' : '#ef4444';
     var bgc   = ok ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.12)';
     var bdc   = ok ? 'rgba(34,197,94,.4)'  : 'rgba(239,68,68,.4)';
-    var nombre = ok ? (m.name.split(' ')[0]+' '+( m.name.split(' ')[2]||m.name.split(' ')[1]||'')).substring(0,10) : '---';
+    var nombre = ok ? (m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||m.name.split(' ')[1]||'')).substring(0,10) : '---';
     var rankTxt = ok ? m.rank : '';
     w = w||52;
     return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:'+w+'px">'
       +'<div style="background:'+bgc+';border:1.5px solid '+bdc+';border-radius:8px;padding:4px 3px;width:'+w+'px;box-sizing:border-box">'
-      // Muñeco SVG
       +'<svg width="100%" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg">'
-      // Cabeza
       +'<circle cx="18" cy="9" r="7" fill="'+color+'" opacity=".9"/>'
-      // Cuerpo
       +'<rect x="11" y="17" width="14" height="14" rx="3" fill="'+color+'" opacity=".8"/>'
-      // Brazos
       +'<rect x="3" y="18" width="8" height="4" rx="2" fill="'+color+'" opacity=".7"/>'
       +'<rect x="25" y="18" width="8" height="4" rx="2" fill="'+color+'" opacity=".7"/>'
-      // Piernas
       +'<rect x="12" y="31" width="5" height="11" rx="2" fill="'+color+'" opacity=".7"/>'
       +'<rect x="19" y="31" width="5" height="11" rx="2" fill="'+color+'" opacity=".7"/>'
       +(ok?'':'<line x1="4" y1="4" x2="32" y2="40" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="2 2"/>')
@@ -7675,97 +7669,102 @@ function renderFormacionTactica(){
       +'</div>';
   }
 
-  // Escuderos — necesitamos hasta 10
-  var escuderos = getCargoAll('Escudero');
-  var MIN_ESC = 6;
-  function escuderoSlot(i){
-    var m = escuderos[i] || null;
-    return muneco('Escudero','E'+(i+1), m, 40);
-  }
+  // ── Obtener TODOS los miembros de cada cargo (sin límite fijo) ──
+  var cte1     = getCargo('Cte. DEI');
+  var cte2     = getCargo('Cte. Escuadra');
+  var cte3     = getCargo('Lider Escuderos');
+  var taser    = getCargo('Op. Taser');
+  var enfer    = getCargo('Enfermero');
+  var ops37    = getCargoAll('Operador 37');
+  var ops40    = getCargoAll('Operador 40');
+  var opLanzs  = getCargoAll('Op. Lanzadora');
+  var spis     = getCargoAll('SPI');
+  var escuderos= getCargoAll('Escudero');
+  var medTec   = getCargoAll('Medios Técnicos');
 
-  // SPI
-  var spis = getCargoAll('SPI');
-  function spiSlot(i){ return muneco('SPI','SPI', spis[i]||null, 44); }
+  // Cargos ya cubiertos en la formación
+  var cargosEnFormacion = new Set(['Cte. DEI','Cte. Escuadra','Lider Escuderos','Op. Taser',
+    'Enfermero','Operador 37','Operador 40','Op. Lanzadora','SPI','Escudero','Medios Técnicos']);
 
-  var cte1   = getCargo('Cte. DEI');
-  var cte2   = getCargo('Cte. Escuadra');
-  var cte3   = getCargo('Lider Escuderos');
-  var ops37  = getCargoAll('Operador 37');    // hasta 2
-  var ops40  = getCargoAll('Operador 40');    // hasta 2
-  var opLanzs= getCargoAll('Op. Lanzadora'); // hasta 2
-  var taser  = getCargo('Op. Taser');
-  var enfer  = getCargo('Enfermero');
-  var rfa1   = getCargoAll('Medios Técnicos')[0]||null;
-  var rfa2   = getCargoAll('Medios Técnicos')[1]||null;
-
-  var fila = 'display:flex;align-items:flex-end;justify-content:center;gap:3px;margin-bottom:8px;flex-wrap:nowrap;overflow-x:auto;';
+  var fila = 'display:flex;align-items:flex-end;justify-content:center;gap:3px;margin-bottom:8px;flex-wrap:wrap;';
 
   var html2 = '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:10px 4px;overflow-x:auto">';
+  html2 += '<div style="text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+esc+' - Dispositivo Táctico</div>';
 
-  // Titulo
-  html2 += '<div style="text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+esc+' - Dispositivo Negro</div>';
-
-  // FILA 1: O O O [CTE DEI] O O O
-  // Posiciones: Op37 Op37_2 OpLanz | CTE DEI | Op40 Op40_2 OpLanz2
+  // ── FILA 1: Todos los OP-37 | CTE DEI | Todos los OP-40 + Lanzadoras ──
   html2 += '<div style="'+fila+'">';
-  html2 += muneco('Operador 37','OP-37', ops37[0]||null, 44);
-  html2 += muneco('Operador 37','OP-37', ops37[1]||null, 44);
-  html2 += muneco('Op. Lanzadora','LANZ', opLanzs[0]||null, 44);
+  ops37.forEach(function(m){ html2 += muneco('Operador 37','OP-37', m, 44); });
+  if(!ops37.length) html2 += muneco('Operador 37','OP-37', null, 44); // al menos 1 slot vacío
+  opLanzs.slice(0, Math.ceil(opLanzs.length/2)||1).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 44); });
+  if(!opLanzs.length) html2 += muneco('Op. Lanzadora','LANZ', null, 44);
   html2 += '<div style="min-width:6px"></div>';
   html2 += muneco('Cte. DEI','CTE DEI', cte1, 52);
   html2 += '<div style="min-width:6px"></div>';
-  html2 += muneco('Operador 40','OP-40', ops40[0]||null, 44);
-  html2 += muneco('Operador 40','OP-40', ops40[1]||null, 44);
-  html2 += muneco('Op. Lanzadora','LANZ', opLanzs[1]||null, 44);
+  ops40.forEach(function(m){ html2 += muneco('Operador 40','OP-40', m, 44); });
+  if(!ops40.length) html2 += muneco('Operador 40','OP-40', null, 44);
+  opLanzs.slice(Math.ceil(opLanzs.length/2)).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 44); });
   html2 += '</div>';
 
-  // FILA 2: R-FA · [CTE ESC 2] · R-FA
+  // ── FILA 2: Medios Técnicos | CTE Escuadra | Medios Técnicos ──
   html2 += '<div style="'+fila+'">';
-  html2 += muneco('Medios Técnicos','M.TEC', rfa1, 52);
-  html2 += '<div style="min-width:24px"></div>';
+  var mt1 = medTec.slice(0, Math.ceil(medTec.length/2));
+  var mt2 = medTec.slice(Math.ceil(medTec.length/2));
+  if(!mt1.length) mt1 = [null];
+  if(!mt2.length) mt2 = [null];
+  mt1.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 52); });
+  html2 += '<div style="min-width:16px"></div>';
   html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 56);
-  html2 += '<div style="min-width:24px"></div>';
-  html2 += muneco('Medios Técnicos','M.TEC', rfa2, 52);
+  html2 += '<div style="min-width:16px"></div>';
+  mt2.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 52); });
   html2 += '</div>';
 
-  // FILA 3: S S T S S  (SPI SPI TASER SPI SPI)
+  // ── FILA 3: Todos los SPI | TASER | Enfermero ──
   html2 += '<div style="'+fila+'">';
-  html2 += spiSlot(0);
-  html2 += spiSlot(1);
-  html2 += '<div style="min-width:6px"></div>';
+  spis.forEach(function(m){ html2 += muneco('SPI','SPI', m, 44); });
+  if(!spis.length) html2 += muneco('SPI','SPI', null, 44);
+  html2 += '<div style="min-width:4px"></div>';
   html2 += muneco('Op. Taser','TASER', taser, 48);
-  html2 += '<div style="min-width:6px"></div>';
-  html2 += spiSlot(2);
-  html2 += spiSlot(3);
+  if(enfer) html2 += muneco('Enfermero','ENFER', enfer, 48);
   html2 += '</div>';
 
-  // FILA 4: [CTE ESC 3] + 10 Escuderos
+  // ── FILA 4: Lider Escuderos + TODOS los Escuderos ──
   html2 += '<div style="'+fila+'margin-top:4px;align-items:flex-end">';
   html2 += muneco('Lider Escuderos','L-ESC', cte3, 48);
   html2 += '<div style="min-width:4px"></div>';
-  for(var i=0; i<10; i++) html2 += escuderoSlot(i);
+  escuderos.forEach(function(m, i){ html2 += muneco('Escudero','E'+(i+1), m, 40); });
+  if(!escuderos.length){
+    for(var i=0;i<6;i++) html2 += muneco('Escudero','E'+(i+1), null, 40);
+  }
   html2 += '</div>';
 
-  // Contador correcto:
-  // F1: 7 posiciones, F2: 3, F3: 5, F4: 11 = 26 total
-  var cubiertosF1 = [ops37[0],ops37[1],opLanzs[0],cte1,ops40[0],ops40[1],opLanzs[1]].filter(Boolean).length;
-  var cubiertosF2 = [rfa1,cte2,rfa2].filter(Boolean).length;
-  var cubiertosF3 = [spis[0],spis[1],taser,spis[2],spis[3]].filter(Boolean).length;
-  var cubiertosF4 = [cte3].filter(Boolean).length + Math.min(escuderos.length, 10);
-  var totalOk = cubiertosF1 + cubiertosF2 + cubiertosF3 + cubiertosF4;
-  var totalReq = 26;
+  // ── FILA EXTRA: Cargos no mapeados que estén en servicio ──
+  var extras = enSvc.filter(function(m){ return !cargosEnFormacion.has(m.cargo); });
+  if(extras.length){
+    html2 += '<div style="border-top:1px solid rgba(255,255,255,.06);margin-top:6px;padding-top:6px">';
+    html2 += '<div style="text-align:center;font-size:8px;color:var(--muted);margin-bottom:4px">OTROS EN SERVICIO</div>';
+    html2 += '<div style="'+fila+'">';
+    extras.forEach(function(m){
+      html2 += muneco(m.cargo, (m.cargo||'').substring(0,6), m, 48);
+    });
+    html2 += '</div></div>';
+  }
+
+  // ── Totales dinámicos ──
+  var totalEnFormacion = enSvc.filter(function(m){ return cargosEnFormacion.has(m.cargo); }).length;
+  var totalPersonal = personal.length;
+  var totalSvc = enSvc.length;
+
   html2 += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,.06)">'
     +'<div style="display:flex;gap:10px">'
-    +'<span style="font-size:9px;color:#22c55e">● Cubierto</span>'
-    +'<span style="font-size:9px;color:#ef4444">● Falta</span>'
+    +'<span style="font-size:9px;color:#22c55e">● En servicio</span>'
+    +'<span style="font-size:9px;color:#ef4444">● Fuera</span>'
     +'</div>'
-    +'<div style="font-size:9px;color:var(--muted)">'+totalOk+'/'+totalReq+' posiciones</div>'
+    +'<div style="font-size:9px;color:var(--muted)">'+totalSvc+'/'+totalPersonal+' en servicio</div>'
     +'</div>';
 
   html2 += '</div>';
   el.innerHTML = html2;
 }
-
 
 //
 var _dashDonutSegmentos = [];
@@ -7885,33 +7884,43 @@ function dashOcultarNovedadDetalle(){
 function dashDrawCiclo(){
   var el = document.getElementById('dashCiclo');
   if(!el) return;
-  if(!cicloConfig.inicioLaboral){
-    el.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Configure en ⚙️</div>'; return;
+  // Mostrar días del bloque del DEI activo (igual que pestaña Bloque)
+  var esc = (typeof curEscuadra!=='undefined' && curEscuadra!=='all') ? curEscuadra : 'DEI 2';
+  var d = bloqueData[esc];
+  if(!d || !d.fechaInicio){
+    el.innerHTML='<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px">Sin bloque iniciado</div>'; return;
   }
-  var inicio=new Date(cicloConfig.inicioLaboral+'T00:00:00');
-  var hoy=new Date(); hoy.setHours(0,0,0,0);
-  var total=cicloConfig.diasTrabajo+cicloConfig.diasDescanso;
-  var desde=Math.floor((hoy-inicio)/(1000*60*60*24));
-  var diaEn=((desde%total)+total)%total;
-  var enLaboral=diaEn<cicloConfig.diasTrabajo;
-  var num=enLaboral?diaEn+1:diaEn-cicloConfig.diasTrabajo+1;
-  var max=enLaboral?cicloConfig.diasTrabajo:cicloConfig.diasDescanso;
-  var pct=Math.round(num/max*100);
-  var color=enLaboral?(num>=cicloConfig.diasTrabajo-3?'#f97316':'#3b82f6'):'#22c55e';
-  var label=enLaboral?'días laborados':'días descanso';
-  var fase=enLaboral?'EN TURNO':'DESCANSO';
+  var diasBloque = calcDiasBloque(esc);
+  var diasBase   = calcDiasBase(esc);
+  var enPausaB   = d.pausas.some(function(p){return p.inicio&&!p.fin;});
+  var cumplido   = d.cumplido || diasBloque >= DIAS_BLOQUE_TOTAL;
+  var pct        = Math.min(100, Math.round(diasBloque / DIAS_BLOQUE_TOTAL * 100));
+  var color, fase;
+  if(cumplido)        { color='#22c55e'; fase='✅ COMPLETADO'; }
+  else if(enPausaB)   { color='#f97316'; fase='⏸️ EN PERMISO'; }
+  else if(d.activo)   { color='#3b82f6'; fase='🔵 EN CURSO'; }
+  else                { color='var(--muted)'; fase='⚪ INACTIVO'; }
   el.innerHTML=
-    '<div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:6px">'
-    +'<div style="font-size:32px;font-weight:900;color:'+color+';line-height:1">'+num+'</div>'
-    +'<div style="font-size:12px;color:var(--muted);padding-bottom:4px">/'+max+'</div>'
+    '<div style="display:flex;align-items:flex-end;gap:6px;margin-bottom:4px">'
+    +'<div style="font-size:32px;font-weight:900;color:'+color+';line-height:1">'+diasBloque+'</div>'
+    +'<div style="font-size:12px;color:var(--muted);padding-bottom:4px">/'+DIAS_BLOQUE_TOTAL+'</div>'
     +'<div style="flex:1"></div>'
     +'<div style="font-size:9px;font-weight:700;color:'+color+';padding:2px 7px;border-radius:10px;background:'+color+'22">'+fase+'</div>'
     +'</div>'
-    +'<div style="font-size:9px;color:var(--muted);margin-bottom:6px">'+label+'</div>'
-    +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">'
+    +'<div style="font-size:9px;color:var(--muted);margin-bottom:5px">días de bloque búsqueda · '+esc+'</div>'
+    +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:5px">'
     +'<div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:3px;transition:width .5s"></div>'
     +'</div>'
-    +'<div style="font-size:8px;color:var(--muted);margin-top:4px;text-align:right">'+pct+'% del ciclo</div>';
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">'
+    +'<div style="text-align:center;padding:4px 0;background:rgba(239,68,68,.1);border-radius:6px">'
+    +'<div style="font-size:15px;font-weight:900;color:#f87171">'+diasBloque+'</div>'
+    +'<div style="font-size:8px;color:var(--muted)">🔴 Búsqueda</div>'
+    +'</div>'
+    +'<div style="text-align:center;padding:4px 0;background:rgba(59,130,246,.1);border-radius:6px">'
+    +'<div style="font-size:15px;font-weight:900;color:#60a5fa">'+diasBase+'</div>'
+    +'<div style="font-size:8px;color:var(--muted)">🔵 Base</div>'
+    +'</div>'
+    +'</div>';
 }
 
 function dashDrawBloque(){
