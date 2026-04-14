@@ -9794,7 +9794,7 @@ function renderFormacionTactica(){
   var medTec   = getCargoAll('Medios Técnicos');
 
   var cargosEnFormacion = new Set(['Cte. DEI','Cte. Escuadra','Lider Escuderos','Op. Taser',
-    'Enfermero','Operador 37','Operador 40','Op. Lanzadora','SPI','Escudero','Medios Técnicos']);
+    'Enfermero','Operador 37','Operador 40','Op. Lanzadora','SPI','Lider SPI','Escudero','Medios Técnicos']);
 
   var filaC = 'display:flex;align-items:flex-end;justify-content:center;gap:3px;margin-bottom:6px;flex-wrap:wrap;';
 
@@ -9809,34 +9809,43 @@ function renderFormacionTactica(){
   // ── separador ──
   html2 += '<div style="border-top:1px dashed rgba(255,255,255,.08);margin:4px 8px 6px"></div>';
 
-  // ── FILA 1: OP-37s | CTE-ESC | OP-40s (6 en línea) ──
+  // ── FILA 1: OP-37s | Lanzadoras | OP-40s (sin CTE-ESC aquí) ──
   html2 += '<div style="'+filaC+'">';
   ops37.forEach(function(m){ html2 += muneco('Operador 37','OP-37', m, 44); });
   if(!ops37.length) html2 += muneco('Operador 37','OP-37', null, 44);
   opLanzs.slice(0, Math.ceil(opLanzs.length/2)||1).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 44); });
   if(!opLanzs.length) html2 += muneco('Op. Lanzadora','LANZ', null, 44);
-  html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 52);
   ops40.forEach(function(m){ html2 += muneco('Operador 40','OP-40', m, 44); });
   if(!ops40.length) html2 += muneco('Operador 40','OP-40', null, 44);
   opLanzs.slice(Math.ceil(opLanzs.length/2)).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 44); });
   html2 += '</div>';
 
-  // ── FILA 2: Medios Técnicos | SPI | TASER | Enfermero ──
+  // ── FILA 2: CTE-ESC | Medios Técnicos | TASER | Enfermero ──
   html2 += '<div style="'+filaC+'">';
+  html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 52);
   medTec.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 48); });
   if(!medTec.length){ html2 += muneco('Medios Técnicos','M.TEC', null, 48); html2 += muneco('Medios Técnicos','M.TEC', null, 48); }
-  spis.forEach(function(m){ html2 += muneco('SPI','SPI', m, 44); });
-  if(!spis.length) html2 += muneco('SPI','SPI', null, 44);
   html2 += muneco('Op. Taser','TASER', taser, 48);
   if(enfer) html2 += muneco('Enfermero','ENFER', enfer, 48);
   html2 += '</div>';
 
-  // ── FILA 3: L-ESC encima de su línea ──
+  // ── FILA 3a: L-SPI encima de la línea SPI ──
   html2 += '<div style="'+filaC+'margin-bottom:2px">';
+  html2 += muneco('Lider SPI','L-SPI', getCargo('Lider SPI'), 48);
+  html2 += '</div>';
+
+  // ── FILA 3b: SPIs en línea ──
+  html2 += '<div style="'+filaC+'">';
+  spis.forEach(function(m){ html2 += muneco('SPI','SPI', m, 44); });
+  if(!spis.length) html2 += muneco('SPI','SPI', null, 44);
+  html2 += '</div>';
+
+  // ── FILA 4a: L-ESC encima de la línea de escuderos ──
+  html2 += '<div style="'+filaC+'margin-bottom:2px;margin-top:4px">';
   html2 += muneco('Lider Escuderos','L-ESC', cte3, 48);
   html2 += '</div>';
 
-  // ── FILA 4: Escuderos en línea ──
+  // ── FILA 4b: Escuderos en línea ──
   html2 += '<div style="'+filaC+'">';
   escuderos.forEach(function(m, i){ html2 += muneco('Escudero','E'+(i+1), m, 40); });
   if(!escuderos.length){ for(var i=0;i<6;i++) html2 += muneco('Escudero','E'+(i+1), null, 40); }
@@ -9884,7 +9893,7 @@ function renderEquiposAB(esc, enSvc){
   var saved = _loadEquipos(esc);
   var svcIds = enSvc.map(function(m){return m.id;});
 
-  // Sync: remove departed members, add new ones to pool
+  // Sync members
   saved.A    = (saved.A||[]).filter(function(id){ return svcIds.includes(id); });
   saved.B    = (saved.B||[]).filter(function(id){ return svcIds.includes(id); });
   saved.pool = (saved.pool||[]).filter(function(id){ return svcIds.includes(id); });
@@ -9892,44 +9901,61 @@ function renderEquiposAB(esc, enSvc){
   svcIds.forEach(function(id){ if(!assigned.includes(id)) saved.pool.push(id); });
   _saveEquipos(esc, saved);
 
+  // Chip con botones de mover — funciona en móvil y desktop
   function chipHtml(memberId, zona){
     var m = members.find(function(x){return x.id===memberId;});
     if(!m) return '';
-    var nombre = m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||m.name.split(' ')[1]||'');
-    var bg = zona==='A' ? 'rgba(59,130,246,.2)' : zona==='B' ? 'rgba(249,115,22,.2)' : 'rgba(255,255,255,.06)';
-    var bc = zona==='A' ? '#3b82f6' : zona==='B' ? '#f97316' : 'rgba(255,255,255,.15)';
-    var col= zona==='A' ? '#93c5fd' : zona==='B' ? '#fdba74' : 'var(--muted)';
-    return '<div draggable="true" data-id="'+memberId+'" data-zona="'+zona+'" '
-      +'ondragstart="equipoDragStart(event)" '
-      +'style="display:inline-flex;align-items:center;gap:4px;background:'+bg+';border:1px solid '+bc+';'
-      +'border-radius:20px;padding:3px 8px 3px 4px;cursor:grab;user-select:none;margin:2px;white-space:nowrap">'
-      +'<div style="width:16px;height:16px;border-radius:50%;background:'+bc+'33;border:1px solid '+bc+';'
-      +'display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;color:'+col+'">'+m.rank+'</div>'
-      +'<span style="font-size:10px;color:'+col+';font-weight:600">'+nombre.substring(0,12)+'</span>'
+    var nombre = (m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||m.name.split(' ')[1]||'')).substring(0,13);
+    var bg  = zona==='A' ? 'rgba(59,130,246,.18)' : zona==='B' ? 'rgba(249,115,22,.18)' : 'rgba(255,255,255,.07)';
+    var bc  = zona==='A' ? '#3b82f6' : zona==='B' ? '#f97316' : 'rgba(255,255,255,.2)';
+    var col = zona==='A' ? '#93c5fd' : zona==='B' ? '#fdba74' : '#aaa';
+    // Botones según zona actual
+    var btns = '';
+    if(zona==='pool'){
+      btns = '<button onclick="equipoMover(\''+esc+'\',\''+memberId+'\',\'A\')" style="background:rgba(59,130,246,.3);border:none;border-radius:4px;color:#93c5fd;font-size:9px;font-weight:700;padding:1px 5px;cursor:pointer;margin-left:2px">A</button>'
+           + '<button onclick="equipoMover(\''+esc+'\',\''+memberId+'\',\'B\')" style="background:rgba(249,115,22,.3);border:none;border-radius:4px;color:#fdba74;font-size:9px;font-weight:700;padding:1px 5px;cursor:pointer;margin-left:2px">B</button>';
+    } else if(zona==='A'){
+      btns = '<button onclick="equipoMover(\''+esc+'\',\''+memberId+'\',\'B\')" style="background:rgba(249,115,22,.3);border:none;border-radius:4px;color:#fdba74;font-size:9px;font-weight:700;padding:1px 5px;cursor:pointer;margin-left:2px">→B</button>'
+           + '<button onclick="equipoMover(\''+esc+'\',\''+memberId+'\',\'pool\')" style="background:rgba(255,255,255,.1);border:none;border-radius:4px;color:#aaa;font-size:9px;padding:1px 5px;cursor:pointer;margin-left:2px">✕</button>';
+    } else {
+      btns = '<button onclick="equipoMover(\''+esc+'\',\''+memberId+'\',\'A\')" style="background:rgba(59,130,246,.3);border:none;border-radius:4px;color:#93c5fd;font-size:9px;font-weight:700;padding:1px 5px;cursor:pointer;margin-left:2px">→A</button>'
+           + '<button onclick="equipoMover(\''+esc+'\',\''+memberId+'\',\'pool\')" style="background:rgba(255,255,255,.1);border:none;border-radius:4px;color:#aaa;font-size:9px;padding:1px 5px;cursor:pointer;margin-left:2px">✕</button>';
+    }
+    return '<div style="display:inline-flex;align-items:center;gap:3px;background:'+bg+';border:1px solid '+bc+';'
+      +'border-radius:16px;padding:3px 6px 3px 5px;margin:2px;white-space:nowrap">'
+      +'<span style="font-size:8px;font-weight:700;color:'+bc+'">'+m.rank+'</span>'
+      +'<span style="font-size:10px;color:'+col+';font-weight:600">'+nombre+'</span>'
+      + btns
       +'</div>';
   }
 
   function zonaHtml(zona, ids, label, color, bg){
-    var chips = ids.map(function(id){return chipHtml(id,zona);}).join('');
-    return '<div data-zona="'+zona+'" ondragover="equipoDragOver(event)" ondrop="equipoDrop(event,\''+zona+'\',\''+esc+'\')" '
-      +'style="flex:1;min-height:54px;background:'+bg+';border:2px dashed '+color+'44;border-radius:10px;padding:6px 8px">'
-      +'<div style="font-size:9px;font-weight:700;color:'+color+';margin-bottom:4px;letter-spacing:.5px">'+label+'</div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:2px;min-height:28px">'+chips+'</div>'
+    var chips = ids.length
+      ? ids.map(function(id){return chipHtml(id,zona);}).join('')
+      : '<div style="font-size:9px;color:rgba(255,255,255,.2);padding:4px">Sin asignar</div>';
+    return '<div style="flex:1;background:'+bg+';border:1px solid '+color+'44;border-radius:10px;padding:6px 8px;min-height:60px">'
+      +'<div style="font-size:9px;font-weight:700;color:'+color+';margin-bottom:6px;letter-spacing:.5px">'+label+' <span style="font-weight:400;opacity:.7">('+ids.length+')</span></div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:1px">'+chips+'</div>'
       +'</div>';
   }
 
-  var poolChips = saved.pool.map(function(id){return chipHtml(id,'pool');}).join('');
-  var html2 = '<div style="border-top:1px solid rgba(255,255,255,.06);padding-top:10px;margin-top:2px">'
+  var poolChips = saved.pool.length
+    ? saved.pool.map(function(id){return chipHtml(id,'pool');}).join('')
+    : '<div style="font-size:9px;color:rgba(255,255,255,.2);padding:4px">Todos asignados ✓</div>';
+
+  var html2 = '<div style="border-top:1px solid rgba(255,255,255,.08);padding-top:10px;margin-top:4px">'
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
     +'<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px">⚡ Equipos de Reacción</div>'
-    +'<button onclick="equiposAutoDistribuir(\''+esc+'\')" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:3px 8px;color:var(--muted);cursor:pointer;font-size:9px">⚡ Auto</button>'
+    +'<div style="display:flex;gap:4px">'
+    +'<button onclick="equiposAutoDistribuir(\''+esc+'\')" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:3px 8px;color:var(--muted);cursor:pointer;font-size:9px">⚡ Auto 50/50</button>'
+    +'<button onclick="equiposLimpiar(\''+esc+'\')" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:3px 8px;color:var(--muted);cursor:pointer;font-size:9px">↺ Limpiar</button>'
+    +'</div>'
     +'</div>'
     // Pool
-    +(saved.pool.length ? '<div data-zona="pool" ondragover="equipoDragOver(event)" ondrop="equipoDrop(event,\'pool\',\''+esc+'\')" '
-      +'style="background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.1);border-radius:8px;padding:5px 8px;margin-bottom:6px;min-height:36px">'
-      +'<div style="font-size:8px;color:var(--muted);margin-bottom:3px">SIN ASIGNAR — arrastra hacia A o B</div>'
-      +'<div style="display:flex;flex-wrap:wrap">'+poolChips+'</div>'
-      +'</div>' : '')
+    +'<div style="background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);border-radius:8px;padding:6px 8px;margin-bottom:6px">'
+    +'<div style="font-size:8px;color:var(--muted);margin-bottom:4px;font-weight:700">SIN ASIGNAR — toca A o B para mover</div>'
+    +'<div style="display:flex;flex-wrap:wrap">'+poolChips+'</div>'
+    +'</div>'
     // A y B
     +'<div style="display:flex;gap:6px">'
     + zonaHtml('A', saved.A, '🔵 EQUIPO A', '#3b82f6', 'rgba(59,130,246,.06)')
@@ -9940,37 +9966,37 @@ function renderEquiposAB(esc, enSvc){
   el.innerHTML = html2;
 }
 
-function equipoDragStart(ev){
-  ev.dataTransfer.setData('memberId', ev.target.dataset.id);
-  ev.dataTransfer.setData('fromZona', ev.target.dataset.zona);
-}
-function equipoDragOver(ev){ ev.preventDefault(); }
-function equipoDrop(ev, toZona, esc){
-  ev.preventDefault();
-  var id = ev.dataTransfer.getData('memberId');
-  var from = ev.dataTransfer.getData('fromZona');
-  if(!id || from === toZona) return;
+function equipoMover(esc, memberId, toZona){
   var saved = _loadEquipos(esc);
-  ['A','B','pool'].forEach(function(z){ saved[z] = (saved[z]||[]).filter(function(x){return x!==id;}); });
-  (saved[toZona]||(saved[toZona]=[])).push(id);
+  ['A','B','pool'].forEach(function(z){ saved[z]=(saved[z]||[]).filter(function(x){return x!==memberId;}); });
+  (saved[toZona]||(saved[toZona]=[])).push(memberId);
   _saveEquipos(esc, saved);
-  var enSvc = members.filter(function(m){
-    var escActual = (typeof curEscuadra!=='undefined'&&curEscuadra!=='all')?curEscuadra:'DEI 2';
-    return m.escuadra===escActual && !m.esEspejo && m.status==='Servicio';
-  });
+  var escActual = (typeof curEscuadra!=='undefined'&&curEscuadra!=='all')?curEscuadra:'DEI 2';
+  var enSvc = members.filter(function(m){ return m.escuadra===escActual && !m.esEspejo && m.status==='Servicio'; });
   renderEquiposAB(esc, enSvc);
 }
+
+function equiposLimpiar(esc){
+  var saved = _loadEquipos(esc);
+  var todos = saved.A.concat(saved.B, saved.pool);
+  saved.A=[]; saved.B=[]; saved.pool=todos;
+  _saveEquipos(esc, saved);
+  var enSvc = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo && m.status==='Servicio'; });
+  renderEquiposAB(esc, enSvc);
+  showToast('↺ Equipos limpiados');
+}
+
+function equipoDragStart(ev){ ev.dataTransfer.setData('memberId', ev.target.dataset.id||''); }
+function equipoDragOver(ev){ ev.preventDefault(); }
 function equiposAutoDistribuir(esc){
   var saved = _loadEquipos(esc);
   var todos = saved.A.concat(saved.B, saved.pool);
   var mid = Math.ceil(todos.length/2);
-  saved.A = todos.slice(0, mid);
-  saved.B = todos.slice(mid);
-  saved.pool = [];
+  saved.A=todos.slice(0,mid); saved.B=todos.slice(mid); saved.pool=[];
   _saveEquipos(esc, saved);
   var enSvc = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo && m.status==='Servicio'; });
   renderEquiposAB(esc, enSvc);
-  showToast('⚡ Distribuido automáticamente A:'+saved.A.length+' / B:'+saved.B.length);
+  showToast('⚡ A:'+saved.A.length+' / B:'+saved.B.length);
 }
 
 //
@@ -10451,45 +10477,33 @@ function initData(){
   // Si no hay datos guardados, cargar desde el Excel importado
   // members already loaded above at variable declaration
 
-  // Pre-load Minuta turno (usa mismo motor que bitácora)
+  // Pre-load Minuta turno — siempre verifica miembros
   var turnos2 = ld('g9_turnos2', []);
-  if(!turnos2.find(function(t){ return t.id==='min001'; })){
-    turnos2.unshift({
-      id:'min001',
-      nombre:'Minuta DEI 2',
-      tipo:'semanal_laboral',
-      escuadra:'DEI 2',
-      miembros:[
-        {memberId:'m0044'},{memberId:'m0050'},{memberId:'m0047'},
-        {memberId:'m0043'},{memberId:'m0042'},{memberId:'m0049'},
-        {memberId:'m0048'},{memberId:'m0064'},{memberId:'m0045'},
-        {memberId:'m0063'}
-      ],
-      historial:[],
-      diasLaboralesPorTurno:7
-    });
-    sv('g9_turnos2', turnos2);
+  var _min = turnos2.find(function(t){ return t.id==='min001'; });
+  if(!_min){
+    _min = {id:'min001',nombre:'Minuta DEI 2',tipo:'semanal_laboral',escuadra:'DEI 2',miembros:[],historial:[],diasLaboralesPorTurno:7};
+    turnos2.unshift(_min);
   }
+  if(!_min.miembros || _min.miembros.length===0){
+    _min.miembros = [{memberId:'m0044'},{memberId:'m0050'},{memberId:'m0047'},
+      {memberId:'m0043'},{memberId:'m0042'},{memberId:'m0049'},
+      {memberId:'m0048'},{memberId:'m0064'},{memberId:'m0045'},{memberId:'m0063'}];
+  }
+  sv('g9_turnos2', turnos2);
 
-  // Pre-load Mando de Semana turno
+  // Pre-load Mando de Semana — siempre verifica miembros
   var turnos3 = ld('g9_turnos3', []);
-  if(!turnos3.find(function(t){ return t.id==='mando001'; })){
-    turnos3.unshift({
-      id:'mando001',
-      nombre:'Mando de Semana DEI 2',
-      tipo:'semanal_laboral',
-      escuadra:'DEI 2',
-      miembros:[
-        {memberId:'m0044'},{memberId:'m0050'},{memberId:'m0047'},
-        {memberId:'m0043'},{memberId:'m0042'},{memberId:'m0049'},
-        {memberId:'m0048'},{memberId:'m0064'},{memberId:'m0045'},
-        {memberId:'m0063'}
-      ],
-      historial:[],
-      diasLaboralesPorTurno:7
-    });
-    sv('g9_turnos3', turnos3);
+  var _man = turnos3.find(function(t){ return t.id==='mando001'; });
+  if(!_man){
+    _man = {id:'mando001',nombre:'Mando de Semana DEI 2',tipo:'semanal_laboral',escuadra:'DEI 2',miembros:[],historial:[],diasLaboralesPorTurno:7};
+    turnos3.unshift(_man);
   }
+  if(!_man.miembros || _man.miembros.length===0){
+    _man.miembros = [{memberId:'m0044'},{memberId:'m0050'},{memberId:'m0047'},
+      {memberId:'m0043'},{memberId:'m0042'},{memberId:'m0049'},
+      {memberId:'m0048'},{memberId:'m0064'},{memberId:'m0045'},{memberId:'m0063'}];
+  }
+  sv('g9_turnos3', turnos3);
 
   // Pre-load bitácora turno if not already present
   var existeBita = turnos.find(function(t){ return t.id==='bita001'; });
