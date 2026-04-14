@@ -3266,6 +3266,16 @@ function renderMinuta(){
         +(lastEntry?'<div style="font-size:9.5px;color:var(--muted)">Último: 📅 '+fmtDate(lastEntry.fecha)+(lastEntry.obs?'<span style="font-style:italic;color:var(--cyan)"> · '+lastEntry.obs+'</span>':'')+'</div>':'<div style="font-size:9.5px;color:var(--muted)">Sin registros</div>')
         +(totalVeces>0?'<div style="font-size:9px;color:var(--cyan);margin-top:1px">📋 Ha llevado: <strong>'+totalVeces+'</strong> '+(totalVeces!==1?'veces':'vez')+'</div>':'')
         +(esPend?'<div style="font-size:9px;color:var(--yellow);margin-top:1px">⏳ Pendiente al regresar de '+esPend.motivo+'</div>':'')
+        +((lastH&&lastH.memberId===m.id)?(function(){
+          var _dt=getDiasLaboralesDesde(lastH.fecha);
+          var _dtTurno=t.diasLaboralesPorTurno||7;
+          var _dtFaltan=Math.max(0,_dtTurno-_dt);
+          var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
+          return '<div style="font-size:10px;margin-top:3px;padding:4px 8px;border-radius:6px;background:'+_dtColor+'18;border:1px solid '+_dtColor+'44;color:'+_dtColor+';font-weight:700">'
+            +'📋 TIENE LA MINUTA: '+_dt+' día'+(_dt!==1?'s':'')+' laborado'+(_dt!==1?'s':'')+' · '
+            +(_dtFaltan===0?'¡Toca entregar!':_dtFaltan+' día'+(_dtFaltan!==1?'s':'')+' restante'+(_dtFaltan!==1?'s':''))
+            +'</div>';
+        })():'')
         +'</div>'
         +(isNext?'<div style="font-size:9px;font-weight:700;color:var(--gold2);background:rgba(200,146,42,.2);padding:2px 7px;border-radius:8px">PRÓXIMO</div>':'')
         +(esPend&&!isNext?'<div style="font-size:9px;color:var(--yellow);background:rgba(251,191,36,.15);padding:2px 7px;border-radius:8px">PENDIENTE</div>':'')
@@ -3676,15 +3686,17 @@ function renderTurnos(){
       var vecesHtml=totalVeces>0
         ?'<div style="font-size:9px;color:var(--cyan);margin-top:1px">📋 Ha llevado: <strong>'+totalVeces+'</strong> '+(totalVeces!==1?'veces':'vez')+'</div>'
         :'';
-      // Días transcurridos/restantes para quien tiene la bitácora ahora
+      // Días transcurridos para quien TIENE la bitácora ahora (el último en recibirla)
       var diasActualHtml='';
-      if(isLast && !isNext && lastEntry){
-        var _dt=getDiasLaboralesDesde(lastEntry.fecha);
+      if(lastH && lastH.memberId===m.id){
+        // Este funcionario es quien tiene la bitácora actualmente
+        var _dt=getDiasLaboralesDesde(lastH.fecha);
         var _dtTurno=t.diasLaboralesPorTurno||7;
         var _dtFaltan=Math.max(0,_dtTurno-_dt);
         var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
-        diasActualHtml='<div style="font-size:9px;margin-top:2px;color:'+_dtColor+';font-weight:700">'
-          +(_dtFaltan===0?'🔔 ¡Toca entregar hoy!':'⏱️ Lleva '+_dt+' día'+(  _dt!==1?'s':'')+' · faltan '+_dtFaltan)
+        diasActualHtml='<div style="font-size:10px;margin-top:3px;padding:4px 8px;border-radius:6px;background:'+_dtColor+'18;border:1px solid '+_dtColor+'44;color:'+_dtColor+';font-weight:700">'
+          +'📖 TIENE LA BITÁCORA: '+_dt+' día'+(  _dt!==1?'s':'')+' laborado'+(  _dt!==1?'s':'')+' · '
+          +(_dtFaltan===0?'¡Toca entregar!':_dtFaltan+' día'+(_dtFaltan!==1?'s':'')+' restante'+(_dtFaltan!==1?'s':''))
           +'</div>';
       }
       var pendHtml=esPendiente
@@ -4840,43 +4852,41 @@ function renderBloque(){
 
     <!-- Registro diario Bloque/Base -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:10px">📅 Registro diario de operación</div>
-      ${d.activo&&!completo?`
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Marca hoy como:</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-        <button onclick="marcarDiaBusqueda('${dei}')"
-          style="padding:10px;border-radius:8px;border:2px solid ${(d.diasDiario&&d.diasDiario[localDateStr()]==='busqueda')?'#ef4444':'rgba(239,68,68,.3)'};background:${(d.diasDiario&&d.diasDiario[localDateStr()]==='busqueda')?'rgba(239,68,68,.25)':'rgba(239,68,68,.08)'};color:${(d.diasDiario&&d.diasDiario[localDateStr()]==='busqueda')?'#f87171':'var(--muted)'};cursor:pointer;font-size:12px;font-weight:700">
-          🔴 Bloque de Búsqueda
-        </button>
-        <button onclick="marcarDiaBase('${dei}')"
-          style="padding:10px;border-radius:8px;border:2px solid ${(d.diasDiario&&d.diasDiario[localDateStr()]==='base')?'#3b82f6':'rgba(59,130,246,.3)'};background:${(d.diasDiario&&d.diasDiario[localDateStr()]==='base')?'rgba(59,130,246,.25)':'rgba(59,130,246,.08)'};color:${(d.diasDiario&&d.diasDiario[localDateStr()]==='base')?'#60a5fa':'var(--muted)'};cursor:pointer;font-size:12px;font-weight:700">
-          🔵 Disponible en Base
-        </button>
-      </div>`:''}
+      <div style="display:flex;align-items:center;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--text)">📅 Registro diario de operación</div>
+        <button onclick="agregarDiaDiario('${dei}')" style="margin-left:auto;background:rgba(200,146,42,.15);border:1px solid var(--gold);border-radius:6px;padding:4px 10px;color:var(--gold2);font-size:10px;cursor:pointer;font-weight:700">+ Agregar día</button>
+      </div>
       ${(()=>{
-        if(!d.diasDiario||!Object.keys(d.diasDiario).length) return '<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px">Sin registros aún</div>';
-        var entries=Object.entries(d.diasDiario).sort(function(a,b){return b[0].localeCompare(a[0]);}).slice(0,14);
+        if(!d.diasDiario||!Object.keys(d.diasDiario).length) return '<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px">Sin registros. Toca "+ Agregar día" para registrar días pasados o de hoy.</div>';
+        var allEntries=Object.entries(d.diasDiario).sort(function(a,b){return b[0].localeCompare(a[0]);});
         var busqCount=Object.values(d.diasDiario).filter(function(v){return v==='busqueda';}).length;
         var baseCount=Object.values(d.diasDiario).filter(function(v){return v==='base';}).length;
-        var summary='<div style="display:flex;gap:12px;margin-bottom:8px">'
-          +'<span style="font-size:10px;color:#f87171;font-weight:700">🔴 Búsqueda: '+busqCount+' día'+(busqCount!==1?'s':'')+'</span>'
-          +'<span style="font-size:10px;color:#60a5fa;font-weight:700">🔵 Base: '+baseCount+' día'+(baseCount!==1?'s':'')+'</span>'
+        var summary='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
+          +'<div style="text-align:center;padding:8px;background:rgba(239,68,68,.1);border-radius:8px">'
+          +'<div style="font-size:22px;font-weight:900;color:#f87171">'+busqCount+'</div>'
+          +'<div style="font-size:9px;color:var(--muted)">🔴 Bloque Búsqueda</div>'
+          +'</div>'
+          +'<div style="text-align:center;padding:8px;background:rgba(59,130,246,.1);border-radius:8px">'
+          +'<div style="font-size:22px;font-weight:900;color:#60a5fa">'+baseCount+'</div>'
+          +'<div style="font-size:9px;color:var(--muted)">🔵 Disponible Base</div>'
+          +'</div>'
           +'</div>';
-        var _dei_local=dei;
-        var rows=entries.map(function(e){
+        var _d2=dei;
+        var rows=allEntries.map(function(e){
           var tipo=e[1]==='busqueda'?'🔴 Búsqueda':'🔵 Base';
           var col=e[1]==='busqueda'?'#f87171':'#60a5fa';
-          return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">'
+          return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px">'
             +'<span style="color:var(--muted);min-width:75px">'+fmtDate(e[0])+'</span>'
-            +'<span style="color:'+col+';font-weight:700">'+tipo+'</span>'
-            +'<button onclick="quitarDiaDiario(&quot;'+_dei_local+'&quot;,&quot;'+e[0]+'&quot;)" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px">✕</button>'
+            +'<span style="color:'+col+';font-weight:700;flex:1">'+tipo+'</span>'
+            +'<button onclick="toggleTipoDia(&quot;'+_d2+'&quot;,&quot;'+e[0]+'&quot;)" style="background:rgba(200,146,42,.15);border:1px solid var(--gold);border-radius:4px;padding:1px 7px;color:var(--gold2);font-size:9px;cursor:pointer;margin-right:4px">↔️</button>'
+            +'<button onclick="quitarDiaDiario(&quot;'+_d2+'&quot;,&quot;'+e[0]+'&quot;)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px">✕</button>'
             +'</div>';
         }).join('');
-        return summary+rows+(Object.keys(d.diasDiario).length>14?'<div style="font-size:9px;color:var(--muted);text-align:center;margin-top:4px">Mostrando últimos 14 días</div>':'');
+        return summary+rows;
       })()}
     </div>
 
-    <!-- Resumen 3 DEI -->
+        <!-- Resumen 3 DEI -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px">
       <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">📊 Resumen rotación GUDMO-9</div>
       ${['DEI 1','DEI 2','DEI 3'].map(d2=>{
@@ -4893,6 +4903,79 @@ function renderBloque(){
       }).join('')}
     </div>
   `;
+}
+
+function agregarDiaDiario(dei){
+  // Modal para registrar un día (hoy o pasado) como Búsqueda o Base
+  var d = bloqueData[dei];
+  if(!d.diasDiario) d.diasDiario={};
+
+  document.getElementById('mTitle').textContent='📅 Registrar día de operación';
+  document.getElementById('mSubtitle').textContent=dei;
+  document.getElementById('statusGrid').innerHTML=
+    '<div class="fg" style="grid-column:1/-1">'
+    +'<label>Fecha (puedes poner días pasados)</label>'
+    +'<input type="date" id="ddFecha" value="'+localDateStr()+'" max="'+localDateStr()+'">'
+    +'</div>'
+    +'<div class="fg" style="grid-column:1/-1">'
+    +'<label>Tipo de operación</label>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">'
+    +'<button id="btnBusq" onclick="selTipoDiario(\'busqueda\')" style="padding:12px;border-radius:8px;border:2px solid rgba(239,68,68,.4);background:rgba(239,68,68,.08);color:var(--muted);cursor:pointer;font-size:13px;font-weight:700;transition:all .2s">🔴 Bloque Búsqueda</button>'
+    +'<button id="btnBase" onclick="selTipoDiario(\'base\')" style="padding:12px;border-radius:8px;border:2px solid rgba(59,130,246,.4);background:rgba(59,130,246,.08);color:var(--muted);cursor:pointer;font-size:13px;font-weight:700;transition:all .2s">🔵 Disponible Base</button>'
+    +'</div>'
+    +'<input type="hidden" id="ddTipo" value="">'
+    +'<div id="ddTipoMsg" style="font-size:10px;color:var(--muted);margin-top:6px">Selecciona el tipo de operación</div>'
+    +'</div>';
+  document.getElementById('obsInput').style.display='none';
+  document.getElementById('fechaFinGroup').style.display='none';
+  document.getElementById('histDateGroup').style.display='none';
+  document.querySelectorAll('.btn-row')[0].innerHTML=
+    '<button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>'
+    +'<button class="btn btn-primary" onclick="guardarDiaDiario(\''+dei+'\')">💾 Guardar</button>';
+  document.querySelectorAll('.btn-row')[1].style.display='none';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function selTipoDiario(tipo){
+  document.getElementById('ddTipo').value = tipo;
+  var btnB = document.getElementById('btnBusq');
+  var btnBase = document.getElementById('btnBase');
+  var msg = document.getElementById('ddTipoMsg');
+  if(tipo==='busqueda'){
+    btnB.style.borderColor='#ef4444'; btnB.style.background='rgba(239,68,68,.25)'; btnB.style.color='#f87171';
+    btnBase.style.borderColor='rgba(59,130,246,.4)'; btnBase.style.background='rgba(59,130,246,.08)'; btnBase.style.color='var(--muted)';
+    msg.textContent='✅ Bloque de Búsqueda seleccionado';
+    msg.style.color='#f87171';
+  } else {
+    btnBase.style.borderColor='#3b82f6'; btnBase.style.background='rgba(59,130,246,.25)'; btnBase.style.color='#60a5fa';
+    btnB.style.borderColor='rgba(239,68,68,.4)'; btnB.style.background='rgba(239,68,68,.08)'; btnB.style.color='var(--muted)';
+    msg.textContent='✅ Disponible en Base seleccionado';
+    msg.style.color='#60a5fa';
+  }
+}
+
+function guardarDiaDiario(dei){
+  var fechaEl = document.getElementById('ddFecha');
+  var tipoEl  = document.getElementById('ddTipo');
+  if(!fechaEl||!tipoEl) return;
+  var fecha = fechaEl.value;
+  var tipo  = tipoEl.value;
+  if(!fecha){ showToast('⚠️ Selecciona una fecha','#f97316'); return; }
+  if(!tipo){ showToast('⚠️ Selecciona el tipo de operación','#f97316'); return; }
+  if(!bloqueData[dei].diasDiario) bloqueData[dei].diasDiario={};
+  bloqueData[dei].diasDiario[fecha] = tipo;
+  saveBloque();
+  cancelTurnoModal();
+  renderBloque();
+  showToast((tipo==='busqueda'?'🔴 Búsqueda':'🔵 Base')+' registrado para '+fmtDate(fecha));
+}
+
+function toggleTipoDia(dei, fecha){
+  if(!bloqueData[dei].diasDiario) return;
+  var actual = bloqueData[dei].diasDiario[fecha];
+  bloqueData[dei].diasDiario[fecha] = actual==='busqueda' ? 'base' : 'busqueda';
+  saveBloque(); renderBloque();
+  showToast('↔️ Cambiado a '+(bloqueData[dei].diasDiario[fecha]==='busqueda'?'Búsqueda':'Base'));
 }
 
 function marcarDiaBusqueda(dei){
