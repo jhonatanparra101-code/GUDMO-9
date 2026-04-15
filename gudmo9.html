@@ -1300,6 +1300,20 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   </div>
 </div>
 
+<!-- MODAL BITÁCORA / MINUTA / MANDO — completamente independiente del editModal -->
+<div class="modal-overlay" id="turnoEntregaModal" style="z-index:1050">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="tem_title">Entregar</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px" id="tem_subtitle"></div>
+    <div id="tem_body"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost" onclick="cerrarTurnoEntregaModal()" style="flex:1">Cancelar</button>
+      <button class="btn btn-primary" id="tem_confirm_btn" style="flex:2">✅ Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT MODAL -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
@@ -3810,7 +3824,7 @@ function renderTurnos(){
         +_saltAviso+_pendAviso
         +diasMsg
         +'</div>'
-        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='marcarCumplido(this.dataset.tid)'>✅ Entregar</button>"
+        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;entregar&quot;)'>✅ Entregar</button>"
         +'</div>'
         +'</div>';
     }
@@ -3896,8 +3910,10 @@ function renderTurnos(){
       +'<div style="font-size:17px;font-weight:700;letter-spacing:1px;color:var(--gold2)">'+t.nombre+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+t.escuadra+' · '+t.miembros.length+' personas</div>'
       +'</div>'
-      +"<button data-tid='"+t.id+"' onclick='reordenarTurno(this.dataset.tid)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
-      +"<button data-tid='"+t.id+"' onclick='deleteTurno(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;calendario&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Ver calendario'>📅</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;miembros&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Editar miembros'>👥</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;reordenar&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
+      +"<button data-tid='"+t.id+"' onclick='eliminarTurno2(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
       +'</div>'
       +proximoBanner
       +'<div style="margin-bottom:4px">'
@@ -4761,6 +4777,192 @@ function configurarCiclo(){
 
 
 
+// ── MOTOR MODAL INDEPENDIENTE PARA BITÁCORA/MINUTA/MANDO ──────────────────
+// Usa turnoEntregaModal — completamente separado del editModal de nómina
+
+var _tem = { turnosRef: null, storageKey: null, renderFn: null, currentTId: null, mode: null };
+
+function abrirTurnoEntregaModal(tId, turnosRef, storageKey, renderFn, tipo){
+  _tem.turnosRef  = turnosRef;
+  _tem.storageKey = storageKey;
+  _tem.renderFn   = renderFn;
+  _tem.currentTId = tId;
+  _tem.mode       = tipo; // 'entregar'|'editar'|'reordenar'|'miembros'|'addTurno'
+
+  var t = turnosRef.find(function(x){return x.id===tId;});
+  if(!t && tipo!=='addTurno') return;
+
+  var icon = storageKey==='g9_turnos2' ? '📋' : storageKey==='g9_turnos3' ? '🎖️' : '📖';
+  var label = storageKey==='g9_turnos2' ? 'Minuta' : storageKey==='g9_turnos3' ? 'Mando de Semana' : 'Bitácora';
+
+  var title = '', body = '', confirmLabel = '';
+
+  if(tipo==='entregar'){
+    var optsHtml = (t.miembros||[]).map(function(mm){
+      var m = members.find(function(x){return x.id===mm.memberId;});
+      return m ? '<option value="'+m.id+'">'+m.rank+' '+m.name+(m.status!=='Servicio'?' ('+m.status+')':'')+'</option>' : '';
+    }).join('');
+    title = icon+' Entregar '+label;
+    body = '<div class="fg" style="grid-column:1/-1">'
+      +'<label>¿A quién le entrego?</label>'
+      +'<select id="tem_dest" style="font-size:13px;padding:8px">'+optsHtml+'</select>'
+      +'</div>'
+      +'<div class="fg" style="margin-top:10px">'
+      +'<label>Fecha de entrega</label>'
+      +'<input type="date" id="tem_fecha" value="'+localDateStr()+'">'
+      +'</div>'
+      +'<div class="fg" style="margin-top:10px">'
+      +'<label>Observación <span style="color:var(--muted);font-weight:400">(opcional)</span></label>'
+      +'<textarea id="tem_obs" rows="2" placeholder="Ej: al día, novedad pendiente..." style="resize:none;font-size:12px;width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text)"></textarea>'
+      +'</div>';
+    confirmLabel = '✅ Confirmar entrega';
+  } else if(tipo==='reordenar'){
+    title = '↕️ Reordenar '+label+' — '+t.nombre;
+    body = _tem_buildReordenar(t);
+    confirmLabel = '✓ Cerrar';
+  } else if(tipo==='miembros'){
+    title = '👥 Miembros — '+t.nombre;
+    body = _tem_buildMiembros(t);
+    confirmLabel = '💾 Guardar';
+  } else if(tipo==='calendario'){
+    title = '📅 Calendario — '+t.nombre;
+    body = _tem_buildCalendario(t);
+    confirmLabel = '✓ Cerrar';
+  }
+
+  document.getElementById('tem_title').textContent = title;
+  document.getElementById('tem_subtitle').textContent = t ? t.nombre : '';
+  document.getElementById('tem_body').innerHTML = body;
+  document.getElementById('tem_confirm_btn').textContent = confirmLabel;
+  document.getElementById('tem_confirm_btn').onclick = function(){ _tem_confirm(); };
+  document.getElementById('turnoEntregaModal').classList.add('open');
+}
+
+function cerrarTurnoEntregaModal(){
+  document.getElementById('turnoEntregaModal').classList.remove('open');
+}
+
+function _tem_confirm(){
+  var tipo = _tem.mode;
+  var tId  = _tem.currentTId;
+  var ref  = _tem.turnosRef;
+  var key  = _tem.storageKey;
+  var fn   = _tem.renderFn;
+
+  if(tipo==='entregar'){
+    var t = ref.find(function(x){return x.id===tId;});
+    if(!t) return;
+    var destEl  = document.getElementById('tem_dest');
+    var fechaEl = document.getElementById('tem_fecha');
+    var obsEl   = document.getElementById('tem_obs');
+    var memberId = destEl ? destEl.value : '';
+    var fecha    = fechaEl ? fechaEl.value : localDateStr();
+    var obs      = obsEl ? obsEl.value.trim() : '';
+    if(!memberId){ showToast('⚠️ Selecciona un funcionario','#f97316'); return; }
+    if(!t.historial) t.historial = [];
+    t.historial.push({memberId:memberId, fecha:fecha, obs:obs});
+    sv(key, ref);
+    cerrarTurnoEntregaModal();
+    fn();
+    var m = members.find(function(x){return x.id===memberId;});
+    var label = key==='g9_turnos2'?'Minuta':key==='g9_turnos3'?'Mando de Semana':'Bitácora';
+    showToast('✅ '+label+' entregada a '+(m?m.rank+' '+m.name.split(' ')[0]:'funcionario'));
+
+  } else if(tipo==='reordenar' || tipo==='calendario'){
+    cerrarTurnoEntregaModal();
+
+  } else if(tipo==='miembros'){
+    var t = ref.find(function(x){return x.id===tId;});
+    if(!t) return;
+    var sel = document.getElementById('tem_miembros_sel');
+    if(!sel) return;
+    t.miembros = Array.from(sel.selectedOptions).map(function(o){return {memberId:o.value};});
+    sv(key, ref);
+    cerrarTurnoEntregaModal();
+    fn();
+    showToast('✅ Miembros actualizados');
+  }
+}
+
+function _tem_buildReordenar(t){
+  if(!t.miembros||!t.miembros.length) return '<div style="color:var(--muted);font-size:12px">Sin miembros</div>';
+  return '<div id="tem_reorder_list">'
+    + t.miembros.map(function(mm,i){
+        var m = members.find(function(x){return x.id===mm.memberId;});
+        var nombre = m ? m.rank+' '+m.name.split(' ')[0]+' '+m.name.split(' ')[2] : mm.memberId;
+        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">'
+          +'<span style="flex:1;font-size:12px;color:var(--text)">'+nombre+'</span>'
+          +'<button onclick="_tem_moverMiembro('+i+',-1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 6px">▲</button>'
+          +'<button onclick="_tem_moverMiembro('+i+',1)" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 6px">▼</button>'
+          +'</div>';
+      }).join('')
+    +'</div>';
+}
+
+function _tem_moverMiembro(idx, dir){
+  var t = _tem.turnosRef.find(function(x){return x.id===_tem.currentTId;});
+  if(!t) return;
+  var newIdx = idx+dir;
+  if(newIdx<0||newIdx>=t.miembros.length) return;
+  var tmp = t.miembros[idx]; t.miembros[idx]=t.miembros[newIdx]; t.miembros[newIdx]=tmp;
+  sv(_tem.storageKey, _tem.turnosRef);
+  document.getElementById('tem_body').innerHTML = _tem_buildReordenar(t);
+}
+
+function _tem_buildMiembros(t){
+  var esc = t.escuadra||'DEI 2';
+  var escMems = members.filter(function(m){return m.escuadra===esc;});
+  var selIds = (t.miembros||[]).map(function(mm){return mm.memberId;});
+  var opts = escMems.map(function(m){
+    var sel = selIds.includes(m.id) ? ' selected' : '';
+    return '<option value="'+m.id+'"'+sel+'>'+m.rank+' '+m.name+'</option>';
+  }).join('');
+  return '<label style="font-size:10px;color:var(--muted)">Selecciona los miembros (mantén presionado para varios)</label>'
+    +'<select id="tem_miembros_sel" multiple style="width:100%;height:160px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:4px;color:var(--text);font-size:11px;margin-top:6px">'+opts+'</select>';
+}
+
+function _tem_buildCalendario(t){
+  if(!t.historial||!t.historial.length) return '<div style="color:var(--muted);font-size:12px;padding:8px">Sin entregas registradas aún.</div>';
+  var sorted = t.historial.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  // Build calendar grid showing last 3 months
+  var html = '<div style="font-size:10px;color:var(--muted);margin-bottom:10px">Historial de entregas</div>';
+  // Table view
+  html += '<div style="overflow-x:auto">';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html += '<tr style="border-bottom:1px solid var(--border)">'
+    +'<th style="text-align:left;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Fecha</th>'
+    +'<th style="text-align:left;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Funcionario</th>'
+    +'<th style="text-align:left;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Obs</th>'
+    +'</tr>';
+  sorted.forEach(function(h, i){
+    var m = members.find(function(x){return x.id===h.memberId;});
+    var nombre = m ? m.rank+' '+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||'') : h.memberId;
+    var bg = i===0 ? 'rgba(34,197,94,.08)' : 'transparent';
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);background:'+bg+'">'
+      +'<td style="padding:6px 4px;color:var(--text);white-space:nowrap">'+fmtDate(h.fecha)+'</td>'
+      +'<td style="padding:6px 4px;color:var(--text)">'+nombre+(i===0?'<span style="font-size:8px;color:#22c55e;margin-left:4px">ACTUAL</span>':'')+'</td>'
+      +'<td style="padding:6px 4px;color:var(--muted);font-size:10px">'+(h.obs||'—')+'</td>'
+      +'</tr>';
+  });
+  html += '</table></div>';
+
+  // Next delivery prediction
+  var diasTurno = t.diasLaboralesPorTurno||7;
+  html += '<div style="margin-top:10px;padding:8px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;font-size:10px">'
+    +'<div style="color:#60a5fa;font-weight:700;margin-bottom:4px">📅 Próxima entrega estimada</div>'
+    +'<div style="color:var(--muted)">Cada '+diasTurno+' días laborales · próximo en turno:</div>';
+  var next = null;
+  if(t.miembros&&t.miembros.length&&t.historial&&t.historial.length){
+    var last = sorted[0];
+    var lastIdx = t.miembros.findIndex(function(mm){return mm.memberId===last.memberId;});
+    var nextIdx = (lastIdx+1)%t.miembros.length;
+    var nextM = members.find(function(x){return x.id===t.miembros[nextIdx].memberId;});
+    if(nextM) html += '<div style="color:var(--text);font-weight:600;margin-top:4px">'+nextM.rank+' '+nextM.name.split(' ')[0]+' '+(nextM.name.split(' ')[2]||'')+'</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
 // ── MOTOR MINUTA (clon de Bitácora) ──
 var turnos2 = ld('g9_turnos2', []);
 
@@ -4878,7 +5080,7 @@ function renderTurnos2(){
         +_saltAviso+_pendAviso
         +diasMsg
         +'</div>'
-        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='marcarCumplido(this.dataset.tid)'>✅ Entregar</button>"
+        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;entregar&quot;)'>✅ Entregar</button>"
         +'</div>'
         +'</div>';
     }
@@ -4964,8 +5166,10 @@ function renderTurnos2(){
       +'<div style="font-size:17px;font-weight:700;letter-spacing:1px;color:var(--gold2)">'+t.nombre+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+t.escuadra+' · '+t.miembros.length+' personas</div>'
       +'</div>'
-      +"<button data-tid='"+t.id+"' onclick='reordenarTurno(this.dataset.tid)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
-      +"<button data-tid='"+t.id+"' onclick='deleteTurno(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;calendario&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Ver calendario'>📅</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;miembros&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Editar miembros'>👥</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;reordenar&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
+      +"<button data-tid='"+t.id+"' onclick='eliminarTurno2(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
       +'</div>'
       +proximoBanner
       +'<div style="margin-bottom:4px">'
@@ -5150,42 +5354,8 @@ function getPendienteBitacora(turno){
   }).filter(Boolean);
 }
 
-function marcarCumplido(tId){
-  const t = turnos2.find(x=>x.id===tId);
-  if(!t) return;
-  if(!t.miembros.length){ showToast('⚠️ Sin miembros configurados','#f97316'); return; }
-
-  // Construir select con todos los miembros del turno
-  var optsHtml = t.miembros.map(function(mm){
-    var m = members.find(function(x){return x.id===mm.memberId;});
-    return m ? '<option value="'+m.id+'">'+m.rank+' '+m.name+(m.status!=='Servicio'?' ('+m.status+')':'')+'</option>' : '';
-  }).join('');
-
-  document.getElementById('mTitle').textContent='📋 Entregar Minuta';
-  document.getElementById('mSubtitle').textContent=t.nombre;
-  document.getElementById('statusGrid').innerHTML=`
-    <div class="fg" style="grid-column:1/-1">
-      <label>¿A quién le entrego la minuta?</label>
-      <select id="bitaDestinatario" style="font-size:13px;padding:8px">${optsHtml}</select>
-    </div>
-    <div class="fg" style="grid-column:1/-1">
-      <label>Fecha de entrega</label>
-      <input type="date" id="bitaFecha" value="${localDateStr()}">
-    </div>
-    <div class="fg" style="grid-column:1/-1">
-      <label>Observación <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
-      <textarea id="minuta2Obs" rows="2" placeholder="Ej: Minuta al día, novedad pendiente..." style="resize:none;font-size:12px"></textarea>
-    </div>`;
-
-  document.getElementById('obsInput').style.display='none';
-  document.getElementById('fechaFinGroup').style.display='none';
-  document.getElementById('histDateGroup').style.display='none';
-
-  document.querySelectorAll('.btn-row')[0].innerHTML=`
-    <button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="confirmarEntregaBitacora2('${tId}')">✅ Confirmar entrega</button>`;
-  document.querySelectorAll('.btn-row')[1].style.display='none';
-  document.getElementById('editModal').classList.add('open');
+function marcarCumplido2_DEPRECATED(tId){
+  abrirTurnoEntregaModal(tId, turnos2, 'g9_turnos2', renderTurnos2, 'entregar');
 }
 
 function confirmarEntregaBitacora2(tId){
@@ -5236,78 +5406,37 @@ function deleteTurno(id){
 
 // Modal para crear turno
 function showAddTurno2(){
-  const esc = curEscuadra==='all'?'DEI 2':curEscuadra;
-  const escMems = members.filter(m=>m.escuadra===esc);
-  // Build NE members list for minuta type
-  const neMems = escMems.filter(m=>['IJ','IN','IT','SI'].includes(m.rank));
-  
-  const opts = escMems.map(m=>`<option value="${m.id}">${m.rank} ${m.name}</option>`).join('');
-  
-  document.getElementById('mTitle').textContent='Nueva Tarea Rotativa';
-  document.getElementById('mSubtitle').textContent=esc;
-  document.getElementById('statusGrid').innerHTML=`
-    <div class="fg" style="grid-column:1/-1">
-      <label>Nombre de la tarea</label>
-      <input type="text" id="turnoNombre" placeholder="Ej: Fondo del DEI, Minuta física...">
-    </div>
-    <div class="fg" style="grid-column:1/-1">
-      <label>Frecuencia</label>
-      <select id="turnoTipo">
-        <option value="mensual">Mensual</option>
-        <option value="semanal">Semanal</option>
-      </select>
-    </div>
-    <div class="fg" style="grid-column:1/-1">
-      <label>Miembros en el turno (seleccione varios)</label>
-      <select id="turnoMiembros" multiple style="height:120px">${opts}</select>
-      <div style="font-size:9.5px;color:var(--muted);margin-top:3px">Mantenga presionado para seleccionar varios · El orden es el turno</div>
-    </div>`;
-  document.getElementById('obsInput').style.display='none';
-  document.getElementById('fechaFinGroup').style.display='none';
-  document.getElementById('histDateGroup').style.display='none';
-  document.querySelectorAll('.btn-row')[0].innerHTML=`
-    <button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveTurno()">Guardar</button>`;
-  document.querySelectorAll('.btn-row')[1].style.display='none';
-  document.getElementById('editModal').classList.add('open');
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var escMems = members.filter(function(m){return m.escuadra===esc;});
+  var opts = escMems.map(function(m){return '<option value="'+m.id+'">'+m.rank+' '+m.name+'</option>';}).join('');
+  var body = '<div class="fg"><label>Nombre de la tarea</label>'
+    +'<input type="text" id="tem_add_nombre" placeholder="Ej: Fondo DEI, Minuta..." style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px"></div>'
+    +'<div class="fg" style="margin-top:10px"><label>Días laborales por turno</label>'
+    +'<input type="number" id="tem_add_dias" value="7" min="1" max="60" style="width:80px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px"></div>'
+    +'<div class="fg" style="margin-top:10px"><label>Miembros (mantén presionado para varios)</label>'
+    +'<select id="tem_add_mems" multiple style="width:100%;height:130px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:4px;color:var(--text);font-size:11px">'+opts+'</select></div>';
+  document.getElementById('tem_title').textContent='📋 Nueva tarea — Minuta';
+  document.getElementById('tem_subtitle').textContent=esc;
+  document.getElementById('tem_body').innerHTML=body;
+  document.getElementById('tem_confirm_btn').textContent='✅ Crear tarea';
+  document.getElementById('tem_confirm_btn').onclick=function(){
+    var nombre=document.getElementById('tem_add_nombre').value.trim();
+    if(!nombre){showToast('⚠️ Ingrese un nombre','#f97316');return;}
+    var dias=parseInt(document.getElementById('tem_add_dias').value)||7;
+    var sel=Array.from(document.getElementById('tem_add_mems').selectedOptions).map(function(o){return{memberId:o.value};});
+    var esc2=curEscuadra==='all'?'DEI 2':curEscuadra;
+    turnos2.push({id:uid(),nombre:nombre,tipo:'semanal_laboral',escuadra:esc2,miembros:sel,historial:[],diasLaboralesPorTurno:dias});
+    sv('g9_turnos2',turnos2);
+    cerrarTurnoEntregaModal();
+    renderTurnos2();
+    showToast('✅ Tarea de Minuta creada');
+  };
+  document.getElementById('turnoEntregaModal').classList.add('open');
 }
 
-function cancelTurnoModal(){
-  // Restore all hidden fields
-  const obs=document.getElementById('obsInput');
-  const fechaGrp=document.getElementById('fechaFinGroup');
-  const histGrp=document.getElementById('histDateGroup');
-  if(obs) obs.style.display='';
-  if(fechaGrp) fechaGrp.style.display='';
-  if(histGrp) histGrp.style.display='';
-  const tpg2=document.getElementById('tipoPermisoGroup');
-  if(tpg2) tpg2.style.display='none';
-  const adg2=document.getElementById('anexoDestinoGroup');
-  if(adg2) adg2.style.display='none';
-  const ci=document.getElementById('cargoInput');
-  if(ci) ci.closest('.fg').style.display='';
-  const pht2=document.getElementById('permisoHorasToggle');
-  const phg2=document.getElementById('permisoHorasGroup');
-  if(pht2) pht2.style.display='none';
-  if(phg2) phg2.style.display='none';
-  // Restore btn rows
-  const rows=document.querySelectorAll('.btn-row');
-  rows.forEach(r=>r.style.display='');
-  closeModal();
-}
+function cancelTurnoModal2(){ cerrarTurnoEntregaModal(); }
+function saveTurno2(){ /* handled inline */ }
 
-function saveTurno(){
-  const nombre = document.getElementById('turnoNombre').value.trim();
-  if(!nombre){ showToast('⚠️ Ingrese un nombre','#f97316'); return; }
-  const tipo = document.getElementById('turnoTipo').value;
-  const sel = Array.from(document.getElementById('turnoMiembros').selectedOptions).map(o=>({memberId:o.value}));
-  const esc = curEscuadra==='all'?'DEI 2':curEscuadra;
-  turnos2.push({id:uid(), nombre, tipo, escuadra:esc, miembros:sel, historial:[]});
-  sv('g9_turnos2',turnos2);
-  cancelTurnoModal();
-  showTab('minuta2', document.querySelector('.tab-btn[onclick*="minuta2"]'));
-  showToast('✅ Tarea rotativa creada');
-}
 
 function editTurnoMembers(tId){
   showToast('💡 Elimine y recree el turno para cambiar miembros','#3b82f6');
@@ -5929,7 +6058,7 @@ function renderTurnos3(){
         +_saltAviso+_pendAviso
         +diasMsg
         +'</div>'
-        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='marcarCumplido(this.dataset.tid)'>✅ Entregar</button>"
+        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos3, &quot;g9_turnos3&quot;, renderTurnos3, &quot;entregar&quot;)'>✅ Entregar</button>"
         +'</div>'
         +'</div>';
     }
@@ -6015,8 +6144,10 @@ function renderTurnos3(){
       +'<div style="font-size:17px;font-weight:700;letter-spacing:1px;color:var(--gold2)">'+t.nombre+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+t.escuadra+' · '+t.miembros.length+' personas</div>'
       +'</div>'
-      +"<button data-tid='"+t.id+"' onclick='reordenarTurno(this.dataset.tid)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
-      +"<button data-tid='"+t.id+"' onclick='deleteTurno(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos3, &quot;g9_turnos3&quot;, renderTurnos3, &quot;calendario&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Ver calendario'>📅</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos3, &quot;g9_turnos3&quot;, renderTurnos3, &quot;miembros&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Editar miembros'>👥</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos3, &quot;g9_turnos3&quot;, renderTurnos3, &quot;reordenar&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
+      +"<button data-tid='"+t.id+"' onclick='eliminarTurno3(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
       +'</div>'
       +proximoBanner
       +'<div style="margin-bottom:4px">'
@@ -6201,42 +6332,8 @@ function getPendienteBitacora(turno){
   }).filter(Boolean);
 }
 
-function marcarCumplido(tId){
-  const t = turnos3.find(x=>x.id===tId);
-  if(!t) return;
-  if(!t.miembros.length){ showToast('⚠️ Sin miembros configurados','#f97316'); return; }
-
-  // Construir select con todos los miembros del turno
-  var optsHtml = t.miembros.map(function(mm){
-    var m = members.find(function(x){return x.id===mm.memberId;});
-    return m ? '<option value="'+m.id+'">'+m.rank+' '+m.name+(m.status!=='Servicio'?' ('+m.status+')':'')+'</option>' : '';
-  }).join('');
-
-  document.getElementById('mTitle').textContent='🎖️ Entregar Mando de Semana';
-  document.getElementById('mSubtitle').textContent=t.nombre;
-  document.getElementById('statusGrid').innerHTML=`
-    <div class="fg" style="grid-column:1/-1">
-      <label>¿A quién le entrego la mando de semana?</label>
-      <select id="bitaDestinatario" style="font-size:13px;padding:8px">${optsHtml}</select>
-    </div>
-    <div class="fg" style="grid-column:1/-1">
-      <label>Fecha de entrega</label>
-      <input type="date" id="bitaFecha" value="${localDateStr()}">
-    </div>
-    <div class="fg" style="grid-column:1/-1">
-      <label>Observación <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
-      <textarea id="mando3Obs" rows="2" placeholder="Ej: Mando de Semana al día, novedad pendiente..." style="resize:none;font-size:12px"></textarea>
-    </div>`;
-
-  document.getElementById('obsInput').style.display='none';
-  document.getElementById('fechaFinGroup').style.display='none';
-  document.getElementById('histDateGroup').style.display='none';
-
-  document.querySelectorAll('.btn-row')[0].innerHTML=`
-    <button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="confirmarEntregaBitacora3('${tId}')">✅ Confirmar entrega</button>`;
-  document.querySelectorAll('.btn-row')[1].style.display='none';
-  document.getElementById('editModal').classList.add('open');
+function marcarCumplido3_DEPRECATED(tId){
+  abrirTurnoEntregaModal(tId, turnos3, 'g9_turnos3', renderTurnos3, 'entregar');
 }
 
 function confirmarEntregaBitacora3(tId){
@@ -6287,78 +6384,37 @@ function deleteTurno(id){
 
 // Modal para crear turno
 function showAddTurno3(){
-  const esc = curEscuadra==='all'?'DEI 2':curEscuadra;
-  const escMems = members.filter(m=>m.escuadra===esc);
-  // Build NE members list for mando de semana type
-  const neMems = escMems.filter(m=>['IJ','IN','IT','SI'].includes(m.rank));
-  
-  const opts = escMems.map(m=>`<option value="${m.id}">${m.rank} ${m.name}</option>`).join('');
-  
-  document.getElementById('mTitle').textContent='Nueva Tarea Rotativa';
-  document.getElementById('mSubtitle').textContent=esc;
-  document.getElementById('statusGrid').innerHTML=`
-    <div class="fg" style="grid-column:1/-1">
-      <label>Nombre de la tarea</label>
-      <input type="text" id="turnoNombre" placeholder="Ej: Fondo del DEI, Mando de Semana física...">
-    </div>
-    <div class="fg" style="grid-column:1/-1">
-      <label>Frecuencia</label>
-      <select id="turnoTipo">
-        <option value="mensual">Mensual</option>
-        <option value="semanal">Semanal</option>
-      </select>
-    </div>
-    <div class="fg" style="grid-column:1/-1">
-      <label>Miembros en el turno (seleccione varios)</label>
-      <select id="turnoMiembros" multiple style="height:120px">${opts}</select>
-      <div style="font-size:9.5px;color:var(--muted);margin-top:3px">Mantenga presionado para seleccionar varios · El orden es el turno</div>
-    </div>`;
-  document.getElementById('obsInput').style.display='none';
-  document.getElementById('fechaFinGroup').style.display='none';
-  document.getElementById('histDateGroup').style.display='none';
-  document.querySelectorAll('.btn-row')[0].innerHTML=`
-    <button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveTurno()">Guardar</button>`;
-  document.querySelectorAll('.btn-row')[1].style.display='none';
-  document.getElementById('editModal').classList.add('open');
+  var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
+  var escMems = members.filter(function(m){return m.escuadra===esc;});
+  var opts = escMems.map(function(m){return '<option value="'+m.id+'">'+m.rank+' '+m.name+'</option>';}).join('');
+  var body = '<div class="fg"><label>Nombre de la tarea</label>'
+    +'<input type="text" id="tem_add3_nombre" placeholder="Ej: Mando de semana DEI 2..." style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px"></div>'
+    +'<div class="fg" style="margin-top:10px"><label>Días laborales por turno</label>'
+    +'<input type="number" id="tem_add3_dias" value="7" min="1" max="60" style="width:80px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text);font-size:13px"></div>'
+    +'<div class="fg" style="margin-top:10px"><label>Miembros (mantén presionado para varios)</label>'
+    +'<select id="tem_add3_mems" multiple style="width:100%;height:130px;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:4px;color:var(--text);font-size:11px">'+opts+'</select></div>';
+  document.getElementById('tem_title').textContent='🎖️ Nueva tarea — Mando de Semana';
+  document.getElementById('tem_subtitle').textContent=esc;
+  document.getElementById('tem_body').innerHTML=body;
+  document.getElementById('tem_confirm_btn').textContent='✅ Crear tarea';
+  document.getElementById('tem_confirm_btn').onclick=function(){
+    var nombre=document.getElementById('tem_add3_nombre').value.trim();
+    if(!nombre){showToast('⚠️ Ingrese un nombre','#f97316');return;}
+    var dias=parseInt(document.getElementById('tem_add3_dias').value)||7;
+    var sel=Array.from(document.getElementById('tem_add3_mems').selectedOptions).map(function(o){return{memberId:o.value};});
+    var esc2=curEscuadra==='all'?'DEI 2':curEscuadra;
+    turnos3.push({id:uid(),nombre:nombre,tipo:'semanal_laboral',escuadra:esc2,miembros:sel,historial:[],diasLaboralesPorTurno:dias});
+    sv('g9_turnos3',turnos3);
+    cerrarTurnoEntregaModal();
+    renderTurnos3();
+    showToast('✅ Tarea de Mando de Semana creada');
+  };
+  document.getElementById('turnoEntregaModal').classList.add('open');
 }
 
-function cancelTurnoModal(){
-  // Restore all hidden fields
-  const obs=document.getElementById('obsInput');
-  const fechaGrp=document.getElementById('fechaFinGroup');
-  const histGrp=document.getElementById('histDateGroup');
-  if(obs) obs.style.display='';
-  if(fechaGrp) fechaGrp.style.display='';
-  if(histGrp) histGrp.style.display='';
-  const tpg2=document.getElementById('tipoPermisoGroup');
-  if(tpg2) tpg2.style.display='none';
-  const adg2=document.getElementById('anexoDestinoGroup');
-  if(adg2) adg2.style.display='none';
-  const ci=document.getElementById('cargoInput');
-  if(ci) ci.closest('.fg').style.display='';
-  const pht2=document.getElementById('permisoHorasToggle');
-  const phg2=document.getElementById('permisoHorasGroup');
-  if(pht2) pht2.style.display='none';
-  if(phg2) phg2.style.display='none';
-  // Restore btn rows
-  const rows=document.querySelectorAll('.btn-row');
-  rows.forEach(r=>r.style.display='');
-  closeModal();
-}
+function cancelTurnoModal3(){ cerrarTurnoEntregaModal(); }
+function saveTurno3(){ /* handled inline */ }
 
-function saveTurno(){
-  const nombre = document.getElementById('turnoNombre').value.trim();
-  if(!nombre){ showToast('⚠️ Ingrese un nombre','#f97316'); return; }
-  const tipo = document.getElementById('turnoTipo').value;
-  const sel = Array.from(document.getElementById('turnoMiembros').selectedOptions).map(o=>({memberId:o.value}));
-  const esc = curEscuadra==='all'?'DEI 2':curEscuadra;
-  turnos3.push({id:uid(), nombre, tipo, escuadra:esc, miembros:sel, historial:[]});
-  sv('g9_turnos3',turnos3);
-  cancelTurnoModal();
-  showTab('mando', document.querySelector('.tab-btn[onclick*="mando"]'));
-  showToast('✅ Tarea rotativa creada');
-}
 
 function editTurnoMembers(tId){
   showToast('💡 Elimine y recree el turno para cambiar miembros','#3b82f6');
