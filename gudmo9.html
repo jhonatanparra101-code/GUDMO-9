@@ -3878,9 +3878,9 @@ function renderTurnos(){
           var hm=members.find(function(x){return x.id===h.memberId;});
           var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
           histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
-            +'<button onclick="editarEntregaBitacora(\''+t.id+'\','+idx_h+')" '
+            +'<button onclick="editarEntregaTurno(\'bitacora\',\''+t.id+'\','+idx_h+')" '
             +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
-            +'<button onclick="borrarEntregaBitacora(\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
+            +'<button onclick="borrarEntregaTurno(\'bitacora\',\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
             +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
             +'</td>';
         });
@@ -3910,10 +3910,10 @@ function renderTurnos(){
       +'<div style="font-size:17px;font-weight:700;letter-spacing:1px;color:var(--gold2)">'+t.nombre+'</div>'
       +'<div style="font-size:10px;color:var(--muted)">'+t.escuadra+' · '+t.miembros.length+' personas</div>'
       +'</div>'
-      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;calendario&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Ver calendario'>📅</button>"
-      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;miembros&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Editar miembros'>👥</button>"
-      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;reordenar&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
-      +"<button data-tid='"+t.id+"' onclick='eliminarTurno2(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos, &quot;g9_turnos&quot;, renderTurnos, &quot;calendario&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Ver calendario'>📅</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos, &quot;g9_turnos&quot;, renderTurnos, &quot;miembros&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Editar miembros'>👥</button>"
+      +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos, &quot;g9_turnos&quot;, renderTurnos, &quot;reordenar&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
+      +"<button data-tid='"+t.id+"' onclick='eliminarTurnoGeneral(&quot;bitacora&quot;, this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
       +'</div>'
       +proximoBanner
       +'<div style="margin-bottom:4px">'
@@ -3930,7 +3930,7 @@ function renderTurnos(){
               ?'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(251,191,36,.1)">'
                 +'<div style="font-size:11px;color:var(--text);flex:1">'+mp.rank+' '+mp.name+'</div>'
                 +'<div style="font-size:9px;color:var(--muted)">'+p.motivo+'</div>'
-                +'<button onclick="quitarPendiente(\''+t.id+'\',\''+mp.id+'\')" style="background:none;border:none;font-size:11px;cursor:pointer;color:var(--muted);padding:0 4px" title="Ya cumplió">✅</button>'
+                +'<button onclick="quitarPendienteTurno(\'bitacora\',\''+t.id+'\',\''+mp.id+'\')" style="background:none;border:none;font-size:11px;cursor:pointer;color:var(--muted);padding:0 4px" title="Ya cumplió">✅</button>'
                 +'</div>'
               :'';
           }).join('')
@@ -4923,48 +4923,184 @@ function _tem_buildMiembros(t){
 
 function _tem_buildCalendario(t){
   if(!t.historial||!t.historial.length) return '<div style="color:var(--muted);font-size:12px;padding:8px">Sin entregas registradas aún.</div>';
-  var sorted = t.historial.slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
-  // Build calendar grid showing last 3 months
-  var html = '<div style="font-size:10px;color:var(--muted);margin-bottom:10px">Historial de entregas</div>';
-  // Table view
-  html += '<div style="overflow-x:auto">';
-  html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
-  html += '<tr style="border-bottom:1px solid var(--border)">'
-    +'<th style="text-align:left;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Fecha</th>'
+  var diasTurno = t.diasLaboralesPorTurno||7;
+  // Orden cronológico ASCENDENTE para construir tramos recibe→entrega
+  var asc = t.historial.slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+
+  var html = '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">📅 Cada turno dura <strong style="color:var(--gold2)">'+diasTurno+' días laborales</strong> · recibe → entrega</div>';
+  html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html += '<thead><tr style="border-bottom:1px solid var(--border)">'
+    +'<th style="text-align:center;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">T</th>'
     +'<th style="text-align:left;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Funcionario</th>'
-    +'<th style="text-align:left;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Obs</th>'
-    +'</tr>';
-  sorted.forEach(function(h, i){
+    +'<th style="text-align:center;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Recibe</th>'
+    +'<th style="text-align:center;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Entrega</th>'
+    +'<th style="text-align:center;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Días</th>'
+    +'</tr></thead><tbody>';
+
+  asc.forEach(function(h, i){
     var m = members.find(function(x){return x.id===h.memberId;});
     var nombre = m ? m.rank+' '+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||'') : h.memberId;
-    var bg = i===0 ? 'rgba(34,197,94,.08)' : 'transparent';
-    html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);background:'+bg+'">'
-      +'<td style="padding:6px 4px;color:var(--text);white-space:nowrap">'+fmtDate(h.fecha)+'</td>'
-      +'<td style="padding:6px 4px;color:var(--text)">'+nombre+(i===0?'<span style="font-size:8px;color:#22c55e;margin-left:4px">ACTUAL</span>':'')+'</td>'
-      +'<td style="padding:6px 4px;color:var(--muted);font-size:10px">'+(h.obs||'—')+'</td>'
-      +'</tr>';
-  });
-  html += '</table></div>';
+    var siguiente = asc[i+1]; // si existe, ese es el día que entregó
+    var esActual = (i===asc.length-1); // último = el que tiene ahora
 
-  // Next delivery prediction
-  var diasTurno = t.diasLaboralesPorTurno||7;
-  html += '<div style="margin-top:10px;padding:8px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;font-size:10px">'
-    +'<div style="color:#60a5fa;font-weight:700;margin-bottom:4px">📅 Próxima entrega estimada</div>'
-    +'<div style="color:var(--muted)">Cada '+diasTurno+' días laborales · próximo en turno:</div>';
-  var next = null;
-  if(t.miembros&&t.miembros.length&&t.historial&&t.historial.length){
-    var last = sorted[0];
+    var fechaEntregaCell, diasCell;
+    if(siguiente){
+      // Ya entregó: la fecha de entrega real es la fecha de recepción del siguiente
+      fechaEntregaCell = '<span style="color:var(--text)">'+fmtDate(siguiente.fecha)+'</span>';
+      // Calcular días laborales entre h.fecha y siguiente.fecha
+      var d1=new Date(h.fecha+'T00:00:00'), d2=new Date(siguiente.fecha+'T00:00:00');
+      var diff = Math.round((d2-d1)/(1000*60*60*24));
+      diasCell = '<span style="color:var(--muted)">'+diff+'d</span>';
+    } else {
+      // Es el actual: estimar entrega y mostrar días que lleva
+      var diasLleva = getDiasLaboralesDesde(h.fecha);
+      var faltan = Math.max(0, diasTurno - diasLleva);
+      var fechaEst = new Date(h.fecha+'T00:00:00');
+      // Estimación simple: sumar días naturales aproximados (faltan días laborales ≈ faltan + fines de semana)
+      fechaEst.setDate(fechaEst.getDate() + Math.ceil(faltan*1.4));
+      var fechaEstStr = fechaEst.toISOString().slice(0,10);
+      var color = faltan===0 ? 'var(--red)' : faltan<=2 ? 'var(--yellow)' : 'var(--green)';
+      fechaEntregaCell = '<span style="color:'+color+';font-weight:700">~'+fmtDate(fechaEstStr)+'</span><div style="font-size:8px;color:var(--muted)">estimada</div>';
+      diasCell = '<span style="color:'+color+';font-weight:700">'+diasLleva+'/'+diasTurno+'</span>'
+        +'<div style="font-size:8px;color:var(--muted)">'+(faltan===0?'¡toca!':'faltan '+faltan)+'</div>';
+    }
+
+    var bg = esActual ? 'rgba(34,197,94,.10)' : 'transparent';
+    var nombreExtra = esActual ? '<span style="font-size:8px;color:#22c55e;margin-left:4px;font-weight:700">ACTUAL</span>' : '';
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);background:'+bg+'">'
+      +'<td style="text-align:center;padding:6px 4px;color:var(--muted);font-size:9px;font-weight:700">T'+(i+1)+'</td>'
+      +'<td style="padding:6px 4px;color:var(--text)">'+nombre+nombreExtra+'</td>'
+      +'<td style="text-align:center;padding:6px 4px;color:var(--text);white-space:nowrap;font-size:10px">'+fmtDate(h.fecha)+'</td>'
+      +'<td style="text-align:center;padding:6px 4px;white-space:nowrap;font-size:10px">'+fechaEntregaCell+'</td>'
+      +'<td style="text-align:center;padding:6px 4px;font-size:10px">'+diasCell+'</td>'
+      +'</tr>';
+    if(h.obs){
+      html += '<tr style="background:'+bg+'"><td></td><td colspan="4" style="padding:0 4px 6px 4px;color:var(--cyan);font-size:10px;font-style:italic">💬 '+h.obs+'</td></tr>';
+    }
+  });
+  html += '</tbody></table></div>';
+
+  // Próximo en turno
+  if(t.miembros&&t.miembros.length){
+    var last = asc[asc.length-1];
     var lastIdx = t.miembros.findIndex(function(mm){return mm.memberId===last.memberId;});
     var nextIdx = (lastIdx+1)%t.miembros.length;
     var nextM = members.find(function(x){return x.id===t.miembros[nextIdx].memberId;});
-    if(nextM) html += '<div style="color:var(--text);font-weight:600;margin-top:4px">'+nextM.rank+' '+nextM.name.split(' ')[0]+' '+(nextM.name.split(' ')[2]||'')+'</div>';
+    if(nextM){
+      html += '<div style="margin-top:12px;padding:10px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;font-size:11px">'
+        +'<div style="color:#60a5fa;font-weight:700;margin-bottom:4px">👉 Próximo en recibir</div>'
+        +'<div style="color:var(--text);font-weight:600">'+nextM.rank+' '+nextM.name.split(' ')[0]+' '+(nextM.name.split(' ')[2]||'')+'</div>'
+        +'</div>';
+    }
   }
-  html += '</div>';
   return html;
 }
 
-// ── MOTOR MINUTA (clon de Bitácora) ──
+// ──────────────────────────────────────────────────────────────
+// FUNCIONES GENÉRICAS PARA BITÁCORA / MINUTA / MANDO DE SEMANA
+// Cada módulo usa el mismo motor pero con su propio store:
+//   bitacora -> turnos     / g9_turnos     / renderTurnos
+//   minuta   -> turnos2    / g9_turnos2    / renderTurnos2
+//   mando    -> turnos3    / g9_turnos3    / renderTurnos3
+// ──────────────────────────────────────────────────────────────
 var turnos2 = ld('g9_turnos2', []);
+
+function _mod(tipo){
+  if(tipo==='minuta')   return {ref:function(){return turnos2;}, key:'g9_turnos2', render:function(){renderTurnos2();}, label:'Minuta',          icon:'📋'};
+  if(tipo==='mando')    return {ref:function(){return turnos3;}, key:'g9_turnos3', render:function(){renderTurnos3();}, label:'Mando de Semana', icon:'🎖️'};
+  return                       {ref:function(){return turnos;},  key:'g9_turnos',  render:function(){renderTurnos();},  label:'Bitácora',        icon:'📖'};
+}
+
+// Editar una entrega del historial (abre modal)
+function editarEntregaTurno(tipo, tId, idx){
+  var mod = _mod(tipo);
+  var t = mod.ref().find(function(x){return x.id===tId;});
+  if(!t) return;
+  var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var h=sorted[idx]; if(!h) return;
+  var optsM=t.miembros.map(function(mm){
+    var mx=members.find(function(x){return x.id===mm.memberId;});
+    return mx?'<option value="'+mx.id+'"'+(mx.id===h.memberId?' selected':'')+'>'+mx.rank+' '+mx.name+'</option>':'';
+  }).join('');
+  document.getElementById('tem_title').textContent='✏️ Editar entrega — '+mod.label;
+  document.getElementById('tem_subtitle').textContent=t.nombre+' — T'+(idx+1);
+  document.getElementById('tem_body').innerHTML=
+     '<div class="fg" style="grid-column:1/-1"><label>Funcionario</label>'
+    +'<select id="tem_edit_member" style="font-size:13px;padding:8px;width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;color:var(--text)">'+optsM+'</select></div>'
+    +'<div class="fg" style="margin-top:10px"><label>Fecha de entrega</label>'
+    +'<input type="date" id="tem_edit_fecha" value="'+h.fecha+'" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text)"></div>'
+    +'<div class="fg" style="margin-top:10px"><label>Observación</label>'
+    +'<textarea id="tem_edit_obs" rows="2" style="resize:none;font-size:12px;width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text)">'+(h.obs||'')+'</textarea></div>';
+  var btn=document.getElementById('tem_confirm_btn');
+  btn.textContent='💾 Guardar cambios';
+  btn.onclick=function(){ guardarEdicionTurno(tipo, tId, idx); };
+  document.getElementById('turnoEntregaModal').classList.add('open');
+}
+
+function guardarEdicionTurno(tipo, tId, idx){
+  var mod = _mod(tipo);
+  var ref = mod.ref();
+  var t = ref.find(function(x){return x.id===tId;});
+  if(!t) return;
+  var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var h=sorted[idx]; if(!h) return;
+  var realIdx=t.historial.indexOf(h); if(realIdx===-1) return;
+  var nuevoMem  = document.getElementById('tem_edit_member').value;
+  var nuevaFecha= document.getElementById('tem_edit_fecha').value;
+  var nuevaObs  = document.getElementById('tem_edit_obs').value.trim();
+  if(!nuevoMem || !nuevaFecha){ showToast('⚠️ Funcionario y fecha son obligatorios','#f97316'); return; }
+  t.historial[realIdx].memberId = nuevoMem;
+  t.historial[realIdx].fecha    = nuevaFecha;
+  t.historial[realIdx].obs      = nuevaObs;
+  sv(mod.key, ref);
+  document.getElementById('turnoEntregaModal').classList.remove('open');
+  mod.render();
+  showToast('✅ '+mod.label+' actualizada');
+}
+
+function borrarEntregaTurno(tipo, tId, idx, nombre){
+  if(!confirm('¿Borrar la entrega T'+(idx+1)+' ('+nombre+')?\nEsta acción no se puede deshacer.')) return;
+  var mod = _mod(tipo);
+  var ref = mod.ref();
+  var t = ref.find(function(x){return x.id===tId;});
+  if(!t) return;
+  var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+  var h=sorted[idx]; if(!h) return;
+  var realIdx=t.historial.indexOf(h);
+  if(realIdx!==-1) t.historial.splice(realIdx,1);
+  sv(mod.key, ref);
+  mod.render();
+  showToast('🗑️ Entrega eliminada');
+}
+
+function eliminarTurnoGeneral(tipo, tId){
+  var mod = _mod(tipo);
+  var ref = mod.ref();
+  var t = ref.find(function(x){return x.id===tId;});
+  if(!t) return;
+  if(!confirm('¿Eliminar el turno "'+t.nombre+'" de '+mod.label+'?\nSe perderá todo su historial.')) return;
+  var i = ref.indexOf(t);
+  if(i!==-1) ref.splice(i,1);
+  sv(mod.key, ref);
+  mod.render();
+  showToast('🗑️ Turno eliminado');
+}
+
+function quitarPendienteTurno(tipo, tId, memberId){
+  var mod = _mod(tipo);
+  var ref = mod.ref();
+  var t = ref.find(function(x){return x.id===tId;});
+  if(!t || !t.pendientes) return;
+  var m = members.find(function(x){return x.id===memberId;});
+  t.pendientes = t.pendientes.filter(function(p){return p.memberId!==memberId;});
+  if(!t.historial) t.historial=[];
+  t.historial.push({memberId:memberId, fecha:localDateStr(), obs:'(Pendiente cumplido al regresar)'});
+  sv(mod.key, ref);
+  mod.render();
+  showToast('✅ '+(m?m.rank+' '+m.name.split(' ')[0]:'Funcionario')+' — pendiente cumplido');
+}
+
+// ── MOTOR MINUTA (clon de Bitácora) ──
 
 function renderTurnos2(){
   var container = document.getElementById('turnosList2');
@@ -5013,7 +5149,7 @@ function renderTurnos2(){
         var _dtFaltan=Math.max(0,_dtTurno-_dt);
         var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
         diasActualHtml='<div style="font-size:10px;margin-top:3px;padding:4px 8px;border-radius:6px;background:'+_dtColor+'18;border:1px solid '+_dtColor+'44;color:'+_dtColor+';font-weight:700">'
-          +'📖 TIENE LA BITÁCORA: '+_dt+' día'+(  _dt!==1?'s':'')+' laborado'+(  _dt!==1?'s':'')+' · '
+          +'📋 TIENE LA MINUTA: '+_dt+' día'+(  _dt!==1?'s':'')+' laborado'+(  _dt!==1?'s':'')+' · '
           +(_dtFaltan===0?'¡Toca entregar!':_dtFaltan+' día'+(_dtFaltan!==1?'s':'')+' restante'+(_dtFaltan!==1?'s':''))
           +'</div>';
       }
@@ -5134,9 +5270,9 @@ function renderTurnos2(){
           var hm=members.find(function(x){return x.id===h.memberId;});
           var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
           histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
-            +'<button onclick="editarEntregaBitacora(\''+t.id+'\','+idx_h+')" '
+            +'<button onclick="editarEntregaTurno(\'minuta\',\''+t.id+'\','+idx_h+')" '
             +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
-            +'<button onclick="borrarEntregaBitacora(\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
+            +'<button onclick="borrarEntregaTurno(\'minuta\',\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
             +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
             +'</td>';
         });
@@ -5169,7 +5305,7 @@ function renderTurnos2(){
       +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;calendario&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Ver calendario'>📅</button>"
       +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;miembros&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Editar miembros'>👥</button>"
       +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;reordenar&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
-      +"<button data-tid='"+t.id+"' onclick='eliminarTurno2(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
+      +"<button data-tid='"+t.id+"' onclick='eliminarTurnoGeneral(&quot;minuta&quot;, this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
       +'</div>'
       +proximoBanner
       +'<div style="margin-bottom:4px">'
@@ -5186,7 +5322,7 @@ function renderTurnos2(){
               ?'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(251,191,36,.1)">'
                 +'<div style="font-size:11px;color:var(--text);flex:1">'+mp.rank+' '+mp.name+'</div>'
                 +'<div style="font-size:9px;color:var(--muted)">'+p.motivo+'</div>'
-                +'<button onclick="quitarPendiente(\''+t.id+'\',\''+mp.id+'\')" style="background:none;border:none;font-size:11px;cursor:pointer;color:var(--muted);padding:0 4px" title="Ya cumplió">✅</button>'
+                +'<button onclick="quitarPendienteTurno(\'minuta\',\''+t.id+'\',\''+mp.id+'\')" style="background:none;border:none;font-size:11px;cursor:pointer;color:var(--muted);padding:0 4px" title="Ya cumplió">✅</button>'
                 +'</div>'
               :'';
           }).join('')
@@ -5991,7 +6127,7 @@ function renderTurnos3(){
         var _dtFaltan=Math.max(0,_dtTurno-_dt);
         var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
         diasActualHtml='<div style="font-size:10px;margin-top:3px;padding:4px 8px;border-radius:6px;background:'+_dtColor+'18;border:1px solid '+_dtColor+'44;color:'+_dtColor+';font-weight:700">'
-          +'📖 TIENE LA BITÁCORA: '+_dt+' día'+(  _dt!==1?'s':'')+' laborado'+(  _dt!==1?'s':'')+' · '
+          +'🎖️ TIENE EL MANDO DE SEMANA: '+_dt+' día'+(  _dt!==1?'s':'')+' laborado'+(  _dt!==1?'s':'')+' · '
           +(_dtFaltan===0?'¡Toca entregar!':_dtFaltan+' día'+(_dtFaltan!==1?'s':'')+' restante'+(_dtFaltan!==1?'s':''))
           +'</div>';
       }
@@ -6112,9 +6248,9 @@ function renderTurnos3(){
           var hm=members.find(function(x){return x.id===h.memberId;});
           var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
           histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
-            +'<button onclick="editarEntregaBitacora(\''+t.id+'\','+idx_h+')" '
+            +'<button onclick="editarEntregaTurno(\'mando\',\''+t.id+'\','+idx_h+')" '
             +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
-            +'<button onclick="borrarEntregaBitacora(\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
+            +'<button onclick="borrarEntregaTurno(\'mando\',\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
             +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
             +'</td>';
         });
@@ -6147,7 +6283,7 @@ function renderTurnos3(){
       +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos3, &quot;g9_turnos3&quot;, renderTurnos3, &quot;calendario&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Ver calendario'>📅</button>"
       +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos3, &quot;g9_turnos3&quot;, renderTurnos3, &quot;miembros&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Editar miembros'>👥</button>"
       +"<button data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos3, &quot;g9_turnos3&quot;, renderTurnos3, &quot;reordenar&quot;)' style='background:none;border:none;font-size:15px;cursor:pointer;color:var(--muted)' title='Reordenar'>↕️</button>"
-      +"<button data-tid='"+t.id+"' onclick='eliminarTurno3(this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
+      +"<button data-tid='"+t.id+"' onclick='eliminarTurnoGeneral(&quot;mando&quot;, this.dataset.tid)' style='background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted)'>🗑️</button>"
       +'</div>'
       +proximoBanner
       +'<div style="margin-bottom:4px">'
@@ -6164,7 +6300,7 @@ function renderTurnos3(){
               ?'<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(251,191,36,.1)">'
                 +'<div style="font-size:11px;color:var(--text);flex:1">'+mp.rank+' '+mp.name+'</div>'
                 +'<div style="font-size:9px;color:var(--muted)">'+p.motivo+'</div>'
-                +'<button onclick="quitarPendiente(\''+t.id+'\',\''+mp.id+'\')" style="background:none;border:none;font-size:11px;cursor:pointer;color:var(--muted);padding:0 4px" title="Ya cumplió">✅</button>'
+                +'<button onclick="quitarPendienteTurno(\'mando\',\''+t.id+'\',\''+mp.id+'\')" style="background:none;border:none;font-size:11px;cursor:pointer;color:var(--muted);padding:0 4px" title="Ya cumplió">✅</button>'
                 +'</div>'
               :'';
           }).join('')
