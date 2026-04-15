@@ -5183,7 +5183,7 @@ function marcarCumplido(tId){
 
   document.querySelectorAll('.btn-row')[0].innerHTML=`
     <button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="confirmarEntregaBitacora('${tId}')">✅ Confirmar entrega</button>`;
+    <button class="btn btn-primary" onclick="confirmarEntregaBitacora2('${tId}')">✅ Confirmar entrega</button>`;
   document.querySelectorAll('.btn-row')[1].style.display='none';
   document.getElementById('editModal').classList.add('open');
 }
@@ -6234,7 +6234,7 @@ function marcarCumplido(tId){
 
   document.querySelectorAll('.btn-row')[0].innerHTML=`
     <button class="btn btn-ghost" onclick="cancelTurnoModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="confirmarEntregaBitacora('${tId}')">✅ Confirmar entrega</button>`;
+    <button class="btn btn-primary" onclick="confirmarEntregaBitacora3('${tId}')">✅ Confirmar entrega</button>`;
   document.querySelectorAll('.btn-row')[1].style.display='none';
   document.getElementById('editModal').classList.add('open');
 }
@@ -9783,7 +9783,7 @@ function renderFormacionTactica(){
 
   var cte1     = getCargo('Cte. DEI');
   var cte2     = getCargo('Cte. Escuadra');
-  var cte3     = getCargo('Lider Escuderos');
+  var cte3     = getCargo('Líder Escuderos');
   var taser    = getCargo('Op. Taser');
   var enfer    = getCargo('Enfermero');
   var ops37    = getCargoAll('Operador 37');
@@ -9793,8 +9793,8 @@ function renderFormacionTactica(){
   var escuderos= getCargoAll('Escudero');
   var medTec   = getCargoAll('Medios Técnicos');
 
-  var cargosEnFormacion = new Set(['Cte. DEI','Cte. Escuadra','Lider Escuderos','Op. Taser',
-    'Enfermero','Operador 37','Operador 40','Op. Lanzadora','SPI','Lider SPI','Escudero','Medios Técnicos']);
+  var cargosEnFormacion = new Set(['Cte. DEI','Cte. Escuadra','Líder Escuderos','Op. Taser',
+    'Enfermero','Operador 37','Operador 40','Op. Lanzadora','SPI','Líder SPI','Líder Operadores','Escudero','Medios Técnicos']);
 
   var filaC = 'display:flex;align-items:flex-end;justify-content:center;gap:3px;margin-bottom:6px;flex-wrap:wrap;';
 
@@ -9805,6 +9805,14 @@ function renderFormacionTactica(){
   html2 += '<div style="'+filaC+'">';
   html2 += muneco('Cte. DEI','CTE DEI', cte1, 56);
   html2 += '</div>';
+
+  // ── FILA 0b: Líder Operadores debajo del CTE DEI ──
+  var liderOps = getCargo('Líder Operadores');
+  if(liderOps) {
+    html2 += '<div style="'+filaC+'margin-bottom:2px">';
+    html2 += muneco('Líder Operadores','L-OPS', liderOps, 52);
+    html2 += '</div>';
+  }
 
   // ── separador ──
   html2 += '<div style="border-top:1px dashed rgba(255,255,255,.08);margin:4px 8px 6px"></div>';
@@ -9822,7 +9830,7 @@ function renderFormacionTactica(){
 
   // ── FILA 2: CTE-ESC | Medios Técnicos | TASER | Enfermero ──
   html2 += '<div style="'+filaC+'">';
-  html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 52);
+  if(cte2) html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 52);
   medTec.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 48); });
   if(!medTec.length){ html2 += muneco('Medios Técnicos','M.TEC', null, 48); html2 += muneco('Medios Técnicos','M.TEC', null, 48); }
   html2 += muneco('Op. Taser','TASER', taser, 48);
@@ -9831,7 +9839,7 @@ function renderFormacionTactica(){
 
   // ── FILA 3a: L-SPI encima de la línea SPI ──
   html2 += '<div style="'+filaC+'margin-bottom:2px">';
-  html2 += muneco('Lider SPI','L-SPI', getCargo('Lider SPI'), 48);
+  html2 += muneco('Líder SPI','L-SPI', getCargo('Líder SPI'), 48);
   html2 += '</div>';
 
   // ── FILA 3b: SPIs en línea ──
@@ -9842,7 +9850,7 @@ function renderFormacionTactica(){
 
   // ── FILA 4a: L-ESC encima de la línea de escuderos ──
   html2 += '<div style="'+filaC+'margin-bottom:2px;margin-top:4px">';
-  html2 += muneco('Lider Escuderos','L-ESC', cte3, 48);
+  html2 += muneco('Líder Escuderos','L-ESC', cte3, 48);
   html2 += '</div>';
 
   // ── FILA 4b: Escuderos en línea ──
