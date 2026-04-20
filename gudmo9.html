@@ -3824,7 +3824,7 @@ function renderTurnos(){
         +_saltAviso+_pendAviso
         +diasMsg
         +'</div>'
-        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos2, &quot;g9_turnos2&quot;, renderTurnos2, &quot;entregar&quot;)'>✅ Entregar</button>"
+        +"<button class='btn btn-primary' style='flex:none;padding:8px 14px;font-size:11px' data-tid='"+t.id+"' onclick='abrirTurnoEntregaModal(this.dataset.tid, turnos, &quot;g9_turnos&quot;, renderTurnos, &quot;entregar&quot;)'>✅ Entregar</button>"
         +'</div>'
         +'</div>';
     }
@@ -4924,94 +4924,70 @@ function _tem_buildMiembros(t){
 function _tem_buildCalendario(t){
   if(!t.historial||!t.historial.length) return '<div style="color:var(--muted);font-size:12px;padding:8px">Sin entregas registradas aún.</div>';
   var diasTurno = t.diasLaboralesPorTurno||7;
-  // Orden cronológico ASCENDENTE para construir tramos recibe→entrega
   var asc = t.historial.slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
-
-  var html = '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">📅 Cada turno dura <strong style="color:var(--gold2)">'+diasTurno+' días laborales</strong> · recibe → entrega</div>';
+  var html = '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">📅 Cada turno = <strong style="color:var(--gold2)">'+diasTurno+' días laborales</strong> · Recibe → Entrega</div>';
   html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
-  html += '<thead><tr style="border-bottom:1px solid var(--border)">'
-    +'<th style="text-align:center;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">T</th>'
-    +'<th style="text-align:left;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Funcionario</th>'
-    +'<th style="text-align:center;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Recibe</th>'
-    +'<th style="text-align:center;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Entrega</th>'
-    +'<th style="text-align:center;padding:5px 4px;color:var(--muted);font-size:9px;text-transform:uppercase">Días</th>'
+  html += '<thead><tr style="border-bottom:2px solid var(--border)">'
+    +'<th style="text-align:center;padding:6px 3px;color:var(--gold2);font-size:9px">T</th>'
+    +'<th style="text-align:left;padding:6px 4px;color:var(--gold2);font-size:9px">FUNCIONARIO</th>'
+    +'<th style="text-align:center;padding:6px 3px;color:var(--gold2);font-size:9px">RECIBE</th>'
+    +'<th style="text-align:center;padding:6px 3px;color:var(--gold2);font-size:9px">ENTREGA</th>'
+    +'<th style="text-align:center;padding:6px 3px;color:var(--gold2);font-size:9px">DÍAS</th>'
     +'</tr></thead><tbody>';
-
   asc.forEach(function(h, i){
     var m = members.find(function(x){return x.id===h.memberId;});
-    var nombre = m ? m.rank+' '+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||'') : h.memberId;
-    var siguiente = asc[i+1]; // si existe, ese es el día que entregó
-    var esActual = (i===asc.length-1); // último = el que tiene ahora
-
+    var nombre = m ? m.rank+' '+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||'') : '?';
+    var siguiente = asc[i+1];
+    var esActual = (i===asc.length-1);
     var fechaEntregaCell, diasCell;
     if(siguiente){
-      // Ya entregó: la fecha de entrega real es la fecha de recepción del siguiente
-      fechaEntregaCell = '<span style="color:var(--text)">'+fmtDate(siguiente.fecha)+'</span>';
-      // Calcular días laborales entre h.fecha y siguiente.fecha
+      fechaEntregaCell = fmtDate(siguiente.fecha);
       var d1=new Date(h.fecha+'T00:00:00'), d2=new Date(siguiente.fecha+'T00:00:00');
       var diff = Math.round((d2-d1)/(1000*60*60*24));
-      diasCell = '<span style="color:var(--muted)">'+diff+'d</span>';
+      var dc = diff<=diasTurno?'var(--green)':diff<=diasTurno+2?'var(--yellow)':'var(--red)';
+      diasCell = '<span style="color:'+dc+';font-weight:600">'+diff+'</span>';
     } else {
-      // Es el actual: estimar entrega y mostrar días que lleva
       var diasLleva = getDiasLaboralesDesde(h.fecha);
       var faltan = Math.max(0, diasTurno - diasLleva);
-      var fechaEst = new Date(h.fecha+'T00:00:00');
-      // Estimación simple: sumar días naturales aproximados (faltan días laborales ≈ faltan + fines de semana)
-      fechaEst.setDate(fechaEst.getDate() + Math.ceil(faltan*1.4));
-      var fechaEstStr = fechaEst.toISOString().slice(0,10);
-      var color = faltan===0 ? 'var(--red)' : faltan<=2 ? 'var(--yellow)' : 'var(--green)';
-      fechaEntregaCell = '<span style="color:'+color+';font-weight:700">~'+fmtDate(fechaEstStr)+'</span><div style="font-size:8px;color:var(--muted)">estimada</div>';
+      var color = faltan===0?'var(--red)':faltan<=2?'var(--yellow)':'var(--green)';
+      fechaEntregaCell = '<span style="color:'+color+';font-weight:700">pendiente</span>';
       diasCell = '<span style="color:'+color+';font-weight:700">'+diasLleva+'/'+diasTurno+'</span>'
-        +'<div style="font-size:8px;color:var(--muted)">'+(faltan===0?'¡toca!':'faltan '+faltan)+'</div>';
+        +(faltan===0?'<div style="font-size:8px;color:var(--red)">¡ENTREGAR!</div>':'<div style="font-size:8px;color:var(--muted)">faltan '+faltan+'</div>');
     }
-
-    var bg = esActual ? 'rgba(34,197,94,.10)' : 'transparent';
-    var nombreExtra = esActual ? '<span style="font-size:8px;color:#22c55e;margin-left:4px;font-weight:700">ACTUAL</span>' : '';
-    html += '<tr style="border-bottom:1px solid rgba(255,255,255,.04);background:'+bg+'">'
-      +'<td style="text-align:center;padding:6px 4px;color:var(--muted);font-size:9px;font-weight:700">T'+(i+1)+'</td>'
-      +'<td style="padding:6px 4px;color:var(--text)">'+nombre+nombreExtra+'</td>'
-      +'<td style="text-align:center;padding:6px 4px;color:var(--text);white-space:nowrap;font-size:10px">'+fmtDate(h.fecha)+'</td>'
-      +'<td style="text-align:center;padding:6px 4px;white-space:nowrap;font-size:10px">'+fechaEntregaCell+'</td>'
-      +'<td style="text-align:center;padding:6px 4px;font-size:10px">'+diasCell+'</td>'
+    var bg = esActual?'rgba(34,197,94,.12)':(i%2===0?'rgba(255,255,255,.02)':'transparent');
+    var act = esActual?' <span style="font-size:8px;color:#22c55e;font-weight:700">◀ ACTUAL</span>':'';
+    html += '<tr style="border-bottom:1px solid rgba(255,255,255,.05);background:'+bg+'">'
+      +'<td style="text-align:center;padding:6px 3px;color:var(--muted);font-weight:700;font-size:10px">T'+(i+1)+'</td>'
+      +'<td style="padding:6px 4px;color:var(--text)">'+nombre+act+'</td>'
+      +'<td style="text-align:center;padding:6px 3px;font-size:10px;color:var(--text)">'+fmtDate(h.fecha)+'</td>'
+      +'<td style="text-align:center;padding:6px 3px;font-size:10px">'+fechaEntregaCell+'</td>'
+      +'<td style="text-align:center;padding:6px 3px;font-size:10px">'+diasCell+'</td>'
       +'</tr>';
-    if(h.obs){
-      html += '<tr style="background:'+bg+'"><td></td><td colspan="4" style="padding:0 4px 6px 4px;color:var(--cyan);font-size:10px;font-style:italic">💬 '+h.obs+'</td></tr>';
-    }
+    if(h.obs) html += '<tr style="background:'+bg+'"><td></td><td colspan="4" style="padding:0 4px 4px;color:var(--cyan);font-size:9px;font-style:italic">💬 '+h.obs+'</td></tr>';
   });
   html += '</tbody></table></div>';
-
-  // Próximo en turno
   if(t.miembros&&t.miembros.length){
     var last = asc[asc.length-1];
     var lastIdx = t.miembros.findIndex(function(mm){return mm.memberId===last.memberId;});
     var nextIdx = (lastIdx+1)%t.miembros.length;
     var nextM = members.find(function(x){return x.id===t.miembros[nextIdx].memberId;});
-    if(nextM){
-      html += '<div style="margin-top:12px;padding:10px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;font-size:11px">'
-        +'<div style="color:#60a5fa;font-weight:700;margin-bottom:4px">👉 Próximo en recibir</div>'
-        +'<div style="color:var(--text);font-weight:600">'+nextM.rank+' '+nextM.name.split(' ')[0]+' '+(nextM.name.split(' ')[2]||'')+'</div>'
-        +'</div>';
-    }
+    if(nextM) html += '<div style="margin-top:10px;padding:10px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px">'
+      +'<div style="font-size:10px;color:#60a5fa;font-weight:700;margin-bottom:3px">👉 Próximo en recibir</div>'
+      +'<div style="font-size:13px;color:var(--text);font-weight:600">'+nextM.rank+' '+nextM.name+'</div></div>';
   }
   return html;
 }
 
+
 // ──────────────────────────────────────────────────────────────
 // FUNCIONES GENÉRICAS PARA BITÁCORA / MINUTA / MANDO DE SEMANA
-// Cada módulo usa el mismo motor pero con su propio store:
-//   bitacora -> turnos     / g9_turnos     / renderTurnos
-//   minuta   -> turnos2    / g9_turnos2    / renderTurnos2
-//   mando    -> turnos3    / g9_turnos3    / renderTurnos3
 // ──────────────────────────────────────────────────────────────
-var turnos2 = ld('g9_turnos2', []);
-
 function _mod(tipo){
   if(tipo==='minuta')   return {ref:function(){return turnos2;}, key:'g9_turnos2', render:function(){renderTurnos2();}, label:'Minuta',          icon:'📋'};
   if(tipo==='mando')    return {ref:function(){return turnos3;}, key:'g9_turnos3', render:function(){renderTurnos3();}, label:'Mando de Semana', icon:'🎖️'};
   return                       {ref:function(){return turnos;},  key:'g9_turnos',  render:function(){renderTurnos();},  label:'Bitácora',        icon:'📖'};
 }
 
-// Editar una entrega del historial (abre modal)
 function editarEntregaTurno(tipo, tId, idx){
   var mod = _mod(tipo);
   var t = mod.ref().find(function(x){return x.id===tId;});
@@ -5027,7 +5003,7 @@ function editarEntregaTurno(tipo, tId, idx){
   document.getElementById('tem_body').innerHTML=
      '<div class="fg" style="grid-column:1/-1"><label>Funcionario</label>'
     +'<select id="tem_edit_member" style="font-size:13px;padding:8px;width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;color:var(--text)">'+optsM+'</select></div>'
-    +'<div class="fg" style="margin-top:10px"><label>Fecha de entrega</label>'
+    +'<div class="fg" style="margin-top:10px"><label>Fecha de recepción</label>'
     +'<input type="date" id="tem_edit_fecha" value="'+h.fecha+'" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text)"></div>'
     +'<div class="fg" style="margin-top:10px"><label>Observación</label>'
     +'<textarea id="tem_edit_obs" rows="2" style="resize:none;font-size:12px;width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text)">'+(h.obs||'')+'</textarea></div>';
@@ -5045,13 +5021,9 @@ function guardarEdicionTurno(tipo, tId, idx){
   var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
   var h=sorted[idx]; if(!h) return;
   var realIdx=t.historial.indexOf(h); if(realIdx===-1) return;
-  var nuevoMem  = document.getElementById('tem_edit_member').value;
-  var nuevaFecha= document.getElementById('tem_edit_fecha').value;
-  var nuevaObs  = document.getElementById('tem_edit_obs').value.trim();
-  if(!nuevoMem || !nuevaFecha){ showToast('⚠️ Funcionario y fecha son obligatorios','#f97316'); return; }
-  t.historial[realIdx].memberId = nuevoMem;
-  t.historial[realIdx].fecha    = nuevaFecha;
-  t.historial[realIdx].obs      = nuevaObs;
+  t.historial[realIdx].memberId = document.getElementById('tem_edit_member').value;
+  t.historial[realIdx].fecha    = document.getElementById('tem_edit_fecha').value;
+  t.historial[realIdx].obs      = document.getElementById('tem_edit_obs').value.trim();
   sv(mod.key, ref);
   document.getElementById('turnoEntregaModal').classList.remove('open');
   mod.render();
@@ -5059,7 +5031,7 @@ function guardarEdicionTurno(tipo, tId, idx){
 }
 
 function borrarEntregaTurno(tipo, tId, idx, nombre){
-  if(!confirm('¿Borrar la entrega T'+(idx+1)+' ('+nombre+')?\nEsta acción no se puede deshacer.')) return;
+  if(!confirm('¿Borrar la entrega T'+(idx+1)+' ('+nombre+')?')) return;
   var mod = _mod(tipo);
   var ref = mod.ref();
   var t = ref.find(function(x){return x.id===tId;});
@@ -5078,7 +5050,7 @@ function eliminarTurnoGeneral(tipo, tId){
   var ref = mod.ref();
   var t = ref.find(function(x){return x.id===tId;});
   if(!t) return;
-  if(!confirm('¿Eliminar el turno "'+t.nombre+'" de '+mod.label+'?\nSe perderá todo su historial.')) return;
+  if(!confirm('¿Eliminar "'+t.nombre+'" de '+mod.label+'?')) return;
   var i = ref.indexOf(t);
   if(i!==-1) ref.splice(i,1);
   sv(mod.key, ref);
@@ -5090,17 +5062,19 @@ function quitarPendienteTurno(tipo, tId, memberId){
   var mod = _mod(tipo);
   var ref = mod.ref();
   var t = ref.find(function(x){return x.id===tId;});
-  if(!t || !t.pendientes) return;
+  if(!t||!t.pendientes) return;
   var m = members.find(function(x){return x.id===memberId;});
   t.pendientes = t.pendientes.filter(function(p){return p.memberId!==memberId;});
   if(!t.historial) t.historial=[];
-  t.historial.push({memberId:memberId, fecha:localDateStr(), obs:'(Pendiente cumplido al regresar)'});
+  t.historial.push({memberId:memberId, fecha:localDateStr(), obs:'(Pendiente cumplido)'});
   sv(mod.key, ref);
   mod.render();
   showToast('✅ '+(m?m.rank+' '+m.name.split(' ')[0]:'Funcionario')+' — pendiente cumplido');
 }
 
+
 // ── MOTOR MINUTA (clon de Bitácora) ──
+var turnos2 = ld('g9_turnos2', []);
 
 function renderTurnos2(){
   var container = document.getElementById('turnosList2');
@@ -5270,7 +5244,7 @@ function renderTurnos2(){
           var hm=members.find(function(x){return x.id===h.memberId;});
           var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
           histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
-            +'<button onclick="editarEntregaTurno(\'minuta\',\''+t.id+'\','+idx_h+')" '
+            +'<button onclick="editarEntregaTurno(\'bitacora\',\''+t.id+'\','+idx_h+')" '
             +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
             +'<button onclick="borrarEntregaTurno(\'minuta\',\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
             +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
@@ -6248,7 +6222,7 @@ function renderTurnos3(){
           var hm=members.find(function(x){return x.id===h.memberId;});
           var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
           histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
-            +'<button onclick="editarEntregaTurno(\'mando\',\''+t.id+'\','+idx_h+')" '
+            +'<button onclick="editarEntregaTurno(\'minuta\',\''+t.id+'\','+idx_h+')" '
             +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
             +'<button onclick="borrarEntregaTurno(\'mando\',\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
             +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
@@ -9279,7 +9253,7 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
     'Comision':   ['Comision','ComisionRegion','ComisionFuera','ComisionErradicacion']
   };
   var tiposABuscar = TIPO_GRUPOS[tipo] || [tipo];
-  var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
+  var ayer = new Date(); ayer.setHours(23,59,59,999); // Cuenta hasta HOY inclusive
   var m = members.find(function(x){ return x.id===memberId; });
 
   // ── Recopilar periodos únicos: clave = fechaSalida (un funcionario solo puede
@@ -9366,7 +9340,7 @@ function navDiasEnMes(memberId, tipo, mesIdx, anio){
 // cuando ya ocurrió. Si el funcionario regresa antes de la fecha prevista, al
 // actualizarle el estado en nómina el sistema recalcula automáticamente.
 function navDiasEnRango(inicio, fin, mesIdx, anio){
-  var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
+  var ayer = new Date(); ayer.setHours(23,59,59,999); // Cuenta hasta HOY inclusive
   var primerDia = new Date(anio, mesIdx, 1);
   var ultimoDia = new Date(anio, mesIdx+1, 0);
   var finReal   = fin < ayer ? fin : ayer;           // nunca días futuros
@@ -9406,10 +9380,7 @@ function navDiasEnRango(inicio, fin, mesIdx, anio){
 function renderNavMatriz(){
   var tipoFiltro = document.getElementById('navTipoFiltro').value;
   // Proteger todos los filtros de permisos — requiere contraseña DEI
-  if((tipoFiltro==='PermisoDEI' || tipoFiltro==='PermisoGUDMO' || tipoFiltro==='Permiso') && !_deiUnlocked){
-    requireDeiPin(function(){ renderNavMatriz(); });
-    return;
-  }
+  // Restricción de PIN desactivada — acceso libre a novedades
   var mesFiltro  = document.getElementById('navMesFiltro').value;
   var esc = curEscuadra==='all'?'DEI 2':curEscuadra;
   var personal = members.filter(function(m){ return m.escuadra===esc && !m.esEspejo; });
@@ -9553,7 +9524,7 @@ function navShowDetalle(memberId, tipo, mesIdx, anio){
     'Comision':   ['Comision','ComisionRegion','ComisionFuera','ComisionErradicacion']
   };
   var tiposBuscar = TIPO_GRUPOS_S[tipo]||[tipo];
-  var ayer = new Date(); ayer.setHours(0,0,0,0); ayer.setDate(ayer.getDate()-1);
+  var ayer = new Date(); ayer.setHours(23,59,59,999); // Cuenta hasta HOY inclusive
   var anio = new Date().getFullYear();
 
   // Buscar en historial SIN filtrar por mes — mostrar todos para editar
