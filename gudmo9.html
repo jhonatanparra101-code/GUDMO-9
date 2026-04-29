@@ -3329,7 +3329,7 @@ function renderMinuta(){
         +(totalVeces>0?'<div style="font-size:9px;color:var(--cyan);margin-top:1px">📋 Ha llevado: <strong>'+totalVeces+'</strong> '+(totalVeces!==1?'veces':'vez')+'</div>':'')
         +(esPend?'<div style="font-size:9px;color:var(--yellow);margin-top:1px">⏳ Pendiente al regresar de '+esPend.motivo+'</div>':'')
         +((lastH&&lastH.memberId===m.id)?(function(){
-          var _dt=getDiasLaboralesDesde(lastH.fecha);
+          var _dt=getDiasEfectivosTurno(m.id, lastH.fecha);
           var _dtTurno=t.diasLaboralesPorTurno||7;
           var _dtFaltan=Math.max(0,_dtTurno-_dt);
           var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
@@ -3752,7 +3752,7 @@ function renderTurnos(){
       var diasActualHtml='';
       if(lastH && lastH.memberId===m.id){
         // Este funcionario es quien tiene la bitácora actualmente
-        var _dt=getDiasLaboralesDesde(lastH.fecha);
+        var _dt=getDiasEfectivosTurno(m.id, lastH.fecha);
         var _dtTurno=t.diasLaboralesPorTurno||7;
         var _dtFaltan=Math.max(0,_dtTurno-_dt);
         var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
@@ -4925,35 +4925,58 @@ function _tem_buildCalendario(t){
   if(!t.historial||!t.historial.length) return '<div style="color:var(--muted);font-size:12px;padding:8px">Sin entregas registradas aún.</div>';
   var diasTurno = t.diasLaboralesPorTurno||7;
   var asc = t.historial.slice().sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
-  var html = '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">📅 Cada turno = <strong style="color:var(--gold2)">'+diasTurno+' días laborales</strong> · Recibe → Entrega</div>';
+  var html = '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">📅 Cada turno = <strong style="color:var(--gold2)">'+diasTurno+' días</strong> · <span style="color:var(--green)">EFECTIVOS</span> = días reales en servicio (descontando novedades)</div>';
   html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
   html += '<thead><tr style="border-bottom:2px solid var(--border)">'
     +'<th style="text-align:center;padding:6px 3px;color:var(--gold2);font-size:9px">T</th>'
     +'<th style="text-align:left;padding:6px 4px;color:var(--gold2);font-size:9px">FUNCIONARIO</th>'
     +'<th style="text-align:center;padding:6px 3px;color:var(--gold2);font-size:9px">RECIBE</th>'
     +'<th style="text-align:center;padding:6px 3px;color:var(--gold2);font-size:9px">ENTREGA</th>'
-    +'<th style="text-align:center;padding:6px 3px;color:var(--gold2);font-size:9px">DÍAS</th>'
+    +'<th style="text-align:center;padding:6px 3px;color:var(--gold2);font-size:9px">EFECTIVOS</th>'
+    +'<th style="text-align:center;padding:6px 3px;color:var(--muted);font-size:9px">TOTAL</th>'
     +'</tr></thead><tbody>';
   asc.forEach(function(h, i){
     var m = members.find(function(x){return x.id===h.memberId;});
     var nombre = m ? m.rank+' '+m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||'') : '?';
     var siguiente = asc[i+1];
     var esActual = (i===asc.length-1);
-    var fechaEntregaCell, diasCell;
+    var fechaEntregaCell, diasEfectivos, diasTotal, faltan;
+
     if(siguiente){
-      fechaEntregaCell = fmtDate(siguiente.fecha);
-      var d1=new Date(h.fecha+'T00:00:00'), d2=new Date(siguiente.fecha+'T00:00:00');
-      var diff = Math.round((d2-d1)/(1000*60*60*24));
-      var dc = diff<=diasTurno?'var(--green)':diff<=diasTurno+2?'var(--yellow)':'var(--red)';
-      diasCell = '<span style="color:'+dc+';font-weight:600">'+diff+'</span>';
+      // Ya entregó: contar hasta el día ANTERIOR a la fecha del siguiente
+      var fechaCierre = new Date(siguiente.fecha+'T00:00:00');
+      fechaCierre.setDate(fechaCierre.getDate()-1);
+      var fechaCierreStr = fechaCierre.toISOString().slice(0,10);
+      diasEfectivos = getDiasEfectivosTurno(h.memberId, h.fecha, fechaCierreStr);
+      diasTotal = getDiasTotalesEntre(h.fecha, fechaCierreStr);
+      fechaEntregaCell = '<span style="color:var(--text)">'+fmtDate(siguiente.fecha)+'</span>';
     } else {
-      var diasLleva = getDiasLaboralesDesde(h.fecha);
-      var faltan = Math.max(0, diasTurno - diasLleva);
+      // Es el actual
+      diasEfectivos = getDiasEfectivosTurno(h.memberId, h.fecha, null);
+      diasTotal = getDiasTotalesEntre(h.fecha, null);
+      faltan = Math.max(0, diasTurno - diasEfectivos);
       var color = faltan===0?'var(--red)':faltan<=2?'var(--yellow)':'var(--green)';
       fechaEntregaCell = '<span style="color:'+color+';font-weight:700">pendiente</span>';
-      diasCell = '<span style="color:'+color+';font-weight:700">'+diasLleva+'/'+diasTurno+'</span>'
-        +(faltan===0?'<div style="font-size:8px;color:var(--red)">¡ENTREGAR!</div>':'<div style="font-size:8px;color:var(--muted)">faltan '+faltan+'</div>');
     }
+
+    var diasColor;
+    if(siguiente){
+      diasColor = diasEfectivos>=diasTurno ? 'var(--green)' : diasEfectivos>=Math.floor(diasTurno*0.7) ? 'var(--yellow)' : 'var(--red)';
+    } else {
+      diasColor = faltan===0 ? 'var(--red)' : faltan<=2 ? 'var(--yellow)' : 'var(--green)';
+    }
+
+    var diasCell = '<div style="color:'+diasColor+';font-weight:700;font-size:13px">'+diasEfectivos+'</div>';
+    if(!siguiente && faltan!==undefined){
+      diasCell += '<div style="font-size:8px;color:'+(faltan===0?'var(--red)':'var(--muted)')+'">'+(faltan===0?'¡ENTREGAR!':'faltan '+faltan)+'</div>';
+    }
+
+    var totalCell = '<span style="color:var(--muted);font-size:10px">'+diasTotal+'d</span>';
+    var dif = diasTotal - diasEfectivos;
+    if(dif > 0){
+      totalCell += '<div style="font-size:8px;color:#f97316">-'+dif+' nov.</div>';
+    }
+
     var bg = esActual?'rgba(34,197,94,.12)':(i%2===0?'rgba(255,255,255,.02)':'transparent');
     var act = esActual?' <span style="font-size:8px;color:#22c55e;font-weight:700">◀ ACTUAL</span>':'';
     html += '<tr style="border-bottom:1px solid rgba(255,255,255,.05);background:'+bg+'">'
@@ -4961,11 +4984,14 @@ function _tem_buildCalendario(t){
       +'<td style="padding:6px 4px;color:var(--text)">'+nombre+act+'</td>'
       +'<td style="text-align:center;padding:6px 3px;font-size:10px;color:var(--text)">'+fmtDate(h.fecha)+'</td>'
       +'<td style="text-align:center;padding:6px 3px;font-size:10px">'+fechaEntregaCell+'</td>'
-      +'<td style="text-align:center;padding:6px 3px;font-size:10px">'+diasCell+'</td>'
+      +'<td style="text-align:center;padding:6px 3px">'+diasCell+'</td>'
+      +'<td style="text-align:center;padding:6px 3px">'+totalCell+'</td>'
       +'</tr>';
-    if(h.obs) html += '<tr style="background:'+bg+'"><td></td><td colspan="4" style="padding:0 4px 4px;color:var(--cyan);font-size:9px;font-style:italic">💬 '+h.obs+'</td></tr>';
+    if(h.obs) html += '<tr style="background:'+bg+'"><td></td><td colspan="5" style="padding:0 4px 4px;color:var(--cyan);font-size:9px;font-style:italic">💬 '+h.obs+'</td></tr>';
   });
   html += '</tbody></table></div>';
+
+  // Próximo en recibir
   if(t.miembros&&t.miembros.length){
     var last = asc[asc.length-1];
     var lastIdx = t.miembros.findIndex(function(mm){return mm.memberId===last.memberId;});
@@ -4978,6 +5004,90 @@ function _tem_buildCalendario(t){
   return html;
 }
 
+
+
+// ──────────────────────────────────────────────────────────────
+// CÁLCULO DE DÍAS EFECTIVOS (descuenta novedades del miembro)
+// Cuenta días calendario entre fechaInicio y fechaFin (inclusive),
+// excluyendo los días en que el funcionario estuvo en novedad
+// (Permiso, Vacaciones, Incapacidad, Comisión, Curso, Luto, etc).
+// Si fechaFin es null o no se proporciona, cuenta hasta hoy.
+// ──────────────────────────────────────────────────────────────
+function getDiasEfectivosTurno(memberId, fechaInicio, fechaFin){
+  if(!memberId || !fechaInicio) return 0;
+  var STATUS_AUSENTE = ['Vacaciones','Incapacidad','LicenciaLuto','Luto','Cursos','Curso',
+                        'ComisionFuera','ComisionRegion','ComisionErradicacion','Comision',
+                        'Guardia','Franquicia','PermisoGUDMO','PermisoDEI','Permiso',
+                        'LeyMaria','PermisoCumple','Anexo','Excusa'];
+
+  var ini = new Date(fechaInicio+'T00:00:00');
+  var fin;
+  if(fechaFin){
+    fin = new Date(fechaFin+'T00:00:00');
+  } else {
+    fin = new Date(); fin.setHours(0,0,0,0);
+  }
+  if(ini > fin) return 0;
+
+  // Recopilar TODOS los periodos de novedad del miembro (historial + estado actual)
+  var periodos = []; // {ini:Date, fin:Date} — ambos inclusive
+  historial.forEach(function(h){
+    if(h.memberId !== memberId) return;
+    if(!STATUS_AUSENTE.includes(h.status)) return;
+    if(h.fechaSalida){
+      var pi = new Date(h.fechaSalida+'T00:00:00');
+      var pf;
+      if(h.fechaFin){
+        pf = new Date(h.fechaFin+'T00:00:00');
+        pf.setDate(pf.getDate()-1); // fechaFin es día de presentación, último día de novedad = -1
+      } else {
+        pf = new Date(); pf.setHours(0,0,0,0);
+      }
+      periodos.push({ini:pi, fin:pf});
+    } else if(h.date) {
+      // Registros sin fechaSalida: usar h.date como un solo día
+      var pd = new Date(h.date+'T00:00:00');
+      periodos.push({ini:pd, fin:pd});
+    }
+  });
+
+  // Estado actual del miembro
+  var m = members.find(function(x){ return x.id===memberId; });
+  if(m && STATUS_AUSENTE.includes(m.status) && m.fechaSalida){
+    var ai = new Date(m.fechaSalida+'T00:00:00');
+    var af;
+    if(m.fechaFin){
+      af = new Date(m.fechaFin+'T00:00:00');
+      af.setDate(af.getDate()-1);
+    } else {
+      af = new Date(); af.setHours(0,0,0,0);
+    }
+    periodos.push({ini:ai, fin:af});
+  }
+
+  // Iterar día por día contando solo los que NO están en novedad
+  var dias = 0;
+  var cur = new Date(ini);
+  // El día de recepción cuenta como día 1
+  while(cur <= fin){
+    var enNovedad = periodos.some(function(p){
+      return cur >= p.ini && cur <= p.fin;
+    });
+    if(!enNovedad) dias++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return dias;
+}
+
+// Cuenta días totales del calendario (sin descuentos), para mostrar comparativa
+function getDiasTotalesEntre(fechaInicio, fechaFin){
+  if(!fechaInicio) return 0;
+  var ini = new Date(fechaInicio+'T00:00:00');
+  var fin = fechaFin ? new Date(fechaFin+'T00:00:00') : new Date();
+  fin.setHours(0,0,0,0);
+  if(ini > fin) return 0;
+  return Math.round((fin - ini)/(1000*60*60*24)) + 1;
+}
 
 // ──────────────────────────────────────────────────────────────
 // FUNCIONES GENÉRICAS PARA BITÁCORA / MINUTA / MANDO DE SEMANA
@@ -5118,7 +5228,7 @@ function renderTurnos2(){
       var diasActualHtml='';
       if(lastH && lastH.memberId===m.id){
         // Este funcionario es quien tiene la minuta actualmente
-        var _dt=getDiasLaboralesDesde(lastH.fecha);
+        var _dt=getDiasEfectivosTurno(m.id, lastH.fecha);
         var _dtTurno=t.diasLaboralesPorTurno||7;
         var _dtFaltan=Math.max(0,_dtTurno-_dt);
         var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
@@ -6096,7 +6206,7 @@ function renderTurnos3(){
       var diasActualHtml='';
       if(lastH && lastH.memberId===m.id){
         // Este funcionario es quien tiene la mando de semana actualmente
-        var _dt=getDiasLaboralesDesde(lastH.fecha);
+        var _dt=getDiasEfectivosTurno(m.id, lastH.fecha);
         var _dtTurno=t.diasLaboralesPorTurno||7;
         var _dtFaltan=Math.max(0,_dtTurno-_dt);
         var _dtColor=_dtFaltan===0?'var(--red)':_dt>=Math.floor(_dtTurno*0.7)?'var(--yellow)':'var(--green)';
@@ -9926,8 +10036,17 @@ function renderFormacionTactica(){
     var nombre = ok ? (m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||m.name.split(' ')[1]||'')).substring(0,10) : '---';
     var rankTxt = ok ? m.rank : '';
     w = w||52;
+    // Verificar si tiene munición asignada
+    var muniItems = ok ? getMunicionAsignada(m.id) : [];
+    var tieneMunicion = muniItems.length > 0;
+    var totalUnidades = muniItems.reduce(function(s, it){ return s + it.pendiente; }, 0);
+    var clickAttr = ok ? 'onclick="mostrarMunicionMiembro(\''+m.id+'\')" style="cursor:pointer"' : '';
+    var muniBadge = tieneMunicion
+      ? '<div style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:9px;padding:0 5px;font-size:8px;font-weight:700;border:1.5px solid var(--card);min-width:14px;height:14px;display:flex;align-items:center;justify-content:center;line-height:1">🔴'+totalUnidades+'</div>'
+      : '';
     return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:'+w+'px">'
-      +'<div style="background:'+bgc+';border:1.5px solid '+bdc+';border-radius:8px;padding:4px 3px;width:'+w+'px;box-sizing:border-box">'
+      +'<div '+clickAttr+' style="background:'+bgc+';border:1.5px solid '+bdc+';border-radius:8px;padding:4px 3px;width:'+w+'px;box-sizing:border-box;position:relative;'+(ok?'cursor:pointer':'')+'">'
+      +muniBadge
       +'<svg width="100%" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg">'
       +'<circle cx="18" cy="9" r="7" fill="'+color+'" opacity=".9"/>'
       +'<rect x="11" y="17" width="14" height="14" rx="3" fill="'+color+'" opacity=".8"/>'
@@ -10046,6 +10165,115 @@ function renderFormacionTactica(){
   // Render equipos A/B after formacion
   renderEquiposAB(esc, enSvc);
 }
+
+
+// ──────────────────────────────────────────────────────────────
+// MUNICIÓN POR FUNCIONARIO (para mostrar en dashboard)
+// ──────────────────────────────────────────────────────────────
+function getMunicionAsignada(memberId){
+  // Devuelve un array de items de munición de los servicios ACTIVOS (no cerrados)
+  // que tiene asignados este funcionario
+  var resultado = []; // [{tipo, cantidad, devuelto, servicioId, fecha, lugar}]
+  if(!Array.isArray(municionData)) return resultado;
+  municionData.forEach(function(srv){
+    if(srv.cerrado) return;
+    if(!srv.asignaciones) return;
+    var asig = srv.asignaciones.find(function(a){ return a.memberId===memberId; });
+    if(!asig || !asig.items) return;
+    asig.items.forEach(function(it){
+      var pendiente = (it.cantidad||0) - (it.devuelto||0);
+      if(pendiente > 0){
+        resultado.push({
+          tipo: it.tipo,
+          cantidad: it.cantidad,
+          devuelto: it.devuelto||0,
+          pendiente: pendiente,
+          fecha: srv.fecha,
+          lugar: srv.lugar||'',
+          servicioId: srv.id
+        });
+      }
+    });
+  });
+  return resultado;
+}
+
+function mostrarMunicionMiembro(memberId){
+  var m = members.find(function(x){ return x.id===memberId; });
+  if(!m) return;
+  var items = getMunicionAsignada(memberId);
+  var modal = document.getElementById('municionInfoModal');
+  if(!modal){
+    // Crear modal una sola vez
+    var div = document.createElement('div');
+    div.innerHTML = '<div class="modal-overlay" id="municionInfoModal" style="display:none" onclick="if(event.target===this)cerrarMunicionInfo()">'
+      +'<div class="modal" style="max-height:80vh;overflow-y:auto">'
+      +'<div class="modal-handle"></div>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+      +'<div class="modal-title" id="munInfoTitle" style="margin:0">Munición asignada</div>'
+      +'<button onclick="cerrarMunicionInfo()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px">✕</button>'
+      +'</div><div id="munInfoBody"></div></div></div>';
+    document.body.appendChild(div.firstChild);
+    modal = document.getElementById('municionInfoModal');
+  }
+  document.getElementById('munInfoTitle').textContent = '🔴 ' + m.rank + ' ' + m.name;
+  var body = '';
+  if(!items.length){
+    body = '<div style="text-align:center;padding:30px 10px;color:var(--muted)">'
+      +'<div style="font-size:48px;margin-bottom:10px">📦</div>'
+      +'<div style="font-size:13px">Sin munición asignada actualmente</div>'
+      +'</div>';
+  } else {
+    // Agrupar por tipo
+    var porTipo = {};
+    items.forEach(function(it){
+      if(!porTipo[it.tipo]) porTipo[it.tipo] = {cantidad:0, devuelto:0, pendiente:0, servicios:[]};
+      porTipo[it.tipo].cantidad  += it.cantidad;
+      porTipo[it.tipo].devuelto  += it.devuelto;
+      porTipo[it.tipo].pendiente += it.pendiente;
+      porTipo[it.tipo].servicios.push({fecha:it.fecha, lugar:it.lugar});
+    });
+    body = '<div style="display:flex;flex-direction:column;gap:10px">';
+    Object.keys(porTipo).forEach(function(tipo){
+      var d = porTipo[tipo];
+      body += '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:12px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+        +'<div style="font-size:13px;font-weight:700;color:var(--text)">'+tipo+'</div>'
+        +'<div style="font-size:24px;font-weight:800;color:var(--red)">'+d.pendiente+'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:6px;font-size:10px;color:var(--muted)">'
+        +'<span>Asignado: <strong style="color:var(--text)">'+d.cantidad+'</strong></span>'
+        +'<span>•</span>'
+        +'<span>Devuelto: <strong style="color:var(--green)">'+d.devuelto+'</strong></span>'
+        +'<span>•</span>'
+        +'<span>Pendiente: <strong style="color:var(--red)">'+d.pendiente+'</strong></span>'
+        +'</div></div>';
+    });
+    body += '</div>';
+    // Detalle de servicios
+    body += '<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">'
+      +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📅 Servicios activos</div>';
+    var serviciosVistos = {};
+    items.forEach(function(it){
+      if(serviciosVistos[it.servicioId]) return;
+      serviciosVistos[it.servicioId] = true;
+      body += '<div style="font-size:11px;color:var(--text);padding:4px 0">'
+        +'<strong>'+fmtDate(it.fecha)+'</strong>'
+        +(it.lugar?' · '+it.lugar:'')
+        +'</div>';
+    });
+    body += '</div>';
+  }
+  document.getElementById('munInfoBody').innerHTML = body;
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+}
+
+function cerrarMunicionInfo(){
+  var modal = document.getElementById('municionInfoModal');
+  if(modal){ modal.style.display='none'; modal.classList.remove('open'); }
+}
+
 
 // ── EQUIPOS A/B ─────────────────────────────────────────────────────────────
 // Persiste en localStorage por escuadra
