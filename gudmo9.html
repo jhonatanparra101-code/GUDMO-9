@@ -9919,9 +9919,14 @@ function renderFormacionTactica(){
     var tieneMunicion = muniItems.length > 0;
     var totalUnidades = muniItems.reduce(function(s, it){ return s + it.pendiente; }, 0);
     var clickAttr = ok ? 'onclick="mostrarMunicionMiembro(\''+m.id+'\')" style="cursor:pointer"' : '';
-    var muniBadge = tieneMunicion
-      ? '<div style="position:absolute;top:-3px;right:-3px;background:#ef4444;color:#fff;border-radius:8px;padding:0 3px;font-size:7px;font-weight:700;border:1px solid var(--card);min-width:11px;height:11px;display:flex;align-items:center;justify-content:center;line-height:1">🔴'+totalUnidades+'</div>'
-      : '';
+    // Indicador chiquito SIEMPRE visible: rojo con número si tiene munición pendiente,
+    // verde minimal sin número si está al día (sin pendientes).
+    var muniBadge = '';
+    if(ok){
+      muniBadge = tieneMunicion
+        ? '<div style="position:absolute;top:-3px;right:-3px;background:#ef4444;color:#fff;border-radius:7px;padding:0 3px;font-size:7px;font-weight:700;border:1px solid var(--card);min-width:10px;height:10px;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 0 3px rgba(239,68,68,.6)">'+totalUnidades+'</div>'
+        : '<div style="position:absolute;top:-2px;right:-2px;background:#22c55e;border-radius:50%;width:6px;height:6px;border:1px solid var(--card)"></div>';
+    }
     return '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:'+w+'px">'
       +'<div '+clickAttr+' style="background:'+bgc+';border:1px solid '+bdc+';border-radius:6px;padding:2px 2px;width:'+w+'px;box-sizing:border-box;position:relative;'+(ok?'cursor:pointer':'')+'">'
       +muniBadge
@@ -9985,14 +9990,14 @@ function renderFormacionTactica(){
   if(!opLanzs.length) html2 += muneco('Op. Lanzadora','LANZ', null, 26);
   ops40.forEach(function(m){ html2 += muneco('Operador 40','OP-40', m, 26); });
   if(!ops40.length) html2 += muneco('Operador 40','OP-40', null, 26);
-  opLanzs.slice(Math.ceil(opLanzs.length/2)).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 44); });
+  opLanzs.slice(Math.ceil(opLanzs.length/2)).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 26); });
   html2 += '</div>';
 
   // ── FILA 2: CTE-ESC | Medios Técnicos | TASER | Enfermero ──
   html2 += '<div style="'+filaC+'">';
   if(cte2) html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 32);
   medTec.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 30); });
-  if(!medTec.length){ html2 += muneco('Medios Técnicos','M.TEC', null, 30); html2 += muneco('Medios Técnicos','M.TEC', null, 48); }
+  if(!medTec.length){ html2 += muneco('Medios Técnicos','M.TEC', null, 30); html2 += muneco('Medios Técnicos','M.TEC', null, 30); }
   html2 += muneco('Op. Taser','TASER', taser, 30);
   if(enfer) html2 += muneco('Enfermero','ENFER', enfer, 30);
   html2 += '</div>';
