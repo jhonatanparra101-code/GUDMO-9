@@ -548,6 +548,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
         <option value="MY">Mayor (MY)</option>
         <option value="CT">Capitán (CT)</option>
         <option value="TN">Teniente (TN)</option>
+        <option value="TE">Teniente (TE)</option>
         <option value="ST">Subteniente (ST)</option>
         <option value="IJ">Intendente Jefe (IJ)</option>
         <option value="SI">Subintendente (SI)</option>
@@ -1641,7 +1642,7 @@ function cargoIcon(c){ return CARGO_ICONS[c]||'👤'; }
 
 // Clasificación jerárquica para el parte oficial
 const RANK_CATS = {
-  OF: { label:'Oficiales',            abbr:'Of.',  ranks:['GN','BG','CR','TC','MY','CT','TN','ST'] },
+  OF: { label:'Oficiales',            abbr:'Of.',  ranks:['GN','BG','CR','TC','MY','CT','TN','TE','ST'] },
   NE: { label:'Nivel Ejecutivo',      abbr:'N.E.', ranks:['IJ','SI','IN','IT'] },
   PT: { label:'Patrulleros',          abbr:'PT',   ranks:['PT','PA'] },
   PP: { label:'Patrulleros de Policía',abbr:'P.P.', ranks:['PP','AG'] },
@@ -9975,15 +9976,39 @@ function renderFormacionTactica(){
     // Verificar si tiene munición asignada
     var muniItems = ok ? getMunicionAsignada(m.id) : [];
     var tieneMunicion = muniItems.length > 0;
-    var totalUnidades = muniItems.reduce(function(s, it){ return s + it.pendiente; }, 0);
     var clickAttr = ok ? 'onclick="mostrarMunicionMiembro(\''+m.id+'\')"' : '';
-    // Indicador chiquito SIEMPRE visible: rojo con número si tiene munición pendiente,
-    // verde minimal sin número si está al día (sin pendientes).
+    // Agrupar items por tipo y sumar pendientes
+    var gruposTipo = {};
+    muniItems.forEach(function(it){
+      if(!gruposTipo[it.tipo]) gruposTipo[it.tipo] = 0;
+      gruposTipo[it.tipo] += it.pendiente;
+    });
+    // Paleta de colores por tipo de munición
+    var colorMuni = function(tipo){
+      var t = (tipo||'').toLowerCase();
+      if(t.indexOf('5231')>=0) return '#ef4444';      // rojo - granada CS 5231
+      if(t.indexOf('gl 302')>=0 || t.indexOf('gl302')>=0) return '#f97316'; // naranja - GL 302
+      if(t.indexOf('humo')>=0) return '#94a3b8';       // gris - humo
+      if(t.indexOf('stun')>=0 || t.indexOf('bang')>=0) return '#fbbf24'; // amarillo - stun
+      if(t.indexOf('triple')>=0) return '#06b6d4';     // cian - triple chaser
+      if(t.indexOf('cs')>=0) return '#a78bfa';         // púrpura - otras CS
+      return '#64748b';                                 // fallback
+    };
+    // Construir pills de subtotales
     var muniBadge = '';
     if(ok){
-      muniBadge = tieneMunicion
-        ? '<div style="position:absolute;top:-3px;right:-3px;background:#ef4444;color:#fff;border-radius:7px;padding:0 3px;font-size:7px;font-weight:700;border:1px solid var(--card);min-width:10px;height:10px;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 0 3px rgba(239,68,68,.6)">'+totalUnidades+'</div>'
-        : '<div style="position:absolute;top:-2px;right:-2px;background:#22c55e;border-radius:50%;width:6px;height:6px;border:1px solid var(--card)"></div>';
+      if(tieneMunicion){
+        var pills = '';
+        Object.keys(gruposTipo).forEach(function(tipo){
+          var n = gruposTipo[tipo];
+          if(n > 0){
+            pills += '<span title="'+tipo+'" style="background:'+colorMuni(tipo)+';color:#fff;border-radius:5px;padding:0 3px;font-size:7px;font-weight:700;line-height:10px;display:inline-block;min-width:8px;text-align:center;border:1px solid rgba(0,0,0,.3)">'+n+'</span>';
+          }
+        });
+        muniBadge = '<div style="position:absolute;top:-5px;left:50%;transform:translateX(-50%);display:flex;gap:1px;white-space:nowrap;z-index:2;filter:drop-shadow(0 0 2px rgba(0,0,0,.5))">'+pills+'</div>';
+      } else {
+        muniBadge = '<div style="position:absolute;top:-2px;right:-2px;background:#22c55e;border-radius:50%;width:6px;height:6px;border:1px solid var(--card)"></div>';
+      }
     }
     // En mobile (iOS Safari) "width:100%" en SVG sin height forza tamaño intrínseco del viewBox.
     // Calculamos width/height en píxeles fijos basados en w, manteniendo proporción 36:44.
