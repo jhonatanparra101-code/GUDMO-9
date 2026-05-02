@@ -3829,79 +3829,8 @@ function renderTurnos(){
         +'</div>';
     }
 
-    // Historial de entregas
-    var histHtml='';
-    if(t.historial.length){
-      var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
-
-      if(t.tipo==='semanal_laboral'){
-        // MATRIZ VIEW — igual que el Excel de guardia
-        // Columnas: persona × turno recibido
-        var miembrosOrden = t.miembros.map(function(mm){
-          return members.find(function(x){return x.id===mm.memberId;});
-        }).filter(Boolean);
-
-        histHtml='<div style="margin-top:10px">'
-          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📊 Registro de entregas</div>'
-          +'<div style="overflow-x:auto">'
-          +'<table style="width:100%;border-collapse:collapse;font-size:10px">'
-          +'<thead><tr>'
-          +'<th style="background:var(--navy);padding:5px 8px;text-align:left;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:100px">FUNCIONARIO</th>';
-
-        // Column per delivery
-        sorted.forEach(function(h,i){
-          histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:55px">T'+(i+1)+'<br><span style="font-size:8px;font-weight:400">'+fmtDate(h.fecha)+'</span></th>';
-        });
-        histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--gold2);font-size:9px;border:1px solid var(--border);min-width:36px">TOT</th>'
-          +'</tr></thead><tbody>';
-
-        miembrosOrden.forEach(function(m){
-          var total=0;
-          var nomCorto=m.name.split(' ').slice(0,2).join(' ');
-          var row='<tr><td style="padding:5px 8px;border:1px solid var(--border);color:var(--text)">'
-            +'<span style="font-size:8px;color:var(--muted);margin-right:3px">'+m.rank+'</span>'+nomCorto+'</td>';
-          sorted.forEach(function(h){
-            var esSuyo=h.memberId===m.id;
-            if(esSuyo) total++;
-            row+='<td style="text-align:center;padding:5px 2px;border:1px solid var(--border);'
-              +'background:'+(esSuyo?'rgba(34,197,94,.15)':'transparent')+';'
-              +'color:'+(esSuyo?'var(--green)':'var(--muted)')+';font-weight:'+(esSuyo?'700':'400')+'">'
-              +(esSuyo?'<span title="'+fmtDate(h.fecha)+(h.obs?' · '+h.obs:'')+'">✓<br><span style="font-size:7px;font-weight:400;color:var(--muted)">'+fmtDate(h.fecha).slice(0,5)+'</span></span>':'-')+'</td>';
-          });
-          row+='<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?'var(--gold2)':'var(--muted)')+';font-weight:700">'+(total||'-')+'</td></tr>';
-          histHtml+=row;
-        });
-
-        // Fila de acciones: editar y borrar cada entrega
-        histHtml+='<tfoot><tr><td style="padding:4px 8px;border:1px solid var(--border);font-size:9px;color:var(--muted)">ACCIONES</td>';
-        sorted.forEach(function(h,idx_h){
-          var hm=members.find(function(x){return x.id===h.memberId;});
-          var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
-          histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
-            +'<button onclick="editarEntregaTurno(\'bitacora\',\''+t.id+'\','+idx_h+')" '
-            +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
-            +'<button onclick="borrarEntregaTurno(\'bitacora\',\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
-            +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
-            +'</td>';
-        });
-        histHtml+='<td style="border:1px solid var(--border)"></td></tr></tfoot>';
-        histHtml+='</tbody></table></div></div>';
-
-      } else {
-        // Lista simple para otros tipos de turno
-        histHtml='<div style="margin-top:10px">'
-          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Historial</div>'
-          +'<div style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">';
-        sorted.reverse().forEach(function(h){
-          var hm=members.find(function(x){return x.id===h.memberId;});
-          histHtml+='<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)">'
-            +'<div style="font-size:10px;color:var(--muted);min-width:70px">'+fmtDate(h.fecha)+'</div>'
-            +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+(hm?hm.rank+' '+hm.name:'Desconocido')+'</div>'
-            +'</div>';
-        });
-        histHtml+='</div></div>';
-      }
-    }
+    // Historial de entregas — timeline tipo novedades (del día X al día Y)
+    var histHtml = renderHistorialTurnoTimeline('bitacora', t);
 
     out+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">'
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
@@ -5090,6 +5019,97 @@ function getDiasTotalesEntre(fechaInicio, fechaFin){
 }
 
 // ──────────────────────────────────────────────────────────────
+// TIMELINE DE PERÍODOS PARA BITÁCORA / MINUTA / MANDO DE SEMANA
+// ──────────────────────────────────────────────────────────────
+function renderHistorialTurnoTimeline(tipo, t){
+  if(!t || !t.historial || !t.historial.length) return '';
+
+  var sorted = [...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
+
+  var hoy = new Date();
+  hoy.setHours(0,0,0,0);
+  var hoyStr = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+
+  var periodos = [];
+  for(var i=0;i<sorted.length;i++){
+    var h = sorted[i];
+    var siguiente = sorted[i+1];
+    var fechaIni = h.fecha;
+    var fechaFin;
+    var actual = false;
+    if(siguiente){
+      var d = new Date(siguiente.fecha+'T00:00:00');
+      d.setDate(d.getDate()-1);
+      fechaFin = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    } else {
+      fechaFin = hoyStr;
+      actual = true;
+    }
+    periodos.push({
+      memberId: h.memberId,
+      fechaIni: fechaIni,
+      fechaFin: fechaFin,
+      obs: h.obs || '',
+      idxOriginal: t.historial.indexOf(h),
+      actual: actual
+    });
+  }
+
+  periodos.reverse();
+
+  var labelTipo = tipo==='minuta'?'📋 Minuta':tipo==='mando'?'🎖️ Mando de Semana':'📖 Bitácora';
+
+  var html = '<div style="margin-top:12px">'
+    +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📜 Historial de '+labelTipo+'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto">';
+
+  periodos.forEach(function(p){
+    var m = members.find(function(x){return x.id===p.memberId;});
+    var nombre = m ? (m.rank+' '+m.name) : 'Desconocido';
+    var diasTotales = getDiasTotalesEntre(p.fechaIni, p.fechaFin);
+    var diasEfectivos = getDiasEfectivosTurno(p.memberId, p.fechaIni, p.fechaFin);
+    var diasNovedad = diasTotales - diasEfectivos;
+
+    var barColor = p.actual ? 'var(--green)' : 'var(--cyan)';
+    var bgGrad = p.actual
+      ? 'linear-gradient(90deg, rgba(34,197,94,.12) 0%, rgba(34,197,94,.04) 100%)'
+      : 'linear-gradient(90deg, rgba(34,211,238,.06) 0%, rgba(34,211,238,.02) 100%)';
+    var border = p.actual ? '1px solid rgba(34,197,94,.35)' : '1px solid var(--border)';
+    var badgeActual = p.actual
+      ? '<span style="font-size:8px;font-weight:700;color:var(--green);background:rgba(34,197,94,.18);padding:2px 6px;border-radius:6px;letter-spacing:.5px">EN CURSO</span>'
+      : '';
+
+    var fIni = fmtDate(p.fechaIni);
+    var fFin = p.actual ? 'hoy' : fmtDate(p.fechaFin);
+    var nomCortoBtn = m ? m.name.split(' ').slice(0,2).join(' ').replace(/'/g,"") : '?';
+
+    html += '<div style="background:'+bgGrad+';border:'+border+';border-left:3px solid '+barColor+';border-radius:8px;padding:9px 10px">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">'
+        +'<div style="flex:1;min-width:140px;font-size:12px;font-weight:700;color:var(--text)">'+nombre+'</div>'
+        +badgeActual
+        +'<button onclick="editarEntregaTurno(\''+tipo+'\',\''+t.id+'\','+p.idxOriginal+')" '
+          +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:5px;padding:3px 7px;font-size:10px;color:var(--blue);cursor:pointer">✏️</button>'
+        +'<button onclick="borrarEntregaTurno(\''+tipo+'\',\''+t.id+'\','+p.idxOriginal+',\''+nomCortoBtn+'\')" '
+          +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:5px;padding:3px 7px;font-size:10px;color:var(--red);cursor:pointer">🗑️</button>'
+      +'</div>'
+      +'<div style="font-size:10.5px;color:var(--muted);margin-bottom:3px">'
+        +'📅 <strong style="color:var(--text)">'+fIni+'</strong> → <strong style="color:var(--text)">'+fFin+'</strong>'
+      +'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px">'
+        +'<span style="font-size:9.5px;color:var(--gold2);background:rgba(200,146,42,.12);padding:2px 7px;border-radius:5px;font-weight:600">'+diasTotales+' día'+(diasTotales!==1?'s':'')+' totales</span>'
+        +'<span style="font-size:9.5px;color:var(--green);background:rgba(34,197,94,.12);padding:2px 7px;border-radius:5px;font-weight:600">✓ '+diasEfectivos+' efectivo'+(diasEfectivos!==1?'s':'')+'</span>'
+        +(diasNovedad>0?'<span style="font-size:9.5px;color:var(--yellow);background:rgba(251,191,36,.12);padding:2px 7px;border-radius:5px;font-weight:600">⏸️ '+diasNovedad+' en novedad</span>':'')
+      +'</div>'
+      +(p.obs?'<div style="font-size:10px;color:var(--cyan);font-style:italic;margin-top:5px;padding-top:5px;border-top:1px dashed rgba(255,255,255,.06)">💬 '+p.obs+'</div>':'')
+    +'</div>';
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+
+// ──────────────────────────────────────────────────────────────
 // FUNCIONES GENÉRICAS PARA BITÁCORA / MINUTA / MANDO DE SEMANA
 // ──────────────────────────────────────────────────────────────
 function _mod(tipo){
@@ -5305,79 +5325,8 @@ function renderTurnos2(){
         +'</div>';
     }
 
-    // Historial de entregas
-    var histHtml='';
-    if(t.historial.length){
-      var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
-
-      if(t.tipo==='semanal_laboral'){
-        // MATRIZ VIEW — igual que el Excel de guardia
-        // Columnas: persona × turno recibido
-        var miembrosOrden = t.miembros.map(function(mm){
-          return members.find(function(x){return x.id===mm.memberId;});
-        }).filter(Boolean);
-
-        histHtml='<div style="margin-top:10px">'
-          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📊 Registro de entregas</div>'
-          +'<div style="overflow-x:auto">'
-          +'<table style="width:100%;border-collapse:collapse;font-size:10px">'
-          +'<thead><tr>'
-          +'<th style="background:var(--navy);padding:5px 8px;text-align:left;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:100px">FUNCIONARIO</th>';
-
-        // Column per delivery
-        sorted.forEach(function(h,i){
-          histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:55px">T'+(i+1)+'<br><span style="font-size:8px;font-weight:400">'+fmtDate(h.fecha)+'</span></th>';
-        });
-        histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--gold2);font-size:9px;border:1px solid var(--border);min-width:36px">TOT</th>'
-          +'</tr></thead><tbody>';
-
-        miembrosOrden.forEach(function(m){
-          var total=0;
-          var nomCorto=m.name.split(' ').slice(0,2).join(' ');
-          var row='<tr><td style="padding:5px 8px;border:1px solid var(--border);color:var(--text)">'
-            +'<span style="font-size:8px;color:var(--muted);margin-right:3px">'+m.rank+'</span>'+nomCorto+'</td>';
-          sorted.forEach(function(h){
-            var esSuyo=h.memberId===m.id;
-            if(esSuyo) total++;
-            row+='<td style="text-align:center;padding:5px 2px;border:1px solid var(--border);'
-              +'background:'+(esSuyo?'rgba(34,197,94,.15)':'transparent')+';'
-              +'color:'+(esSuyo?'var(--green)':'var(--muted)')+';font-weight:'+(esSuyo?'700':'400')+'">'
-              +(esSuyo?'<span title="'+fmtDate(h.fecha)+(h.obs?' · '+h.obs:'')+'">✓<br><span style="font-size:7px;font-weight:400;color:var(--muted)">'+fmtDate(h.fecha).slice(0,5)+'</span></span>':'-')+'</td>';
-          });
-          row+='<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?'var(--gold2)':'var(--muted)')+';font-weight:700">'+(total||'-')+'</td></tr>';
-          histHtml+=row;
-        });
-
-        // Fila de acciones: editar y borrar cada entrega
-        histHtml+='<tfoot><tr><td style="padding:4px 8px;border:1px solid var(--border);font-size:9px;color:var(--muted)">ACCIONES</td>';
-        sorted.forEach(function(h,idx_h){
-          var hm=members.find(function(x){return x.id===h.memberId;});
-          var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
-          histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
-            +'<button onclick="editarEntregaTurno(\'bitacora\',\''+t.id+'\','+idx_h+')" '
-            +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
-            +'<button onclick="borrarEntregaTurno(\'minuta\',\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
-            +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
-            +'</td>';
-        });
-        histHtml+='<td style="border:1px solid var(--border)"></td></tr></tfoot>';
-        histHtml+='</tbody></table></div></div>';
-
-      } else {
-        // Lista simple para otros tipos de turno
-        histHtml='<div style="margin-top:10px">'
-          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Historial</div>'
-          +'<div style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">';
-        sorted.reverse().forEach(function(h){
-          var hm=members.find(function(x){return x.id===h.memberId;});
-          histHtml+='<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)">'
-            +'<div style="font-size:10px;color:var(--muted);min-width:70px">'+fmtDate(h.fecha)+'</div>'
-            +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+(hm?hm.rank+' '+hm.name:'Desconocido')+'</div>'
-            +'</div>';
-        });
-        histHtml+='</div></div>';
-      }
-    }
+    // Historial de entregas — timeline tipo novedades (del día X al día Y)
+    var histHtml = renderHistorialTurnoTimeline('minuta', t);
 
     out+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">'
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
@@ -6283,79 +6232,8 @@ function renderTurnos3(){
         +'</div>';
     }
 
-    // Historial de entregas
-    var histHtml='';
-    if(t.historial.length){
-      var sorted=[...t.historial].sort(function(a,b){return a.fecha.localeCompare(b.fecha);});
-
-      if(t.tipo==='semanal_laboral'){
-        // MATRIZ VIEW — igual que el Excel de guardia
-        // Columnas: persona × turno recibido
-        var miembrosOrden = t.miembros.map(function(mm){
-          return members.find(function(x){return x.id===mm.memberId;});
-        }).filter(Boolean);
-
-        histHtml='<div style="margin-top:10px">'
-          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">📊 Registro de entregas</div>'
-          +'<div style="overflow-x:auto">'
-          +'<table style="width:100%;border-collapse:collapse;font-size:10px">'
-          +'<thead><tr>'
-          +'<th style="background:var(--navy);padding:5px 8px;text-align:left;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:100px">FUNCIONARIO</th>';
-
-        // Column per delivery
-        sorted.forEach(function(h,i){
-          histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--muted);font-size:9px;border:1px solid var(--border);min-width:55px">T'+(i+1)+'<br><span style="font-size:8px;font-weight:400">'+fmtDate(h.fecha)+'</span></th>';
-        });
-        histHtml+='<th style="background:var(--navy);padding:5px 4px;text-align:center;color:var(--gold2);font-size:9px;border:1px solid var(--border);min-width:36px">TOT</th>'
-          +'</tr></thead><tbody>';
-
-        miembrosOrden.forEach(function(m){
-          var total=0;
-          var nomCorto=m.name.split(' ').slice(0,2).join(' ');
-          var row='<tr><td style="padding:5px 8px;border:1px solid var(--border);color:var(--text)">'
-            +'<span style="font-size:8px;color:var(--muted);margin-right:3px">'+m.rank+'</span>'+nomCorto+'</td>';
-          sorted.forEach(function(h){
-            var esSuyo=h.memberId===m.id;
-            if(esSuyo) total++;
-            row+='<td style="text-align:center;padding:5px 2px;border:1px solid var(--border);'
-              +'background:'+(esSuyo?'rgba(34,197,94,.15)':'transparent')+';'
-              +'color:'+(esSuyo?'var(--green)':'var(--muted)')+';font-weight:'+(esSuyo?'700':'400')+'">'
-              +(esSuyo?'<span title="'+fmtDate(h.fecha)+(h.obs?' · '+h.obs:'')+'">✓<br><span style="font-size:7px;font-weight:400;color:var(--muted)">'+fmtDate(h.fecha).slice(0,5)+'</span></span>':'-')+'</td>';
-          });
-          row+='<td style="text-align:center;padding:5px 4px;border:1px solid var(--border);color:'+(total>0?'var(--gold2)':'var(--muted)')+';font-weight:700">'+(total||'-')+'</td></tr>';
-          histHtml+=row;
-        });
-
-        // Fila de acciones: editar y borrar cada entrega
-        histHtml+='<tfoot><tr><td style="padding:4px 8px;border:1px solid var(--border);font-size:9px;color:var(--muted)">ACCIONES</td>';
-        sorted.forEach(function(h,idx_h){
-          var hm=members.find(function(x){return x.id===h.memberId;});
-          var nomCorto=hm?hm.name.split(' ').slice(0,2).join(' '):'?';
-          histHtml+='<td style="text-align:center;padding:4px 2px;border:1px solid var(--border)">'
-            +'<button onclick="editarEntregaTurno(\'minuta\',\''+t.id+'\','+idx_h+')" '
-            +'style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--blue);cursor:pointer;margin-bottom:2px;display:block;width:100%">✏️</button>'
-            +'<button onclick="borrarEntregaTurno(\'mando\',\''+t.id+'\','+idx_h+',\''+nomCorto+'\')" '
-            +'style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 5px;font-size:9px;color:var(--red);cursor:pointer;display:block;width:100%">🗑️</button>'
-            +'</td>';
-        });
-        histHtml+='<td style="border:1px solid var(--border)"></td></tr></tfoot>';
-        histHtml+='</tbody></table></div></div>';
-
-      } else {
-        // Lista simple para otros tipos de turno
-        histHtml='<div style="margin-top:10px">'
-          +'<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Historial</div>'
-          +'<div style="max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">';
-        sorted.reverse().forEach(function(h){
-          var hm=members.find(function(x){return x.id===h.memberId;});
-          histHtml+='<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:rgba(255,255,255,.03);border-radius:6px;border:1px solid var(--border)">'
-            +'<div style="font-size:10px;color:var(--muted);min-width:70px">'+fmtDate(h.fecha)+'</div>'
-            +'<div style="font-size:11px;font-weight:600;color:var(--text)">'+(hm?hm.rank+' '+hm.name:'Desconocido')+'</div>'
-            +'</div>';
-        });
-        histHtml+='</div></div>';
-      }
-    }
+    // Historial de entregas — timeline tipo novedades (del día X al día Y)
+    var histHtml = renderHistorialTurnoTimeline('mando', t);
 
     out+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">'
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
@@ -10033,7 +9911,7 @@ function renderFormacionTactica(){
     var color = ok ? '#22c55e' : '#ef4444';
     var bgc   = ok ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.12)';
     var bdc   = ok ? 'rgba(34,197,94,.4)'  : 'rgba(239,68,68,.4)';
-    var nombre = ok ? (m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||m.name.split(' ')[1]||'')).substring(0,10) : '---';
+    var nombre = ok ? (m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||m.name.split(' ')[1]||'')).substring(0,9) : '---';
     var rankTxt = ok ? m.rank : '';
     w = w||52;
     // Verificar si tiene munición asignada
@@ -10042,10 +9920,10 @@ function renderFormacionTactica(){
     var totalUnidades = muniItems.reduce(function(s, it){ return s + it.pendiente; }, 0);
     var clickAttr = ok ? 'onclick="mostrarMunicionMiembro(\''+m.id+'\')" style="cursor:pointer"' : '';
     var muniBadge = tieneMunicion
-      ? '<div style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:9px;padding:0 5px;font-size:8px;font-weight:700;border:1.5px solid var(--card);min-width:14px;height:14px;display:flex;align-items:center;justify-content:center;line-height:1">🔴'+totalUnidades+'</div>'
+      ? '<div style="position:absolute;top:-3px;right:-3px;background:#ef4444;color:#fff;border-radius:8px;padding:0 3px;font-size:7px;font-weight:700;border:1px solid var(--card);min-width:11px;height:11px;display:flex;align-items:center;justify-content:center;line-height:1">🔴'+totalUnidades+'</div>'
       : '';
-    return '<div style="display:flex;flex-direction:column;align-items:center;gap:2px;min-width:'+w+'px">'
-      +'<div '+clickAttr+' style="background:'+bgc+';border:1.5px solid '+bdc+';border-radius:8px;padding:4px 3px;width:'+w+'px;box-sizing:border-box;position:relative;'+(ok?'cursor:pointer':'')+'">'
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:'+w+'px">'
+      +'<div '+clickAttr+' style="background:'+bgc+';border:1px solid '+bdc+';border-radius:6px;padding:2px 2px;width:'+w+'px;box-sizing:border-box;position:relative;'+(ok?'cursor:pointer':'')+'">'
       +muniBadge
       +'<svg width="100%" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg">'
       +'<circle cx="18" cy="9" r="7" fill="'+color+'" opacity=".9"/>'
@@ -10056,10 +9934,10 @@ function renderFormacionTactica(){
       +'<rect x="19" y="31" width="5" height="11" rx="2" fill="'+color+'" opacity=".7"/>'
       +(ok?'':'<line x1="4" y1="4" x2="32" y2="40" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="2 2"/>')
       +'</svg>'
-      +'<div style="font-size:7.5px;font-weight:700;color:'+color+';text-align:center;line-height:1.2;margin-top:1px">'+rankTxt+'</div>'
-      +'<div style="font-size:7px;color:'+(ok?'var(--text)':'var(--muted)')+';text-align:center;line-height:1.2;max-width:'+w+'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nombre+'</div>'
+      +'<div style="font-size:6.5px;font-weight:700;color:'+color+';text-align:center;line-height:1.1;margin-top:1px">'+rankTxt+'</div>'
+      +'<div style="font-size:6px;color:'+(ok?'var(--text)':'var(--muted)')+';text-align:center;line-height:1.1;max-width:'+w+'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nombre+'</div>'
       +'</div>'
-      +'<div style="font-size:7px;color:var(--muted);text-align:center;font-weight:600;letter-spacing:.3px">'+label+'</div>'
+      +'<div style="font-size:6px;color:var(--muted);text-align:center;font-weight:600;letter-spacing:.2px">'+label+'</div>'
       +'</div>';
   }
 
@@ -10078,21 +9956,21 @@ function renderFormacionTactica(){
   var cargosEnFormacion = new Set(['Cte. DEI','Cte. Escuadra','Líder Escuderos','Op. Taser',
     'Enfermero','Operador 37','Operador 40','Op. Lanzadora','SPI','Líder SPI','Líder Operadores','Escudero','Medios Técnicos']);
 
-  var filaC = 'display:flex;align-items:flex-end;justify-content:center;gap:3px;margin-bottom:6px;flex-wrap:wrap;';
+  var filaC = 'display:flex;align-items:flex-end;justify-content:center;gap:2px;margin-bottom:3px;flex-wrap:wrap;';
 
   var html2 = '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:10px 4px 8px">';
   html2 += '<div style="text-align:center;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">'+esc+' — Dispositivo Táctico</div>';
 
   // ── FILA 0: CTE DEI centrado arriba solo ──
   html2 += '<div style="'+filaC+'">';
-  html2 += muneco('Cte. DEI','CTE DEI', cte1, 56);
+  html2 += muneco('Cte. DEI','CTE DEI', cte1, 38);
   html2 += '</div>';
 
   // ── FILA 0b: Líder Operadores debajo del CTE DEI ──
   var liderOps = getCargo('Líder Operadores');
   if(liderOps) {
     html2 += '<div style="'+filaC+'margin-bottom:2px">';
-    html2 += muneco('Líder Operadores','L-OPS', liderOps, 52);
+    html2 += muneco('Líder Operadores','L-OPS', liderOps, 32);
     html2 += '</div>';
   }
 
@@ -10101,44 +9979,44 @@ function renderFormacionTactica(){
 
   // ── FILA 1: OP-37s | Lanzadoras | OP-40s (sin CTE-ESC aquí) ──
   html2 += '<div style="'+filaC+'">';
-  ops37.forEach(function(m){ html2 += muneco('Operador 37','OP-37', m, 44); });
-  if(!ops37.length) html2 += muneco('Operador 37','OP-37', null, 44);
-  opLanzs.slice(0, Math.ceil(opLanzs.length/2)||1).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 44); });
-  if(!opLanzs.length) html2 += muneco('Op. Lanzadora','LANZ', null, 44);
-  ops40.forEach(function(m){ html2 += muneco('Operador 40','OP-40', m, 44); });
-  if(!ops40.length) html2 += muneco('Operador 40','OP-40', null, 44);
+  ops37.forEach(function(m){ html2 += muneco('Operador 37','OP-37', m, 26); });
+  if(!ops37.length) html2 += muneco('Operador 37','OP-37', null, 26);
+  opLanzs.slice(0, Math.ceil(opLanzs.length/2)||1).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 26); });
+  if(!opLanzs.length) html2 += muneco('Op. Lanzadora','LANZ', null, 26);
+  ops40.forEach(function(m){ html2 += muneco('Operador 40','OP-40', m, 26); });
+  if(!ops40.length) html2 += muneco('Operador 40','OP-40', null, 26);
   opLanzs.slice(Math.ceil(opLanzs.length/2)).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 44); });
   html2 += '</div>';
 
   // ── FILA 2: CTE-ESC | Medios Técnicos | TASER | Enfermero ──
   html2 += '<div style="'+filaC+'">';
-  if(cte2) html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 52);
-  medTec.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 48); });
-  if(!medTec.length){ html2 += muneco('Medios Técnicos','M.TEC', null, 48); html2 += muneco('Medios Técnicos','M.TEC', null, 48); }
-  html2 += muneco('Op. Taser','TASER', taser, 48);
-  if(enfer) html2 += muneco('Enfermero','ENFER', enfer, 48);
+  if(cte2) html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 32);
+  medTec.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 30); });
+  if(!medTec.length){ html2 += muneco('Medios Técnicos','M.TEC', null, 30); html2 += muneco('Medios Técnicos','M.TEC', null, 48); }
+  html2 += muneco('Op. Taser','TASER', taser, 30);
+  if(enfer) html2 += muneco('Enfermero','ENFER', enfer, 30);
   html2 += '</div>';
 
   // ── FILA 3a: L-SPI encima de la línea SPI ──
   html2 += '<div style="'+filaC+'margin-bottom:2px">';
-  html2 += muneco('Líder SPI','L-SPI', getCargo('Líder SPI'), 48);
+  html2 += muneco('Líder SPI','L-SPI', getCargo('Líder SPI'), 30);
   html2 += '</div>';
 
   // ── FILA 3b: SPIs en línea ──
   html2 += '<div style="'+filaC+'">';
-  spis.forEach(function(m){ html2 += muneco('SPI','SPI', m, 44); });
-  if(!spis.length) html2 += muneco('SPI','SPI', null, 44);
+  spis.forEach(function(m){ html2 += muneco('SPI','SPI', m, 26); });
+  if(!spis.length) html2 += muneco('SPI','SPI', null, 26);
   html2 += '</div>';
 
   // ── FILA 4a: L-ESC encima de la línea de escuderos ──
   html2 += '<div style="'+filaC+'margin-bottom:2px;margin-top:4px">';
-  html2 += muneco('Líder Escuderos','L-ESC', cte3, 48);
+  html2 += muneco('Líder Escuderos','L-ESC', cte3, 30);
   html2 += '</div>';
 
   // ── FILA 4b: Escuderos en línea ──
   html2 += '<div style="'+filaC+'">';
-  escuderos.forEach(function(m, i){ html2 += muneco('Escudero','E'+(i+1), m, 40); });
-  if(!escuderos.length){ for(var i=0;i<6;i++) html2 += muneco('Escudero','E'+(i+1), null, 40); }
+  escuderos.forEach(function(m, i){ html2 += muneco('Escudero','E'+(i+1), m, 24); });
+  if(!escuderos.length){ for(var i=0;i<6;i++) html2 += muneco('Escudero','E'+(i+1), null, 24); }
   html2 += '</div>';
 
   // ── EXTRAS ──
@@ -10147,7 +10025,7 @@ function renderFormacionTactica(){
     html2 += '<div style="border-top:1px solid rgba(255,255,255,.06);margin-top:6px;padding-top:6px">'
       +'<div style="text-align:center;font-size:8px;color:var(--muted);margin-bottom:4px">OTROS EN SERVICIO</div>'
       +'<div style="'+filaC+'">';
-    extras.forEach(function(m){ html2 += muneco(m.cargo,(m.cargo||'').substring(0,6),m,48); });
+    extras.forEach(function(m){ html2 += muneco(m.cargo,(m.cargo||'').substring(0,6),m,30); });
     html2 += '</div></div>';
   }
 
