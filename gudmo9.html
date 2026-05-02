@@ -9927,10 +9927,14 @@ function renderFormacionTactica(){
         ? '<div style="position:absolute;top:-3px;right:-3px;background:#ef4444;color:#fff;border-radius:7px;padding:0 3px;font-size:7px;font-weight:700;border:1px solid var(--card);min-width:10px;height:10px;display:flex;align-items:center;justify-content:center;line-height:1;box-shadow:0 0 3px rgba(239,68,68,.6)">'+totalUnidades+'</div>'
         : '<div style="position:absolute;top:-2px;right:-2px;background:#22c55e;border-radius:50%;width:6px;height:6px;border:1px solid var(--card)"></div>';
     }
-    return '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:'+w+'px">'
+    // En mobile (iOS Safari) "width:100%" en SVG sin height forza tamaño intrínseco del viewBox.
+    // Calculamos width/height en píxeles fijos basados en w, manteniendo proporción 36:44.
+    var svgW = w - 4; // descontar padding (2px cada lado)
+    var svgH = Math.round(svgW * 44 / 36);
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:1px;width:'+w+'px;flex:0 0 '+w+'px">'
       +'<div '+clickAttr+' style="background:'+bgc+';border:1px solid '+bdc+';border-radius:6px;padding:2px 2px;width:'+w+'px;box-sizing:border-box;position:relative;'+(ok?'cursor:pointer':'')+'">'
       +muniBadge
-      +'<svg width="100%" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg">'
+      +'<svg width="'+svgW+'" height="'+svgH+'" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg" style="display:block">'
       +'<circle cx="18" cy="9" r="7" fill="'+color+'" opacity=".9"/>'
       +'<rect x="11" y="17" width="14" height="14" rx="3" fill="'+color+'" opacity=".8"/>'
       +'<rect x="3" y="18" width="8" height="4" rx="2" fill="'+color+'" opacity=".7"/>'
