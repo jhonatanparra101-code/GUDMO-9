@@ -9918,7 +9918,7 @@ function renderFormacionTactica(){
     var muniItems = ok ? getMunicionAsignada(m.id) : [];
     var tieneMunicion = muniItems.length > 0;
     var totalUnidades = muniItems.reduce(function(s, it){ return s + it.pendiente; }, 0);
-    var clickAttr = ok ? 'onclick="mostrarMunicionMiembro(\''+m.id+'\')" style="cursor:pointer"' : '';
+    var clickAttr = ok ? 'onclick="mostrarMunicionMiembro(\''+m.id+'\')"' : '';
     // Indicador chiquito SIEMPRE visible: rojo con número si tiene munición pendiente,
     // verde minimal sin número si está al día (sin pendientes).
     var muniBadge = '';
