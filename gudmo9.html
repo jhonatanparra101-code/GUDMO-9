@@ -612,6 +612,15 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
         <option value="PermisoCumple">🎂 Permiso Cumpleaños</option>
       </select>
     </div>
+    <div class="fg">
+      <label>Asignar a</label>
+      <select id="nEscuadra" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text)">
+        <option value="DEI 1">DEI 1</option>
+        <option value="DEI 2" selected>DEI 2</option>
+        <option value="DEI 3">DEI 3</option>
+        <option value="Plana Mayor">Plana Mayor</option>
+      </select>
+    </div>
     <button class="btn btn-primary" onclick="addMember()" style="width:100%">Agregar Funcionario</button>
   </div>
 
@@ -1519,6 +1528,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
       <button class="btn btn-primary" onclick="saveEdit()">Guardar</button>
     </div>
     <div class="btn-row" style="margin-top:4px">
+      <button class="btn btn-ghost" onclick="trasladarMiembro()" style="background:rgba(59,130,246,.1);color:#60a5fa;border:1px solid rgba(59,130,246,.4)">🔀 Trasladar a otro DEI</button>
       <button class="btn btn-danger" onclick="deleteMember()">Eliminar Funcionario</button>
     </div>
   </div>
@@ -2412,9 +2422,12 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 function addMember(){
   const name=document.getElementById('nName').value.trim().toUpperCase();
   if(!name){ showToast('⚠️ Ingrese el nombre','#f97316'); return; }
+  // Tomar la escuadra del selector explícito; si no existe, fallback al filtro actual
+  var escSel = document.getElementById('nEscuadra');
+  var escuadraNueva = escSel ? escSel.value : (curEscuadra==='all'?'DEI 2':curEscuadra);
   const m={
     id:uid(),
-    escuadra: curEscuadra==='all'?'DEI 2':curEscuadra,
+    escuadra: escuadraNueva,
     rank:document.getElementById('nRank').value,
     name,
     idNum:document.getElementById('nId').value.trim(),
@@ -2954,6 +2967,36 @@ function saveEdit(){
     ? ' · Próximo: '+members[idx].proximoEstado.status+' el '+fmtDate(members[idx].proximoEstado.fecha)
     : '';
   showToast('✅ Estado actualizado'+msgExtra);
+}
+
+function trasladarMiembro(){
+  if(!editingId){ showToast('⚠️ Seleccione un funcionario','#f97316'); return; }
+  var m = members.find(function(x){return x.id===editingId;});
+  if(!m){ return; }
+  // Detectar escuadras existentes
+  var escuadrasSet = {};
+  members.forEach(function(mm){ if(mm.escuadra) escuadrasSet[mm.escuadra]=true; });
+  ['DEI 1','DEI 2','DEI 3','Plana Mayor'].forEach(function(e){ escuadrasSet[e]=true; });
+  var escuadras = Object.keys(escuadrasSet).sort();
+  // Construir prompt simple
+  var msg = 'Trasladar a:\n\n';
+  escuadras.forEach(function(e,i){
+    var marca = (e===m.escuadra)?' (actual)':'';
+    msg += (i+1)+') '+e+marca+'\n';
+  });
+  msg += '\nEscriba el número:';
+  var resp = prompt(msg);
+  if(!resp) return;
+  var idx = parseInt(resp,10)-1;
+  if(isNaN(idx) || idx<0 || idx>=escuadras.length){ showToast('⚠️ Selección inválida','#f97316'); return; }
+  var nuevaEsc = escuadras[idx];
+  if(nuevaEsc === m.escuadra){ showToast('⚠️ Ya está en '+nuevaEsc,'#f97316'); return; }
+  if(!confirm('¿Trasladar '+m.rank+' '+m.name+' de '+m.escuadra+' a '+nuevaEsc+'?\n\nEsto NO afecta su estado, novedades, ni el historial — solo cambia la escuadra a la que pertenece.')) return;
+  m.escuadra = nuevaEsc;
+  sv('g9_members', members);
+  closeModal();
+  render();
+  showToast('✅ Trasladado a '+nuevaEsc,'#22c55e');
 }
 
 function deleteMember(){
@@ -5037,7 +5080,12 @@ function renderHistorialTurnoTimeline(tipo, t){
     var fechaIni = h.fecha;
     var fechaFin;
     var actual = false;
-    if(siguiente){
+    // Prioridad: si la entrega tiene fechaFin explícita (fijada manualmente al editar), usarla.
+    if(h.fechaFin){
+      fechaFin = h.fechaFin;
+      // Solo es 'actual' si no hay siguiente Y la fechaFin no es anterior a hoy
+      actual = !siguiente && (h.fechaFin >= hoyStr);
+    } else if(siguiente){
       var d = new Date(siguiente.fecha+'T00:00:00');
       d.setDate(d.getDate()-1);
       fechaFin = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -5133,8 +5181,10 @@ function editarEntregaTurno(tipo, tId, idx){
   document.getElementById('tem_body').innerHTML=
      '<div class="fg" style="grid-column:1/-1"><label>Funcionario</label>'
     +'<select id="tem_edit_member" style="font-size:13px;padding:8px;width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;color:var(--text)">'+optsM+'</select></div>'
-    +'<div class="fg" style="margin-top:10px"><label>Fecha de recepción</label>'
+    +'<div class="fg" style="margin-top:10px"><label>📅 Fecha de recepción</label>'
     +'<input type="date" id="tem_edit_fecha" value="'+h.fecha+'" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text)"></div>'
+    +'<div class="fg" style="margin-top:10px"><label>📅 Fecha de entrega <span style="color:var(--muted);font-weight:400">(opcional — déjela vacía para que el sistema calcule automático hasta la siguiente entrega o hoy)</span></label>'
+    +'<input type="date" id="tem_edit_fechaFin" value="'+(h.fechaFin||'')+'" style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text)"></div>'
     +'<div class="fg" style="margin-top:10px"><label>Observación</label>'
     +'<textarea id="tem_edit_obs" rows="2" style="resize:none;font-size:12px;width:100%;background:var(--navy);border:1px solid var(--border);border-radius:6px;padding:8px;color:var(--text)">'+(h.obs||'')+'</textarea></div>';
   var btn=document.getElementById('tem_confirm_btn');
@@ -5154,6 +5204,13 @@ function guardarEdicionTurno(tipo, tId, idx){
   t.historial[realIdx].memberId = document.getElementById('tem_edit_member').value;
   t.historial[realIdx].fecha    = document.getElementById('tem_edit_fecha').value;
   t.historial[realIdx].obs      = document.getElementById('tem_edit_obs').value.trim();
+  // Fecha de entrega/fin opcional — si se deja vacía, el sistema calcula automático
+  var ffinVal = document.getElementById('tem_edit_fechaFin');
+  if(ffinVal && ffinVal.value){
+    t.historial[realIdx].fechaFin = ffinVal.value;
+  } else {
+    delete t.historial[realIdx].fechaFin;
+  }
   sv(mod.key, ref);
   document.getElementById('turnoEntregaModal').classList.remove('open');
   mod.render();
@@ -7027,6 +7084,7 @@ function renderCiclo(){
 //   comisiones: [{fecha,dias,destino,obs}] }
 let bloqueViewDEI = 'DEI 1';
 const DIAS_BLOQUE_TOTAL = 35;
+const DIAS_BASE_TOTAL = 25;
 
 function saveBloque(){ sv('g9_bloque', bloqueData); }
 
@@ -7426,7 +7484,7 @@ function renderDisponibleBase(dei){
     +'</div>'
     +'<div style="text-align:right">'
     +'<div style="font-size:32px;font-weight:900;color:'+bColor+';line-height:1">'+diasBase+'</div>'
-    +'<div style="font-size:9px;color:var(--muted)">días</div>'
+    +'<div style="font-size:9px;color:var(--muted)">de '+DIAS_BASE_TOTAL+' días</div>'
     +'</div>'
     +'</div>'
     + pausasHtml
@@ -10560,7 +10618,7 @@ function dashDrawBloque(){
     +'<div style="font-size:8px;color:var(--muted)">🔴 Búsqueda</div>'
     +'</div>'
     +'<div style="text-align:center;padding:5px 0;background:rgba(59,130,246,.1);border-radius:6px">'
-    +'<div style="font-size:16px;font-weight:900;color:#60a5fa">'+diasBase+'</div>'
+    +'<div style="font-size:16px;font-weight:900;color:#60a5fa">'+diasBase+'<span style="font-size:10px;color:var(--muted);font-weight:400">/'+DIAS_BASE_TOTAL+'</span></div>'
     +'<div style="font-size:8px;color:var(--muted)">🔵 Base</div>'
     +'</div>'
 
