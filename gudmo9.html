@@ -276,7 +276,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
     <input class="login-input" type="password" id="loginPass" placeholder="Contraseña de acceso" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
     <div class="login-err" id="loginErr"></div>
     <button class="login-btn" onclick="doLogin()">🔐 Ingresar</button>
-    <div class="login-hint">Acceso restringido — solo personal autorizado</div>
+    <div class="login-hint">Acceso restringido — admin: edita / invitado: solo lectura</div>
   </div>
 </div>
 
@@ -444,6 +444,62 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   from { opacity:0; transform:translateY(-8px); }
   to   { opacity:1; transform:translateY(0); }
 }
+
+/* === MODO SOLO LECTURA: oculta cualquier control que cree/modifique/elimine === */
+body.modo-lectura button[onclick*="add"],
+body.modo-lectura button[onclick*="Add"],
+body.modo-lectura button[onclick*="crear"],
+body.modo-lectura button[onclick*="Crear"],
+body.modo-lectura button[onclick*="nuevo"],
+body.modo-lectura button[onclick*="Nuevo"],
+body.modo-lectura button[onclick*="Eliminar"],
+body.modo-lectura button[onclick*="eliminar"],
+body.modo-lectura button[onclick*="borrar"],
+body.modo-lectura button[onclick*="Borrar"],
+body.modo-lectura button[onclick*="delete"],
+body.modo-lectura button[onclick*="Delete"],
+body.modo-lectura button[onclick*="editar"],
+body.modo-lectura button[onclick*="Editar"],
+body.modo-lectura button[onclick*="quitar"],
+body.modo-lectura button[onclick*="Quitar"],
+body.modo-lectura button[onclick*="trasladar"],
+body.modo-lectura button[onclick*="Trasladar"],
+body.modo-lectura button[onclick*="Pendiente"],
+body.modo-lectura button[onclick*="pendiente"],
+body.modo-lectura button[onclick*="guardar"],
+body.modo-lectura button[onclick*="Guardar"],
+body.modo-lectura button[onclick*="cambiarStatus"],
+body.modo-lectura button[onclick*="cambiarCargo"],
+body.modo-lectura button.btn-add,
+body.modo-lectura button.btn-edit,
+body.modo-lectura button.btn-del,
+body.modo-lectura button.btn-borrar,
+body.modo-lectura button.btn-eliminar,
+body.modo-lectura .btn-primary,
+body.modo-lectura input[type="submit"]{
+  display:none !important;
+}
+body.modo-lectura input,
+body.modo-lectura textarea,
+body.modo-lectura select{
+  pointer-events:none !important;
+  background:rgba(255,255,255,.04) !important;
+  opacity:.7 !important;
+}
+/* Permitir interacción con elementos de filtrado/navegación */
+body.modo-lectura select#navTipoFiltro,
+body.modo-lectura select#filtroDEI,
+body.modo-lectura select.filtro,
+body.modo-lectura input[type="search"],
+body.modo-lectura input.filtro,
+body.modo-lectura .nav-tabs select,
+body.modo-lectura .filter-bar input,
+body.modo-lectura .filter-bar select{
+  pointer-events:auto !important;
+  opacity:1 !important;
+  background:var(--card) !important;
+}
+
 </style>
 
 <div class="section" id="tab-roster">
@@ -1544,6 +1600,10 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   var KEY  = "sb_publishable_qKMworw6YVacmgAh8E98wg_zDfr7W6E";
   var API  = URL + "/rest/v1/gudmo9";
   window.__FB_SET__ = async function(path, data){
+    // Modo solo lectura: bloquear cualquier escritura a la nube
+    if(window._readOnly===true || (typeof _readOnly!=='undefined' && _readOnly)){
+      return false;
+    }
     try {
       var key = path.replace('/','_');
       var val = typeof data.data === 'string' ? data.data : JSON.stringify(data);
@@ -1695,6 +1755,11 @@ const ld = (k,d) => {
 };
 
 const sv = (k,v) => { 
+  // Modo solo lectura: ignorar todas las escrituras
+  if(typeof _readOnly!=='undefined' && _readOnly){
+    console.warn('[modo lectura] Escritura bloqueada para clave:', k);
+    return;
+  }
   const str = JSON.stringify(v);
   // Always sync to IDB immediately for data safety
   openDB().then(function(db){
@@ -1702,7 +1767,7 @@ const sv = (k,v) => {
     tx.objectStore('kv').put(JSON.stringify(v), k);
   }).catch(function(){});
   // Cloud sync inmediato para claves críticas
-  if(['g9_members','g9_hist','g9_turnos','g9_bloque','g9_config'].includes(k)){
+  if(['g9_members','g9_hist','g9_turnos','g9_turnos2','g9_turnos3','g9_minutas','g9_bloque','g9_base','g9_config','g9_aseo','g9_ciclo','g9_municion'].includes(k)){
     setTimeout(function(){
       if(window.__FB_READY__){
         var ts2 = Date.now();
@@ -1710,8 +1775,15 @@ const sv = (k,v) => {
           'g9_members':  'gudmo9/members',
           'g9_hist':     'gudmo9/historial',
           'g9_turnos':   'gudmo9/turnos',
+          'g9_turnos2':  'gudmo9/turnos2',
+          'g9_turnos3':  'gudmo9/turnos3',
+          'g9_minutas':  'gudmo9/minutas',
           'g9_bloque':   'gudmo9/bloque',
-          'g9_config':   'gudmo9/config'
+          'g9_base':     'gudmo9/base',
+          'g9_config':   'gudmo9/config',
+          'g9_aseo':     'gudmo9/aseo',
+          'g9_ciclo':    'gudmo9/ciclo',
+          'g9_municion': 'gudmo9/municion'
         };
         if(keyMap[k]) window.__FB_SET__(keyMap[k], { data: JSON.stringify(v), ts: ts2 });
       }
@@ -1792,7 +1864,11 @@ async function fbSaveAll(){
       window.__FB_SET__('gudmo9/historial', { data: JSON.stringify(historial),  ts: ts }),
       window.__FB_SET__('gudmo9/config',    { data: JSON.stringify(config),     ts: ts }),
       window.__FB_SET__('gudmo9/turnos',    { data: JSON.stringify(turnos),     ts: ts }),
+      window.__FB_SET__('gudmo9/turnos2',   { data: JSON.stringify(typeof turnos2!=='undefined'?turnos2:[]), ts: ts }),
+      window.__FB_SET__('gudmo9/turnos3',   { data: JSON.stringify(typeof turnos3!=='undefined'?turnos3:[]), ts: ts }),
+      window.__FB_SET__('gudmo9/minutas',   { data: JSON.stringify(typeof minutas!=='undefined'?minutas:[]),  ts: ts }),
       window.__FB_SET__('gudmo9/bloque',    { data: JSON.stringify(bloqueData), ts: ts }),
+      window.__FB_SET__('gudmo9/base',      { data: JSON.stringify(typeof baseData!=='undefined'?baseData:{}), ts: ts }),
       window.__FB_SET__('gudmo9/ciclo',     { data: JSON.stringify(cicloConfig),ts: ts }),
       window.__FB_SET__('gudmo9/aseo',      { data: JSON.stringify(aseoData),   ts: ts }),
       window.__FB_SET__('gudmo9/municion',  { data: JSON.stringify(municionData),ts: ts }),
@@ -1822,7 +1898,11 @@ async function fbLoadAll(){
     r=sbX(await window.__FB_GET__('gudmo9/historial'));  if(r&&Array.isArray(r)&&r.length>=historial.length){historial=r;sv('g9_hist',historial);}
     r=sbX(await window.__FB_GET__('gudmo9/config'));     if(r&&r.cmdt!==undefined){config=r;sv('g9_config',config);}
     r=sbX(await window.__FB_GET__('gudmo9/turnos'));     if(r&&Array.isArray(r)){turnos=r;sv('g9_turnos',turnos);}
+    r=sbX(await window.__FB_GET__('gudmo9/turnos2'));    if(r&&Array.isArray(r)){turnos2=r;sv('g9_turnos2',turnos2);}
+    r=sbX(await window.__FB_GET__('gudmo9/turnos3'));    if(r&&Array.isArray(r)){turnos3=r;sv('g9_turnos3',turnos3);}
+    r=sbX(await window.__FB_GET__('gudmo9/minutas'));    if(r&&Array.isArray(r)){minutas=r;sv('g9_minutas',minutas);}
     r=sbX(await window.__FB_GET__('gudmo9/bloque'));     if(r&&typeof r==='object'){bloqueData=r;sv('g9_bloque',bloqueData);}
+    r=sbX(await window.__FB_GET__('gudmo9/base'));       if(r&&typeof r==='object'){baseData=r;sv('g9_base',baseData);}
     r=sbX(await window.__FB_GET__('gudmo9/ciclo'));      if(r&&r.diasTrabajo!==undefined){cicloConfig=r;sv('g9_ciclo',cicloConfig);}
     r=sbX(await window.__FB_GET__('gudmo9/aseo'));       if(r&&Array.isArray(r)){aseoData=r;sv('g9_aseo',aseoData);}
     r=sbX(await window.__FB_GET__('gudmo9/municion'));   if(r&&Array.isArray(r)){municionData=r;sv('g9_municion',municionData);}
@@ -9959,19 +10039,44 @@ function renderFormacionTactica(){
   var enSvc = personal.filter(function(m){ return m.status==='Servicio'; });
 
   function getCargo(cargo){
-    return enSvc.find(function(m){ return m.cargo===cargo; }) || null;
+    // Buscar en TODO el personal (no solo en servicio).
+    // Prioridad: el que esté en servicio. Si no, el primero que tenga el cargo.
+    var enServicio = enSvc.find(function(m){ return m.cargo===cargo; });
+    if(enServicio) return enServicio;
+    return personal.find(function(m){ return m.cargo===cargo; }) || null;
   }
   function getCargoAll(cargo){
-    return enSvc.filter(function(m){ return m.cargo===cargo; });
+    // Devuelve TODOS los miembros con ese cargo, en servicio o no.
+    // Los que están en servicio se devuelven primero.
+    var enServicio = enSvc.filter(function(m){ return m.cargo===cargo; });
+    var fueraServicio = personal.filter(function(m){ return m.cargo===cargo && m.status!=='Servicio'; });
+    return enServicio.concat(fueraServicio);
   }
 
   function muneco(cargo, label, m, w){
     var ok = m !== null;
-    var color = ok ? '#22c55e' : '#ef4444';
-    var bgc   = ok ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.12)';
-    var bdc   = ok ? 'rgba(34,197,94,.4)'  : 'rgba(239,68,68,.4)';
+    // Distinguir 3 estados:
+    //  - Verde: existe miembro Y está en servicio
+    //  - Rojo con nombre: existe miembro pero NO en servicio (vacaciones, permiso, etc.)
+    //  - Rojo vacío: no hay miembro asignado al cargo
+    var enServicio = ok && m.status === 'Servicio';
+    var color = enServicio ? '#22c55e' : '#ef4444';
+    var bgc   = enServicio ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.12)';
+    var bdc   = enServicio ? 'rgba(34,197,94,.4)'  : 'rgba(239,68,68,.4)';
     var nombre = ok ? (m.name.split(' ')[0]+' '+(m.name.split(' ')[2]||m.name.split(' ')[1]||'')).substring(0,9) : '---';
     var rankTxt = ok ? m.rank : '';
+    // Si el miembro existe pero está fuera de servicio, mostrar el motivo en lugar del nombre
+    var motivoTxt = '';
+    if(ok && !enServicio){
+      var motivos = {
+        'Vacaciones':'VAC','Permiso':'PER','Franquicia':'FRA','Guardia':'GRD',
+        'Incapacidad':'INC','Comision':'COM','ComisionRegion':'C.RG','ComisionFuera':'C.FR',
+        'ComisionErradicacion':'ERR','PermisoGUDMO':'P.GU','PermisoDEI':'P.DEI',
+        'Curso':'CUR','Anexo':'ANX','Secretario':'SEC','Excusa':'EXC','Luto':'LUT',
+        'LeyMaria':'L.M','PermisoCumple':'CMP'
+      };
+      motivoTxt = motivos[m.status] || (m.status||'').substring(0,4).toUpperCase();
+    }
     w = w||52;
     // Verificar si tiene munición asignada
     var muniItems = ok ? getMunicionAsignada(m.id) : [];
@@ -10028,6 +10133,7 @@ function renderFormacionTactica(){
       +'</svg>'
       +'<div style="font-size:6.5px;font-weight:700;color:'+color+';text-align:center;line-height:1.1;margin-top:1px">'+rankTxt+'</div>'
       +'<div style="font-size:6px;color:'+(ok?'var(--text)':'var(--muted)')+';text-align:center;line-height:1.1;max-width:'+w+'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+nombre+'</div>'
+      +(motivoTxt?'<div style="font-size:6px;font-weight:700;color:#fbbf24;text-align:center;line-height:1.1;background:rgba(0,0,0,.3);border-radius:3px;margin-top:1px;padding:0 1px">'+motivoTxt+'</div>':'')
       +'</div>'
       +'<div style="font-size:6px;color:var(--muted);text-align:center;font-weight:600;letter-spacing:.2px">'+label+'</div>'
       +'</div>';
@@ -10736,25 +10842,68 @@ function dashDrawAlertas(){
 
 // ── AUTENTICACIÓN ──
 var APP_PASS = 'GUDMO9DEI';       // Contraseña general — cámbiala
+var APP_PASS_READONLY = 'GUDMO9VER'; // Contraseña solo lectura — para compañeros
 var DEI_PASS = 'DEI2PRIVADO';     // Contraseña sección DEI — cámbiala
 var _appUnlocked = false;
 var _deiUnlocked = false;
+var _readOnly = false;
 var _deiPinCallback = null;
 
 function doLogin(){
   var v = document.getElementById('loginPass').value;
   if(v === APP_PASS){
     _appUnlocked = true;
+    _readOnly = false;
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('loginPass').value = '';
     document.getElementById('loginErr').textContent = '';
-    // Guardar sesión en sessionStorage (se borra al cerrar la pestaña)
     sessionStorage.setItem('gudmo9_auth','1');
+    sessionStorage.removeItem('gudmo9_readonly');
+    aplicarModoSoloLectura();
+  } else if(v === APP_PASS_READONLY){
+    _appUnlocked = true;
+    _readOnly = true;
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('loginPass').value = '';
+    document.getElementById('loginErr').textContent = '';
+    sessionStorage.setItem('gudmo9_auth','1');
+    sessionStorage.setItem('gudmo9_readonly','1');
+    aplicarModoSoloLectura();
   } else {
     document.getElementById('loginErr').textContent = '⚠️ Contraseña incorrecta';
     document.getElementById('loginPass').value = '';
     document.getElementById('loginPass').focus();
   }
+}
+
+function aplicarModoSoloLectura(){
+  if(_readOnly){
+    document.body.classList.add('modo-lectura');
+    // Mostrar banner permanente arriba
+    var banner = document.getElementById('readOnlyBanner');
+    if(!banner){
+      banner = document.createElement('div');
+      banner.id = 'readOnlyBanner';
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f59e0b;color:#000;text-align:center;padding:4px;font-size:11px;font-weight:700;z-index:9998;letter-spacing:.5px';
+      banner.innerHTML = '👁️ MODO SOLO LECTURA — Compañero invitado';
+      document.body.appendChild(banner);
+      // Empujar el contenido hacia abajo
+      document.body.style.paddingTop = '24px';
+    }
+  } else {
+    document.body.classList.remove('modo-lectura');
+    var b = document.getElementById('readOnlyBanner');
+    if(b){ b.remove(); document.body.style.paddingTop = ''; }
+  }
+}
+
+// Bloqueador genérico de acciones de edición
+function bloqSiLectura(){
+  if(_readOnly){
+    alert('👁️ Modo solo lectura\n\nNo puedes modificar datos. Pídele al comandante DEI que haga el cambio.');
+    return true;
+  }
+  return false;
 }
 
 function requireDeiPin(callback){
@@ -10799,8 +10948,17 @@ function closeDeiPin(){
 (function checkSession(){
   if(sessionStorage.getItem('gudmo9_auth')==='1'){
     _appUnlocked = true;
+    _readOnly = sessionStorage.getItem('gudmo9_readonly')==='1';
     var ls = document.getElementById('loginScreen');
     if(ls) ls.classList.add('hidden');
+    if(_readOnly){
+      // Aplicar el modo después de que el DOM esté listo
+      if(document.readyState==='loading'){
+        document.addEventListener('DOMContentLoaded', aplicarModoSoloLectura);
+      } else {
+        setTimeout(aplicarModoSoloLectura, 0);
+      }
+    }
   }
   if(sessionStorage.getItem('gudmo9_dei')==='1'){
     _deiUnlocked = true;
