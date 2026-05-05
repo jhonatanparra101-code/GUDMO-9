@@ -10151,6 +10151,26 @@ function renderFormacionTactica(){
   var escuderos= getCargoAll('Escudero');
   var medTec   = getCargoAll('Medios Técnicos');
 
+  // Helper: rellena array hasta el cupo con nulls (vacantes rojas con guiones)
+  function rellenar(arr, cupo){
+    var r = arr.slice(0, cupo);
+    while(r.length < cupo) r.push(null);
+    return r;
+  }
+
+  // CUPOS FIJOS de la formación táctica DEI
+  var CUPO_OP37 = 2, CUPO_OP40 = 2, CUPO_LANZ = 2;
+  var CUPO_MTEC = 2;
+  var CUPO_SPI  = 4;
+  var CUPO_ESC  = 10;
+
+  ops37     = rellenar(ops37, CUPO_OP37);
+  ops40     = rellenar(ops40, CUPO_OP40);
+  opLanzs   = rellenar(opLanzs, CUPO_LANZ);
+  medTec    = rellenar(medTec, CUPO_MTEC);
+  spis      = rellenar(spis, CUPO_SPI);
+  escuderos = rellenar(escuderos, CUPO_ESC);
+
   var cargosEnFormacion = new Set(['Cte. DEI','Cte. Escuadra','Líder Escuderos','Op. Taser',
     'Enfermero','Operador 37','Operador 40','Op. Lanzadora','SPI','Líder SPI','Líder Operadores','Escudero','Medios Técnicos']);
 
@@ -10175,24 +10195,18 @@ function renderFormacionTactica(){
   // ── separador ──
   html2 += '<div style="border-top:1px dashed rgba(255,255,255,.08);margin:4px 8px 6px"></div>';
 
-  // ── FILA 1: OP-37s | Lanzadoras | OP-40s (sin CTE-ESC aquí) ──
+  // ── FILA 1: OP-37 | LANZ | OP-40 | LANZ (cupos fijos: 2,1,2,1) ──
   html2 += '<div style="'+filaC+'">';
   ops37.forEach(function(m){ html2 += muneco('Operador 37','OP-37', m, 26); });
-  if(!ops37.length) html2 += muneco('Operador 37','OP-37', null, 26);
-  opLanzs.slice(0, Math.ceil(opLanzs.length/2)||1).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 26); });
-  if(!opLanzs.length) html2 += muneco('Op. Lanzadora','LANZ', null, 26);
+  opLanzs.slice(0,1).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 26); });
   ops40.forEach(function(m){ html2 += muneco('Operador 40','OP-40', m, 26); });
-  if(!ops40.length) html2 += muneco('Operador 40','OP-40', null, 26);
-  opLanzs.slice(Math.ceil(opLanzs.length/2)).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 26); });
+  opLanzs.slice(1).forEach(function(m){ html2 += muneco('Op. Lanzadora','LANZ', m, 26); });
   html2 += '</div>';
 
-  // ── FILA 2: CTE-ESC | Medios Técnicos | TASER | Enfermero ──
+  // ── FILA 2: CTE-ESC | M.TEC×2 (sin TASER ni ENFER aquí — bajan a fila SPI) ──
   html2 += '<div style="'+filaC+'">';
-  if(cte2) html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 32);
+  html2 += muneco('Cte. Escuadra','CTE-ESC', cte2, 32);
   medTec.forEach(function(m){ html2 += muneco('Medios Técnicos','M.TEC', m, 30); });
-  if(!medTec.length){ html2 += muneco('Medios Técnicos','M.TEC', null, 30); html2 += muneco('Medios Técnicos','M.TEC', null, 30); }
-  html2 += muneco('Op. Taser','TASER', taser, 30);
-  if(enfer) html2 += muneco('Enfermero','ENFER', enfer, 30);
   html2 += '</div>';
 
   // ── FILA 3a: L-SPI encima de la línea SPI ──
@@ -10200,10 +10214,11 @@ function renderFormacionTactica(){
   html2 += muneco('Líder SPI','L-SPI', getCargo('Líder SPI'), 30);
   html2 += '</div>';
 
-  // ── FILA 3b: SPIs en línea ──
+  // ── FILA 3b: 4 SPI + TASER + ENFERMERO en línea ──
   html2 += '<div style="'+filaC+'">';
   spis.forEach(function(m){ html2 += muneco('SPI','SPI', m, 26); });
-  if(!spis.length) html2 += muneco('SPI','SPI', null, 26);
+  html2 += muneco('Op. Taser','TASER', taser, 26);
+  html2 += muneco('Enfermero','ENFER', enfer, 26);
   html2 += '</div>';
 
   // ── FILA 4a: L-ESC encima de la línea de escuderos ──
@@ -10211,10 +10226,9 @@ function renderFormacionTactica(){
   html2 += muneco('Líder Escuderos','L-ESC', cte3, 30);
   html2 += '</div>';
 
-  // ── FILA 4b: Escuderos en línea ──
+  // ── FILA 4b: Escuderos en línea (cupo: 10) ──
   html2 += '<div style="'+filaC+'">';
   escuderos.forEach(function(m, i){ html2 += muneco('Escudero','E'+(i+1), m, 24); });
-  if(!escuderos.length){ for(var i=0;i<6;i++) html2 += muneco('Escudero','E'+(i+1), null, 24); }
   html2 += '</div>';
 
   // ── EXTRAS ──
