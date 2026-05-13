@@ -861,6 +861,11 @@ body.modo-lectura .filter-bar select{
     <div style="margin-top:12px;text-align:center">
       <button onclick="fbSaveAll().then(()=>showToast('☁️ Datos subidos a la nube'))" style="background:rgba(34,197,94,.12);border:1px solid var(--green);border-radius:8px;padding:8px 16px;color:var(--green);font-size:11px;cursor:pointer;font-weight:700">📤 Subir mis datos actuales a la nube</button>
     </div>
+    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center">
+      <button onclick="mostrarBackupsLocales()" style="background:rgba(251,191,36,.12);border:1px solid #fbbf24;border-radius:8px;padding:8px 12px;color:#fbbf24;font-size:11px;cursor:pointer;font-weight:700">📦 Ver respaldos</button>
+      <button onclick="exportarDatosCompletos()" style="background:rgba(59,130,246,.12);border:1px solid #3b82f6;border-radius:8px;padding:8px 12px;color:#3b82f6;font-size:11px;cursor:pointer;font-weight:700">⬇️ Exportar JSON</button>
+      <button onclick="importarDatosCompletos()" style="background:rgba(168,85,247,.12);border:1px solid #a855f7;border-radius:8px;padding:8px 12px;color:#a855f7;font-size:11px;cursor:pointer;font-weight:700">⬆️ Importar JSON</button>
+    </div>
   </div>
 </div>
 
@@ -1893,19 +1898,45 @@ async function fbLoadAll(){
   try {
     fbSyncing = true;
     showCloudStatus('⟳ Cargando...', '#3b82f6');
+    // ── BACKUP AUTOMÁTICO antes de bajar nada de la nube ──
+    // Guarda snapshot rotativo en localStorage (max 5 últimos) para poder restaurar
+    try {
+      var snapshot = {
+        ts: Date.now(),
+        fecha: new Date().toISOString(),
+        members: members, historial: historial, turnos: turnos, config: config,
+        turnos2: (typeof turnos2!=='undefined'?turnos2:[]),
+        turnos3: (typeof turnos3!=='undefined'?turnos3:[]),
+        minutas: (typeof minutas!=='undefined'?minutas:[]),
+        bloqueData: bloqueData, ciclo: cicloConfig, aseo: aseoData, municion: municionData,
+        baseData: (typeof baseData!=='undefined'?baseData:{})
+      };
+      var backups = JSON.parse(localStorage.getItem('g9_backups')||'[]');
+      backups.unshift(snapshot);
+      if(backups.length > 5) backups = backups.slice(0,5);
+      localStorage.setItem('g9_backups', JSON.stringify(backups));
+    } catch(e){ console.warn('[backup] no se pudo crear snapshot', e); }
     var r;
     r=sbX(await window.__FB_GET__('gudmo9/members'));    if(r&&Array.isArray(r)&&r.length>0){members=r;sv('g9_members',members);}
     r=sbX(await window.__FB_GET__('gudmo9/historial'));  if(r&&Array.isArray(r)&&r.length>=historial.length){historial=r;sv('g9_hist',historial);}
     r=sbX(await window.__FB_GET__('gudmo9/config'));     if(r&&r.cmdt!==undefined){config=r;sv('g9_config',config);}
-    r=sbX(await window.__FB_GET__('gudmo9/turnos'));     if(r&&Array.isArray(r)){turnos=r;sv('g9_turnos',turnos);}
-    r=sbX(await window.__FB_GET__('gudmo9/turnos2'));    if(r&&Array.isArray(r)){turnos2=r;sv('g9_turnos2',turnos2);}
-    r=sbX(await window.__FB_GET__('gudmo9/turnos3'));    if(r&&Array.isArray(r)){turnos3=r;sv('g9_turnos3',turnos3);}
-    r=sbX(await window.__FB_GET__('gudmo9/minutas'));    if(r&&Array.isArray(r)){minutas=r;sv('g9_minutas',minutas);}
-    r=sbX(await window.__FB_GET__('gudmo9/bloque'));     if(r&&typeof r==='object'){bloqueData=r;sv('g9_bloque',bloqueData);}
-    r=sbX(await window.__FB_GET__('gudmo9/base'));       if(r&&typeof r==='object'){baseData=r;sv('g9_base',baseData);}
+    // CRÍTICO: Nunca sobreescribir datos locales no-vacíos con valores vacíos de la nube.
+    // Esto previene la pérdida de datos cuando la nube tiene placeholder [] o {}.
+    function _esVacio(x){
+      if(x==null) return true;
+      if(Array.isArray(x)) return x.length===0;
+      if(typeof x==='object') return Object.keys(x).length===0;
+      return false;
+    }
+    r=sbX(await window.__FB_GET__('gudmo9/turnos'));     if(r&&Array.isArray(r)&&!(_esVacio(r)&&!_esVacio(turnos))){turnos=r;sv('g9_turnos',turnos);}
+    r=sbX(await window.__FB_GET__('gudmo9/turnos2'));    if(r&&Array.isArray(r)&&!(_esVacio(r)&&typeof turnos2!=='undefined'&&!_esVacio(turnos2))){if(typeof turnos2!=='undefined'){turnos2=r;sv('g9_turnos2',turnos2);}}
+    r=sbX(await window.__FB_GET__('gudmo9/turnos3'));    if(r&&Array.isArray(r)&&!(_esVacio(r)&&typeof turnos3!=='undefined'&&!_esVacio(turnos3))){if(typeof turnos3!=='undefined'){turnos3=r;sv('g9_turnos3',turnos3);}}
+    r=sbX(await window.__FB_GET__('gudmo9/minutas'));    if(r&&Array.isArray(r)&&!(_esVacio(r)&&typeof minutas!=='undefined'&&!_esVacio(minutas))){if(typeof minutas!=='undefined'){minutas=r;sv('g9_minutas',minutas);}}
+    r=sbX(await window.__FB_GET__('gudmo9/bloque'));     if(r&&typeof r==='object'&&!(_esVacio(r)&&!_esVacio(bloqueData))){bloqueData=r;sv('g9_bloque',bloqueData);}
+    r=sbX(await window.__FB_GET__('gudmo9/base'));       if(r&&typeof r==='object'&&!(_esVacio(r)&&typeof baseData!=='undefined'&&!_esVacio(baseData))){if(typeof baseData!=='undefined'){baseData=r;sv('g9_base',baseData);}}
     r=sbX(await window.__FB_GET__('gudmo9/ciclo'));      if(r&&r.diasTrabajo!==undefined){cicloConfig=r;sv('g9_ciclo',cicloConfig);}
-    r=sbX(await window.__FB_GET__('gudmo9/aseo'));       if(r&&Array.isArray(r)){aseoData=r;sv('g9_aseo',aseoData);}
-    r=sbX(await window.__FB_GET__('gudmo9/municion'));   if(r&&Array.isArray(r)){municionData=r;sv('g9_municion',municionData);}
+    r=sbX(await window.__FB_GET__('gudmo9/aseo'));       if(r&&Array.isArray(r)&&!(_esVacio(r)&&!_esVacio(aseoData))){aseoData=r;sv('g9_aseo',aseoData);}
+    r=sbX(await window.__FB_GET__('gudmo9/municion'));   if(r&&Array.isArray(r)&&!(_esVacio(r)&&!_esVacio(municionData))){municionData=r;sv('g9_municion',municionData);}
     r=sbX(await window.__FB_GET__('gudmo9/inventario')); if(r&&typeof inventarioDEI!=='undefined'){inventarioDEI=r;sv('g9_inventario',inventarioDEI);}
     r=sbX(await window.__FB_GET__('gudmo9/misiones'));   if(r&&typeof misionesData!=='undefined'&&typeof r==='object'){misionesData=r;sv('g9_misiones',misionesData);}
     r=sbX(await window.__FB_GET__('gudmo9/planillas'));  if(r&&Array.isArray(r)&&typeof planillaData!=='undefined'){planillaData=r;sv('g9_planillas',planillaData);}
@@ -1918,6 +1949,145 @@ async function fbLoadAll(){
     showCloudStatus('⚠️ Sin conexion', '#f97316');
     return false;
   }
+}
+
+// ============== SISTEMA DE RESPALDO Y RESTAURACIÓN ==============
+function mostrarBackupsLocales(){
+  var backups = [];
+  try { backups = JSON.parse(localStorage.getItem('g9_backups')||'[]'); } catch(e){}
+  if(!backups.length){
+    alert('No hay respaldos automáticos disponibles.\n\nLos respaldos se crean cada vez que la app sincroniza con la nube.');
+    return;
+  }
+  var html = '<div style="max-height:60vh;overflow:auto">';
+  html += '<h3 style="margin:0 0 10px">📦 Respaldos automáticos</h3>';
+  html += '<p style="font-size:12px;color:var(--muted);margin:0 0 12px">Se guardan los últimos 5 antes de cada sincronización. Si perdiste datos, restaura uno anterior.</p>';
+  backups.forEach(function(b, i){
+    var fecha = new Date(b.ts).toLocaleString('es-CO');
+    var entregasBita = (b.turnos&&b.turnos[0]&&b.turnos[0].historial)?b.turnos[0].historial.length:0;
+    var entregasMin  = (b.turnos2&&b.turnos2[0]&&b.turnos2[0].historial)?b.turnos2[0].historial.length:0;
+    var entregasMand = (b.turnos3&&b.turnos3[0]&&b.turnos3[0].historial)?b.turnos3[0].historial.length:0;
+    var novedades = (b.historial||[]).length;
+    var miembros = (b.members||[]).length;
+    html += '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">';
+    html += '<div style="font-weight:700;font-size:13px;margin-bottom:4px">#'+(i+1)+' — '+fecha+'</div>';
+    html += '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">';
+    html += '👥 '+miembros+' funcionarios · 📋 '+novedades+' novedades<br>';
+    html += '📖 Bitácora: '+entregasBita+' entregas · ✍️ Minuta: '+entregasMin+' · 🎖️ Mando: '+entregasMand+'';
+    html += '</div>';
+    html += '<button onclick="restaurarBackup('+i+')" style="background:#22c55e;color:#000;border:none;border-radius:6px;padding:6px 12px;font-weight:700;font-size:11px;cursor:pointer">♻️ Restaurar este</button> ';
+    html += '<button onclick="descargarBackup('+i+')" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-weight:700;font-size:11px;cursor:pointer;margin-left:4px">⬇️ Descargar JSON</button>';
+    html += '</div>';
+  });
+  html += '</div>';
+  abrirModal('Respaldos disponibles', html);
+}
+
+function restaurarBackup(idx){
+  if(!confirm('⚠️ Esto reemplazará TODOS los datos actuales con los del respaldo seleccionado.\n\nSe creará un respaldo del estado actual antes de restaurar.\n\n¿Continuar?')) return;
+  var backups = JSON.parse(localStorage.getItem('g9_backups')||'[]');
+  var b = backups[idx];
+  if(!b) return alert('Respaldo no encontrado');
+  // Aplicar el respaldo
+  if(b.members) { members = b.members; sv('g9_members', members); }
+  if(b.historial) { historial = b.historial; sv('g9_hist', historial); }
+  if(b.turnos) { turnos = b.turnos; sv('g9_turnos', turnos); }
+  if(b.turnos2 && typeof turnos2!=='undefined') { turnos2 = b.turnos2; sv('g9_turnos2', turnos2); }
+  if(b.turnos3 && typeof turnos3!=='undefined') { turnos3 = b.turnos3; sv('g9_turnos3', turnos3); }
+  if(b.minutas && typeof minutas!=='undefined') { minutas = b.minutas; sv('g9_minutas', minutas); }
+  if(b.bloqueData) { bloqueData = b.bloqueData; sv('g9_bloque', bloqueData); }
+  if(b.baseData && typeof baseData!=='undefined') { baseData = b.baseData; sv('g9_base', baseData); }
+  if(b.config) { config = b.config; sv('g9_config', config); }
+  if(b.ciclo) { cicloConfig = b.ciclo; sv('g9_ciclo', cicloConfig); }
+  if(b.aseo) { aseoData = b.aseo; sv('g9_aseo', aseoData); }
+  if(b.municion) { municionData = b.municion; sv('g9_municion', municionData); }
+  alert('✅ Respaldo restaurado exitosamente.\n\nLa página se recargará para aplicar los cambios.');
+  setTimeout(function(){ location.reload(); }, 500);
+}
+
+function descargarBackup(idx){
+  var backups = JSON.parse(localStorage.getItem('g9_backups')||'[]');
+  var b = backups[idx];
+  if(!b) return;
+  var blob = new Blob([JSON.stringify(b, null, 2)], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'gudmo9_backup_'+new Date(b.ts).toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+function exportarDatosCompletos(){
+  var data = {
+    ts: Date.now(),
+    fecha: new Date().toISOString(),
+    members: members, historial: historial, turnos: turnos, config: config,
+    turnos2: (typeof turnos2!=='undefined'?turnos2:[]),
+    turnos3: (typeof turnos3!=='undefined'?turnos3:[]),
+    minutas: (typeof minutas!=='undefined'?minutas:[]),
+    bloqueData: bloqueData, ciclo: cicloConfig, aseo: aseoData, municion: municionData,
+    baseData: (typeof baseData!=='undefined'?baseData:{})
+  };
+  var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'gudmo9_export_'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+function importarDatosCompletos(){
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      try {
+        var data = JSON.parse(ev.target.result);
+        if(!confirm('⚠️ Esto reemplazará TODOS los datos actuales con los del archivo.\n\n¿Continuar?')) return;
+        if(data.members) { members = data.members; sv('g9_members', members); }
+        if(data.historial) { historial = data.historial; sv('g9_hist', historial); }
+        if(data.turnos) { turnos = data.turnos; sv('g9_turnos', turnos); }
+        if(data.turnos2 && typeof turnos2!=='undefined') { turnos2 = data.turnos2; sv('g9_turnos2', turnos2); }
+        if(data.turnos3 && typeof turnos3!=='undefined') { turnos3 = data.turnos3; sv('g9_turnos3', turnos3); }
+        if(data.minutas && typeof minutas!=='undefined') { minutas = data.minutas; sv('g9_minutas', minutas); }
+        if(data.bloqueData) { bloqueData = data.bloqueData; sv('g9_bloque', bloqueData); }
+        if(data.baseData && typeof baseData!=='undefined') { baseData = data.baseData; sv('g9_base', baseData); }
+        if(data.config) { config = data.config; sv('g9_config', config); }
+        if(data.ciclo) { cicloConfig = data.ciclo; sv('g9_ciclo', cicloConfig); }
+        if(data.aseo) { aseoData = data.aseo; sv('g9_aseo', aseoData); }
+        if(data.municion) { municionData = data.municion; sv('g9_municion', municionData); }
+        alert('✅ Datos importados. La página se recargará.');
+        setTimeout(function(){ location.reload(); }, 500);
+      } catch(err){
+        alert('❌ Error al leer el archivo: '+err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function abrirModal(titulo, htmlContent){
+  var existing = document.getElementById('modalBackup');
+  if(existing) existing.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modalBackup';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = '<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;max-width:500px;width:100%;color:var(--text)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    +'<h2 style="margin:0;font-size:16px">'+titulo+'</h2>'
+    +'<button onclick="document.getElementById(\'modalBackup\').remove()" style="background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;padding:0;line-height:1">×</button>'
+    +'</div>'
+    +htmlContent
+    +'</div>';
+  document.body.appendChild(modal);
+  modal.onclick = function(e){ if(e.target===modal) modal.remove(); };
 }
 
 function showCloudStatus(msg, color){
