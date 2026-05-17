@@ -11287,12 +11287,174 @@ function initData(){
   }
 }
 
+
 // ═══════════════════════════════════════════════════════════
-//  MÓDULO DOCTRINA — Base de datos de documentos doctrinales
+//  MÓDULO DOCTRINA — Base de datos organizada por JERARQUÍA NORMATIVA
+//  Nivel 1: Leyes  |  Nivel 2: Decretos  |  Nivel 3: Resoluciones
+//  Nivel 4: Instructivos  |  Nivel 5: Libretos / Guías de campo
 // ═══════════════════════════════════════════════════════════
 var DOCTRINA = [
+  // ───────────── NIVEL 1 — LEYES ─────────────
+  {
+    id: 'ley62',
+    nivel: 1,
+    rango: 'Ley',
+    tipo: 'Ley',
+    numero: '62 de 1993',
+    fecha: '12 de agosto de 1993',
+    color: '#0ea5e9',
+    icono: '🏛️',
+    titulo: 'Normas sobre la Policía Nacional (naturaleza, fines y función policial)',
+    emisor: 'Congreso de la República de Colombia',
+    deroga: 'Derogó el Decreto Ley 2137 de 1983',
+    vigencia: 'Vigente (con modificaciones)',
+    resumen: 'Es la ley base que define qué es la Policía Nacional, para qué existe y bajo qué principios actúa. Aquí se establece que la Policía es un cuerpo armado permanente, de naturaleza CIVIL, a cargo de la Nación. Todo lo que hace la UNDMO y el DEI se sostiene, en última instancia, sobre esta ley.',
+    puntosClave: [
+      'Art. 1 — Finalidad: la Policía protege a las personas en su vida, honra, bienes, creencias y libertades, y asegura que los habitantes convivan en paz.',
+      'Art. 2 — Principios: el servicio se presta con igualdad, imparcialidad, control ciudadano y publicidad. La actividad policial es comunitaria, preventiva, educativa, ecológica, solidaria y de apoyo judicial.',
+      'Art. 3 — Límites: ninguna actividad de Policía puede contrariar a quien ejerce su derecho, sino a quien abusa de él.',
+      'Art. 4 — Inmediatez: toda persona tiene derecho a recibir protección inmediata ante cualquier manifestación delictiva o contravencional.',
+      'Art. 5 — Definición: la Policía es un cuerpo armado, servicio público permanente, de naturaleza CIVIL y a cargo de la Nación.',
+      'Art. 7 — Profesionalismo: la actividad policial es una profesión; la formación tiene acento en derechos humanos, ética y servicio comunitario.',
+      'Art. 8 — Obligatoriedad de intervenir: el uniformado, sea cual sea su especialidad o circunstancia, está obligado a intervenir frente a los casos de Policía.'
+    ],
+    terminos: [
+      {t:'Naturaleza civil', d:'La Policía NO es militar. Es un cuerpo armado de carácter civil; eso marca cómo debe usar la fuerza.'},
+      {t:'Casos de Policía', d:'Situaciones que requieren la intervención policial para proteger derechos o restablecer la convivencia.'},
+      {t:'Inmediatez', d:'Principio que obliga a la Policía a dar protección sin demora ante un hecho delictivo o contravencional.'},
+      {t:'Obligatoriedad de intervenir', d:'Deber del uniformado de actuar siempre frente a un caso de Policía, esté o no de servicio.'},
+      {t:'Límite de la actividad policial', d:'La fuerza se dirige contra quien abusa de su derecho, nunca contra quien lo ejerce legítimamente.'}
+    ],
+    preguntas: [
+      {q:'Según la Ley 62 de 1993, la Policía Nacional es un cuerpo armado de naturaleza:', op:['Militar','Civil','Mixta','Privada'], correcta:1},
+      {q:'¿Qué artículo de la Ley 62 establece la obligatoriedad de intervenir?', op:['Artículo 1','Artículo 5','Artículo 8','Artículo 20'], correcta:2},
+      {q:'Según el Art. 3, la actividad de Policía se dirige contra:', op:['Quien ejerce su derecho','Quien abusa de su derecho','Cualquier ciudadano','Solo manifestantes'], correcta:1},
+      {q:'El principio de inmediatez (Art. 4) significa que la persona tiene derecho a:', op:['Recibir protección inmediata','Una indemnización','Un abogado gratuito','Guardar silencio'], correcta:0},
+      {q:'¿Qué decreto ley derogó la Ley 62 de 1993?', op:['El Decreto 1070 de 2015','El Decreto Ley 2137 de 1983','El Decreto 003 de 2021','Ninguno'], correcta:1}
+    ]
+  },
+  {
+    id: 'ley1801',
+    nivel: 1,
+    rango: 'Ley',
+    tipo: 'Ley',
+    numero: '1801 de 2016',
+    fecha: '29 de julio de 2016',
+    color: '#0284c7',
+    icono: '📕',
+    titulo: 'Código Nacional de Seguridad y Convivencia Ciudadana (lo relativo a manifestación y uso de la fuerza)',
+    emisor: 'Congreso de la República de Colombia',
+    deroga: 'Reemplazó el anterior Código Nacional de Policía (Decreto 1355 de 1970)',
+    vigencia: 'Vigente',
+    resumen: 'Es el Código de Convivencia. Para la UNDMO/DEI lo importante son los artículos sobre el derecho de reunión y manifestación pública (53 a 75) y, sobre todo, el artículo 166, que es la base legal del uso de la fuerza y de los medios materiales de policía. El Libreto del DEI cita expresamente este artículo 166.',
+    puntosClave: [
+      'Art. 53 — Garantiza el ejercicio del derecho de reunión y manifestación pública y pacífica en el espacio público.',
+      'Art. 54 — Toda persona puede reunirse y manifestarse pública y pacíficamente; las autoridades deben garantizar este derecho.',
+      'Art. 55 — Las manifestaciones espontáneas y pacíficas también están protegidas y no requieren aviso previo.',
+      'Art. 56 — Reglas para las manifestaciones que requieren aviso, sin que esto sea una autorización (es solo informativo).',
+      'Art. 149 — Define los medios materiales de policía (incluye armas, elementos y dispositivos).',
+      'Art. 166 — Uso de la fuerza: es la base legal para que la Policía emplee medios materiales (incluido el DEI). La fuerza debe ser necesaria, proporcional y racional. El Libreto del DEI lo cita como fundamento de la intervención.',
+      'Art. 20 — La actividad de policía es la materialización de los medios y medidas correctivas conforme a las atribuciones de los uniformados.'
+    ],
+    terminos: [
+      {t:'Art. 166', d:'Artículo del Código que habilita y regula el uso de la fuerza por la Policía. El Libreto del DEI lo cita como fundamento de la intervención.'},
+      {t:'Derecho de reunión y manifestación', d:'Derecho constitucional (Art. 37 C.P.) desarrollado en los Art. 53-56 del Código: reunirse y manifestarse pública y pacíficamente.'},
+      {t:'Medios materiales de policía', d:'Instrumentos, armas, elementos y dispositivos que la Policía puede emplear conforme a la ley (Art. 149).'},
+      {t:'Manifestación espontánea', d:'La que ocurre sin organización previa; está igualmente protegida y no requiere aviso (Art. 55).'},
+      {t:'Actividad de policía', d:'Materialización concreta, por parte del uniformado, de los medios y medidas correctivas (Art. 20).'}
+    ],
+    preguntas: [
+      {q:'¿Qué artículo de la Ley 1801 de 2016 es la base legal del uso de la fuerza, citado en el Libreto del DEI?', op:['Artículo 53','Artículo 149','Artículo 166','Artículo 20'], correcta:2},
+      {q:'¿Cómo se conoce comúnmente la Ley 1801 de 2016?', op:['Estatuto de Protesta','Código Nacional de Seguridad y Convivencia Ciudadana','Manual del DEI','Ley de Armas'], correcta:1},
+      {q:'Según el Código, una manifestación espontánea y pacífica:', op:['Está prohibida','Está protegida y no requiere aviso previo','Requiere permiso de la Alcaldía','Solo es legal de día'], correcta:1},
+      {q:'El aviso previo de una manifestación (Art. 56) es:', op:['Una autorización','Solo informativo, no es autorización','Obligatorio para reunirse','Un trámite judicial'], correcta:1},
+      {q:'Según el Art. 166, el uso de la fuerza debe ser:', op:['Inmediato y total','Necesario, proporcional y racional','Decidido por el patrullero','Ilimitado'], correcta:1}
+    ]
+  },
+  // ───────────── NIVEL 2 — DECRETOS ─────────────
+  {
+    id: 'dec003',
+    nivel: 2,
+    rango: 'Decreto',
+    tipo: 'Decreto',
+    numero: '003 de 2021',
+    fecha: '5 de enero de 2021',
+    color: '#22c55e',
+    icono: '📜',
+    titulo: 'Estatuto de Reacción, Uso y Verificación de la Fuerza Legítima del Estado y Protección del Derecho a la Protesta Pacífica Ciudadana',
+    emisor: 'Gobierno Nacional',
+    deroga: 'No deroga; es respuesta a la Sentencia STC-7641 de 2020 de la Corte Suprema de Justicia',
+    vigencia: 'Vigente',
+    resumen: 'Es el primer protocolo nacional de acciones preventivas, concomitantes y posteriores en materia de protesta. Nació por orden de la Corte Suprema de Justicia (sentencia STC-7641 de 2020) tras el Paro Nacional de 2019. El Libreto del DEI lo cita: en virtud del Decreto 003/2021 el Ministerio Público hace la revista de los elementos antes del servicio.',
+    puntosClave: [
+      'Es el "Estatuto de Reacción, Uso y Verificación de la Fuerza Legítima del Estado y Protección del Derecho a la Protesta Pacífica".',
+      'Nace por orden de la Corte Suprema de Justicia: sentencia STC-7641 de 2020, tras tutela de víctimas del Paro Nacional de 2019.',
+      'Establece la PRIMACÍA DEL DIÁLOGO y la mediación en las protestas como elemento determinante y principal.',
+      'La promoción del diálogo y mediación es permanente, aun cuando se considere agotados los medios pacíficos y se proceda al uso de la fuerza.',
+      'Aplica el principio de diferenciación: la Policía focaliza la fuerza solo sobre los actos de violencia concomitantes, absteniéndose de actuar contra la manifestación pacífica.',
+      'Estructura las acciones policiales en tres momentos: preventivas, concomitantes y posteriores.',
+      'En virtud de este decreto, el Ministerio Público realiza la REVISTA de los elementos que empleará el dispositivo, verificando que cumplan estándares y sean de dotación institucional.'
+    ],
+    terminos: [
+      {t:'STC-7641 de 2020', d:'Sentencia de tutela de la Corte Suprema de Justicia (22 de septiembre de 2020) que ordenó crear este estatuto.'},
+      {t:'Revista del Ministerio Público', d:'Verificación previa al servicio, por el Ministerio Público, de que los elementos cumplen estándares y son dotación oficial (citada en el Libreto).'},
+      {t:'Acciones preventivas', d:'Las que se realizan ANTES de la manifestación para prevenir alteraciones.'},
+      {t:'Acciones concomitantes', d:'Las que se realizan DURANTE la manifestación.'},
+      {t:'Acciones posteriores', d:'Las que se realizan DESPUÉS de la manifestación (verificación, informes).'},
+      {t:'Primacía del diálogo', d:'Principio según el cual el diálogo y la mediación son el medio principal y permanente en las protestas.'}
+    ],
+    preguntas: [
+      {q:'¿Por orden de qué sentencia nace el Decreto 003 de 2021?', op:['STC-7641 de 2020 de la Corte Suprema','C-225 de 1995','SU-047 de 1999','T-406 de 1992'], correcta:0},
+      {q:'Según el Libreto del DEI, ¿qué hace el Ministerio Público en virtud del Decreto 003/2021?', op:['Da la orden de intervenir','Realiza la revista de los elementos del servicio','Comanda el dispositivo','Captura infractores'], correcta:1},
+      {q:'¿Qué nombre recibe el protocolo del Decreto 003 de 2021?', op:['Manual de Convivencia','Estatuto de Reacción, Uso y Verificación de la Fuerza Legítima','Código de Policía','Reglamento del DEI'], correcta:1},
+      {q:'¿En qué tres momentos estructura las acciones policiales el Decreto 003?', op:['Mañana, tarde y noche','Preventivas, concomitantes y posteriores','Antes y después','Patrullaje y reacción'], correcta:1},
+      {q:'Según el Decreto 003, el diálogo y la mediación son:', op:['Opcionales','El elemento determinante y principal, de carácter permanente','Solo para el final','Responsabilidad de la Alcaldía'], correcta:1}
+    ]
+  },
+  {
+    id: 'dec1231',
+    nivel: 2,
+    rango: 'Decreto',
+    tipo: 'Decreto',
+    numero: '1231 de 2024',
+    fecha: '3 de octubre de 2024',
+    color: '#8b5cf6',
+    icono: '⚖️',
+    titulo: 'Reglamenta el uso diferenciado y proporcional de la fuerza por parte de la Policía Nacional',
+    emisor: 'Presidencia de la República / Ministerio de Defensa Nacional',
+    deroga: 'No deroga; adiciona el Título 14 a la Parte 5 del Libro 2 del Decreto 1070 de 2015',
+    vigencia: 'Vigente',
+    resumen: 'Es la norma marco que regula cuándo y cómo la Policía puede usar la fuerza. El Libreto del DEI lo cita junto con el Art. 166 de la Ley 1801 como fundamento para hacer uso de la fuerza de manera proporcional y necesaria. De este decreto se desprenden las resoluciones 01840 (armas) y 04240 (modelo).',
+    puntosClave: [
+      'El uso de la fuerza es una facultad EXCEPCIONAL: solo se invoca para proteger los Derechos Humanos y mantener la convivencia pacífica.',
+      'Pone el diálogo como medio principal; el uso de la fuerza es gradual y de último recurso.',
+      'Cuando se use la fuerza, se debe informar al superior jerárquico y a quien dio la orden, una vez superados los hechos, precisando tiempo, modo, lugar y justificación.',
+      'Si hay personas lesionadas, se remite informe al superior jerárquico Y al Ministerio Público.',
+      'El personal solo puede usar armas, dispositivos y municiones menos letales que causen el menor daño posible.',
+      'El uso de armas de fuego es una MEDIDA EXTREMA: solo ante peligro inminente de muerte o lesiones graves.',
+      'Ordena que la Policía determine, por resolución, el manual de empleo de las AML (eso es la Resolución 01840 de 2025).',
+      'La Policía tenía un plazo de 18 meses para actualizar los actos administrativos internos que lo contradijeran.'
+    ],
+    terminos: [
+      {t:'AML', d:'Armas Menos Letales. Categoría aceptada por ONU, CICR y CIDH para dispositivos diseñados para reducir el daño letal.'},
+      {t:'Uso diferenciado de la fuerza', d:'Aplicar la fuerza de forma gradual y proporcional según la gravedad de la situación y el nivel de resistencia.'},
+      {t:'Facultad excepcional', d:'El uso de la fuerza no es la regla; solo se invoca cuando es estrictamente necesario para proteger derechos.'},
+      {t:'Medida extrema', d:'Calificación del uso de armas de fuego: reservado para peligro inminente de muerte o lesiones graves.'},
+      {t:'Decreto 1070 de 2015', d:'Decreto Único Reglamentario del Sector Defensa, al que el Decreto 1231 le adiciona el Título 14.'}
+    ],
+    preguntas: [
+      {q:'¿De qué año es el Decreto 1231 sobre uso de la fuerza?', op:['2021','2023','2024','2025'], correcta:2},
+      {q:'Según el Decreto 1231, el uso de armas de fuego se considera:', op:['Una práctica rutinaria','Una medida extrema','Prohibido en todo caso','Decisión del patrullero'], correcta:1},
+      {q:'Cuando se usa la fuerza y hay personas lesionadas, ¿a quién se remite informe?', op:['Solo al superior jerárquico','Al superior jerárquico y al Ministerio Público','A la Alcaldía','A nadie'], correcta:1},
+      {q:'El Decreto 1231 ordena a la Policía expedir, por resolución, el manual de:', op:['Uniformes','Empleo de las Armas Menos Letales (AML)','Ascensos','Vacaciones'], correcta:1},
+      {q:'¿Qué le hace el Decreto 1231 al Decreto 1070 de 2015?', op:['Lo deroga totalmente','Le adiciona el Título 14 a la Parte 5 del Libro 2','No tiene relación','Lo suspende'], correcta:1}
+    ]
+  },
+  // ───────────── NIVEL 3 — RESOLUCIONES ─────────────
   {
     id: 'res1091',
+    nivel: 3,
+    rango: 'Resolución',
     tipo: 'Resolución',
     numero: '1091 de 2023',
     fecha: '31 de marzo de 2023',
@@ -11306,16 +11468,16 @@ var DOCTRINA = [
     puntosClave: [
       'Crea el procedimiento de actuación de la UNDMO, que reemplaza al ESMAD.',
       'Prioriza el diálogo entre la Policía y la población manifestante. La intervención es el último recurso.',
-      'Establece las etapas de actuación policial: anticipación, preparación, acciones previas, concomitantes y posteriores.',
+      'Establece las etapas de actuación: anticipación, preparación, acciones previas, concomitantes y posteriores.',
       'El Dispositivo Especializado de Intervención (DEI) puede apoyar la custodia de salas temporales de privación de libertad, ubicándose estratégicamente para disuadir amotinamientos.',
-      'Prohíbe que el personal del grupo especializado (DEI) realice registro a personas privadas de libertad ni a los lugares donde están.',
+      'Prohíbe que el personal del DEI realice registro a personas privadas de libertad ni a los lugares donde están.',
       'Si las capacidades de la unidad son rebasadas, el comandante de región/metropolitana/departamento coordina apoyo a través de la Jefatura Nacional del Servicio de Policía.',
       'Autoriza el uso de dispositivos tecnológicos (drones, body cams) en el marco de las manifestaciones.'
     ],
     terminos: [
       {t:'UNDMO', d:'Unidad de Diálogo y Mantenimiento del Orden. Reemplaza al ESMAD. Su énfasis es el diálogo antes que la fuerza.'},
       {t:'DEI', d:'Dispositivo Especializado de Intervención. Grupo táctico que interviene cuando se agota el diálogo y hay disturbios.'},
-      {t:'Etapa de anticipación', d:'Fase previa donde se hacen acciones de inteligencia para prevenir la comisión de delitos en la manifestación.'},
+      {t:'Etapa de anticipación', d:'Fase previa donde se hacen acciones de inteligencia para prevenir delitos en la manifestación.'},
       {t:'Acciones concomitantes', d:'Las que se ejecutan durante el desarrollo de la manifestación.'},
       {t:'Última ratio', d:'Principio según el cual la intervención de la fuerza es el último recurso, agotado el diálogo.'}
     ],
@@ -11323,49 +11485,14 @@ var DOCTRINA = [
       {q:'¿Qué unidad reemplazó al ESMAD según la Resolución 1091 de 2023?', op:['La UNDMO','El GAULA','El DEI','La SIJIN'], correcta:0},
       {q:'¿Cuál es el principio que prioriza la Resolución 1091 frente a las manifestaciones?', op:['El uso inmediato de la fuerza','El diálogo entre Policía y manifestantes','La captura masiva','El cierre de vías'], correcta:1},
       {q:'¿Puede el personal del DEI hacer registro a personas privadas de la libertad en salas temporales?', op:['Sí, siempre','No, está expresamente prohibido','Solo con orden judicial','Solo de noche'], correcta:1},
-      {q:'¿Qué etapas de actuación policial introduce la Resolución 1091?', op:['Solo acciones previas y posteriores','Anticipación, preparación, previas, concomitantes y posteriores','Únicamente intervención','Patrullaje y vigilancia'], correcta:1},
+      {q:'¿Qué etapas de actuación policial introduce la Resolución 1091?', op:['Solo previas y posteriores','Anticipación, preparación, previas, concomitantes y posteriores','Únicamente intervención','Patrullaje y vigilancia'], correcta:1},
       {q:'Si las capacidades de la unidad son rebasadas, ¿a través de quién se coordina el apoyo?', op:['La Alcaldía','La Jefatura Nacional del Servicio de Policía','El Ejército','La Fiscalía'], correcta:1}
     ]
   },
   {
-    id: 'dec1231',
-    tipo: 'Decreto',
-    numero: '1231 de 2024',
-    fecha: '3 de octubre de 2024',
-    color: '#8b5cf6',
-    icono: '⚖️',
-    titulo: 'Reglamenta el uso diferenciado y proporcional de la fuerza por parte de la Policía Nacional',
-    emisor: 'Presidencia de la República / Ministerio de Defensa Nacional',
-    deroga: 'No deroga; adiciona el Título 14 a la Parte 5 del Libro 2 del Decreto 1070 de 2015',
-    vigencia: 'Vigente',
-    resumen: 'Es la norma marco (de rango superior) que regula cuándo y cómo la Policía puede usar la fuerza. Fue producto del diálogo entre Mindefensa, la Policía, organizaciones sociales y la ONU. Es la primera vez que el Gobierno interviene la autonomía reglamentaria de la Policía en este tema.',
-    puntosClave: [
-      'El uso de la fuerza es una facultad EXCEPCIONAL: solo se invoca para proteger los Derechos Humanos y mantener la convivencia pacífica.',
-      'Pone el diálogo como medio principal para soluciones pacíficas; el uso de la fuerza es gradual y de último recurso.',
-      'Cuando se use la fuerza, se debe informar al superior jerárquico y a quien dio la orden, una vez superados los hechos, precisando tiempo, modo, lugar y justificación.',
-      'Si hay personas lesionadas, se remite informe al superior jerárquico Y al Ministerio Público.',
-      'El personal solo puede usar armas, dispositivos y municiones menos letales que causen el menor daño posible a la integridad.',
-      'El uso de armas de fuego es una MEDIDA EXTREMA: solo ante peligro inminente de muerte o lesiones graves.',
-      'Incorpora el concepto de Armas Menos Letales (AML), alineado con las orientaciones de la ONU de junio de 2020.',
-      'La Policía tenía un plazo de 18 meses para actualizar los actos administrativos internos que contradijeran este decreto.'
-    ],
-    terminos: [
-      {t:'AML', d:'Armas Menos Letales. Categoría aceptada por ONU, CICR y CIDH para los dispositivos diseñados para reducir el daño letal.'},
-      {t:'Uso diferenciado de la fuerza', d:'Aplicar la fuerza de forma gradual y proporcional según la gravedad de la situación y el nivel de resistencia o agresión.'},
-      {t:'Facultad excepcional', d:'El uso de la fuerza no es la regla; solo se invoca cuando es estrictamente necesario para proteger derechos.'},
-      {t:'Medida extrema', d:'Calificación del uso de armas de fuego: reservado para peligro inminente de muerte o lesiones graves.'},
-      {t:'Decreto 1070 de 2015', d:'Decreto Único Reglamentario del Sector Defensa, al cual el Decreto 1231 le adiciona el Título 14.'}
-    ],
-    preguntas: [
-      {q:'¿De qué año es realmente el Decreto 1231 sobre uso de la fuerza?', op:['2021','2023','2024','2025'], correcta:2},
-      {q:'Según el Decreto 1231, el uso de armas de fuego se considera:', op:['Una práctica rutinaria','Una medida extrema','Prohibido en todo caso','Decisión del patrullero'], correcta:1},
-      {q:'Cuando se usa la fuerza y hay personas lesionadas, ¿a quién se remite informe?', op:['Solo al superior jerárquico','Al superior jerárquico y al Ministerio Público','A la Alcaldía','A nadie'], correcta:1},
-      {q:'El Decreto 1231 incorpora el concepto AML alineado con orientaciones de:', op:['La OTAN','La ONU (junio de 2020)','La Interpol','El FBI'], correcta:1},
-      {q:'¿Qué le hace el Decreto 1231 al Decreto 1070 de 2015?', op:['Lo deroga totalmente','Le adiciona el Título 14 a la Parte 5 del Libro 2','No tiene relación','Lo suspende'], correcta:1}
-    ]
-  },
-  {
     id: 'res1840',
+    nivel: 3,
+    rango: 'Resolución',
     tipo: 'Resolución',
     numero: '01840 de 2025',
     fecha: '20 de junio de 2025',
@@ -11375,25 +11502,25 @@ var DOCTRINA = [
     emisor: 'Dirección General de la Policía Nacional / Ministerio de Defensa',
     deroga: 'Deroga en su totalidad la Resolución 01716 del 31 de mayo de 2021',
     vigencia: 'Vigente — aplicación inmediata y obligatoria',
-    resumen: 'Es el manual técnico que desarrolla, en detalle, qué armas menos letales existen, cómo se clasifican y cómo se emplean: tasers, venom, gases lacrimógenos, tonfas, armas cinéticas, neumáticas y agentes químicos. Es la norma más directamente ligada al manejo de munición del DEI.',
+    resumen: 'Es el manual técnico que desarrolla el Decreto 1231: qué armas menos letales existen, cómo se clasifican y cómo se emplean (tasers, venom, gases lacrimógenos, tonfas, armas cinéticas, agentes químicos). Es la norma más directamente ligada al manejo de munición del DEI.',
     puntosClave: [
       'Determina los parámetros institucionales para el empleo de las AML y su clasificación técnica.',
       'Deroga totalmente la Resolución 01716 de 2021 (el manual anterior de AML).',
       'Aplica los principios: necesidad, legalidad, proporcionalidad, constitucionalidad y diferenciación.',
       'Antes de emplear AML, agotados los medios preventivos y disuasivos, se debe dar una clara ADVERTENCIA del uso de la fuerza, con tiempo suficiente para que la orden sea entendida y acatada.',
-      'Las AML de dotación oficial NO pueden ser alteradas ni modificadas en sus características de fabricación, origen, diseño o propósito.',
+      'Las AML de dotación oficial NO pueden ser alteradas ni modificadas en fabricación, origen, diseño o propósito.',
       'Se prohíbe usar las AML con municiones de características técnicas letales.',
-      'Se prohíbe el uso de elementos o dispositivos que no sean dotación oficial (salvo medios de apoyo del Código de Convivencia, Ley 1801 de 2016).',
-      'Solo personal capacitado y formado en uso progresivo de la fuerza puede emplear las AML.',
+      'Se prohíbe el uso de elementos que no sean dotación oficial (salvo medios de apoyo de la Ley 1801 de 2016).',
+      'Solo personal capacitado en uso progresivo de la fuerza puede emplear las AML.',
       'Limita el uso de gases lacrimógenos en lugares cerrados o con presencia de niños y adultos mayores.',
       'Restringe el uso del taser en zonas sensibles del cuerpo.'
     ],
     terminos: [
       {t:'AML', d:'Armas, Municiones, Elementos y Dispositivos Menos Letales.'},
-      {t:'Anuncio del uso de la fuerza', d:'Advertencia clara y previa que se da antes de emplear AML, dando tiempo a que la orden sea entendida y acatada.'},
+      {t:'Anuncio del uso de la fuerza', d:'Advertencia clara y previa antes de emplear AML, dando tiempo a que la orden sea entendida y acatada.'},
       {t:'Principio de diferenciación', d:'Distinguir entre quienes participan pacíficamente y quienes cometen actos violentos, dirigiendo la fuerza solo a estos últimos.'},
-      {t:'Tiempo, modo y lugar', d:'Condiciones que el uniformado debe observar siempre que emplee la fuerza con AML (artículo 2.5.14.1 num. 16 del Decreto 1231).'},
-      {t:'Dotación oficial', d:'Armamento y elementos entregados oficialmente por la Policía. Solo estos pueden usarse; no pueden ser alterados.'},
+      {t:'Tiempo, modo y lugar', d:'Condiciones que el uniformado debe observar al emplear la fuerza con AML (Decreto 1231, art. 2.5.14.1 num. 16).'},
+      {t:'Dotación oficial', d:'Armamento entregado oficialmente por la Policía. Solo este puede usarse; no puede ser alterado.'},
       {t:'Medios de apoyo', d:'Concepto de la Ley 1801 de 2016 que permite, excepcionalmente, el uso de ciertos elementos fuera de la dotación.'}
     ],
     preguntas: [
@@ -11407,6 +11534,8 @@ var DOCTRINA = [
   },
   {
     id: 'res4240',
+    nivel: 3,
+    rango: 'Resolución',
     tipo: 'Resolución',
     numero: '04240 de 2025',
     fecha: '1 de diciembre de 2025',
@@ -11416,22 +11545,22 @@ var DOCTRINA = [
     emisor: 'Dirección General de la Policía Nacional',
     deroga: 'Desarrolla el Decreto 1231 de 2024',
     vigencia: 'Vigente',
-    resumen: 'Desarrolla operativamente el Decreto 1231: establece el "modelo" concreto de cómo los uniformados aplican el uso diferenciado y proporcional de la fuerza en distintas situaciones. Incluye una política de cero tolerancia al abuso de la fuerza y transparencia en las cifras.',
+    resumen: 'Desarrolla operativamente el Decreto 1231: establece el "modelo" concreto de cómo los uniformados aplican el uso diferenciado y proporcional de la fuerza. Incluye una política de cero tolerancia al abuso de la fuerza y transparencia en las cifras.',
     puntosClave: [
       'Desarrolla el modelo para el uso diferenciado y proporcional de la fuerza, aterrizando el Decreto 1231 de 2024.',
       'Establece parámetros institucionales de actuación para los uniformados en distintas situaciones.',
       'Política de CERO TOLERANCIA frente a los casos de abuso de la fuerza.',
-      'Transparencia: la Policía debe publicar las cifras de los casos de uso de la fuerza que se presenten.',
-      'La implementación queda a cargo de la Dirección de Educación Policial (o la unidad que haga sus veces): instruir, capacitar y entrenar al personal.',
-      'Se debe presentar un informe anual, publicado en las páginas web del Ministerio de Defensa y de la Policía Nacional.',
+      'Transparencia: la Policía debe publicar las cifras de los casos de uso de la fuerza.',
+      'La implementación queda a cargo de la Dirección de Educación Policial: instruir, capacitar y entrenar al personal.',
+      'Se debe presentar un informe anual, publicado en las webs del Ministerio de Defensa y de la Policía Nacional.',
       'Reafirma los principios de legalidad, necesidad y proporcionalidad como ejes del uso de la fuerza.'
     ],
     terminos: [
       {t:'Modelo de uso de la fuerza', d:'Esquema operativo concreto que indica cómo aplicar gradualmente la fuerza según la situación.'},
       {t:'Cero tolerancia', d:'Política institucional que no admite ningún caso de abuso de la fuerza.'},
       {t:'Principio de legalidad', d:'El uso de la fuerza debe estar siempre amparado en la ley.'},
-      {t:'Principio de necesidad', d:'La fuerza solo se aplica cuando es indispensable para cumplir un objetivo legítimo, evitando lo arbitrario o excesivo.'},
-      {t:'Principio de proporcionalidad', d:'La intensidad de la fuerza debe corresponder al nivel de resistencia o agresión enfrentado.'},
+      {t:'Principio de necesidad', d:'La fuerza solo se aplica cuando es indispensable para un objetivo legítimo, evitando lo arbitrario.'},
+      {t:'Principio de proporcionalidad', d:'La intensidad de la fuerza debe corresponder al nivel de resistencia o agresión.'},
       {t:'Informe anual', d:'Reporte público de los casos de uso de la fuerza, publicado en las webs de Mindefensa y la Policía.'}
     ],
     preguntas: [
@@ -11442,41 +11571,203 @@ var DOCTRINA = [
       {q:'El principio de necesidad establece que la fuerza se usa cuando:', op:['Lo decide el patrullero','Es indispensable para un objetivo legítimo','Hay muchas personas','Es de noche'], correcta:1}
     ]
   },
+  // ───────────── NIVEL 4 — INSTRUCTIVOS ─────────────
   {
-    id: 'dec003',
-    tipo: 'Decreto',
-    numero: '003 de 2021',
-    fecha: '5 de enero de 2021',
-    color: '#22c55e',
-    icono: '📜',
-    titulo: 'Estatuto de Reacción, Uso y Verificación de la Fuerza Legítima del Estado y Protección del Derecho a la Protesta Pacífica Ciudadana',
-    emisor: 'Gobierno Nacional',
-    deroga: 'No deroga; es respuesta a la Sentencia STC-7641 de 2020 de la Corte Suprema de Justicia',
+    id: 'inst003',
+    nivel: 4,
+    rango: 'Instructivo',
+    tipo: 'Instructivo',
+    numero: '003 / JESEP-UNDMO-14.7',
+    fecha: '1 de mayo de 2026',
+    color: '#a855f7',
+    icono: '📝',
+    titulo: 'Ciclo operacional de la UNDMO y criterios de utilización de los Dispositivos Especializados de Intervención (DEI)',
+    emisor: 'JESEP — Jefatura Nacional del Servicio de Policía (Brig. Gen. Wharlinton Iván Gualdrón Gualdrón)',
+    deroga: 'Deroga el Instructivo 007 JESEP-UNDMO-14.7 del 14 de noviembre de 2023',
     vigencia: 'Vigente',
-    resumen: 'Es el primer protocolo nacional de acciones preventivas, concomitantes y posteriores en materia de protesta. Nació por orden de la Corte Suprema de Justicia (sentencia STC-7641 de 2020) tras el Paro Nacional de 2019. Establece directrices de actuación de las autoridades de policía durante manifestaciones.',
+    resumen: 'Es el instructivo que define el CICLO OPERACIONAL del personal de la UNDMO (las fases de 30 días: servicio, capacitación, bienestar, salud mental, actividad física y franquicia) y los CRITERIOS para usar el DEI en cada tipo de escenario. Es el documento que organiza directamente tu día a día y el de tu unidad. Armoniza la operatividad con el bienestar laboral, en cumplimiento de la Resolución 1572 de 2023.',
     puntosClave: [
-      'Es el "Estatuto de Reacción, Uso y Verificación de la Fuerza Legítima del Estado y Protección del Derecho a la Protesta Pacífica".',
-      'Nace por orden de la Corte Suprema de Justicia: sentencia STC-7641 de 2020, tras tutela de víctimas del Paro Nacional de 2019.',
-      'Establece la PRIMACÍA DEL DIÁLOGO y la mediación en las protestas como elemento determinante y principal.',
-      'La promoción del diálogo y mediación es permanente, aun cuando se considere agotados los medios pacíficos y se proceda al uso de la fuerza.',
-      'Aplica el principio de diferenciación: la Policía focaliza la fuerza solo sobre los actos de violencia concomitantes, absteniéndose de actuar contra la manifestación pacífica.',
-      'Estructura las acciones policiales en tres momentos: preventivas, concomitantes y posteriores.',
-      'Dirigido a las autoridades de policía en sus funciones de garantía de derechos, convivencia y orden público.'
+      'El ciclo operacional son las fases que cumple el personal de los GDMO durante un periodo de 30 días: servicio, capacitación, bienestar, salud mental y franquicia.',
+      'Servicio Antidisturbios y de Apoyo: el DEI realiza 19 días de actividades de la misionalidad antidisturbios (atención a reunión, manifestación, control de disturbios, motines, asonadas).',
+      'Distribución operacional: 70% en misionalidad antidisturbios y 30% para apoyar planes focalizados de convivencia y seguridad; los fines de semana puede subir hasta el 40%, previa autorización de la Jefatura Nacional del Servicio de Policía.',
+      'Capacitación: 2 días de actualización e instrucción en derechos humanos, uso legítimo de la fuerza, diálogo, mediación, doctrina y resolución de conflictos.',
+      'Bienestar e Incentivos: 1 día para actividad de bienestar y promoción de la salud (estrategia 4D).',
+      'Salud Mental: 1 día (o los necesarios) para talleres de descargas emocionales y manejo de estrés, en cumplimiento de la Resolución 1974 de 2023.',
+      'Actividad Física: 2 días de acondicionamiento físico, distribuidos en 4 jornadas (una semanal, mañana o tarde).',
+      'Permiso o Franquicia: modelo de 25 días laborados por 5 de descanso para los GDMO (Resolución 2256 de 2023). Si por necesidad del servicio no se otorga, se adiciona 1 día de franquicia por cada 5 laborados, sin superar 60 días laborados.',
+      'CRITERIO CLAVE — El DEI se usa como ÚLTIMA RATIO: solo para superar un riesgo o amenaza cuando las capacidades de las unidades han sido rebasadas, en intervención a hechos violentos.',
+      'En manifestación pública el DEI se ubica de manera estratégica, conforme al art. 34 del Decreto 003/2021 y al art. 23 de la Resolución 1091/2023. Debe mantener el principio de unidad de grupo y mando.',
+      'El periodo de permanencia de los DEI desplegados como apoyo será de 45 días, según necesidades del servicio.',
+      'El personal de la UNDMO NO debe usarse para subsanar novedades del MSPOPT (excusas médicas, vacaciones, licencias) ni para puesto fijo, custodios o patrullas.',
+      'Registro a personas privadas de la libertad y centros carcelarios: se eleva solicitud a la Jefatura Nacional del Servicio de Policía; el DEI se ubica en puntos estratégicos como última ratio, con acompañamiento del Ministerio Público.',
+      'Equipos de Diálogo (EDI): mínimo 2 unidades (binomio) por servicio; NO se usan para registros, allanamientos, erradicación ni motines carcelarios. El componente de diálogo es solo para manifestación pública y pacífica.',
+      'Los funcionarios de diálogo (EDI) NO deben realizar funciones del DEI ni usar su equipamiento, y viceversa.'
     ],
     terminos: [
-      {t:'STC-7641 de 2020', d:'Sentencia de tutela de la Corte Suprema de Justicia (22 de septiembre de 2020) que ordenó crear este estatuto.'},
-      {t:'Acciones preventivas', d:'Las que se realizan ANTES de la manifestación para prevenir alteraciones.'},
-      {t:'Acciones concomitantes', d:'Las que se realizan DURANTE la manifestación.'},
-      {t:'Acciones posteriores', d:'Las que se realizan DESPUÉS de la manifestación (verificación, informes).'},
-      {t:'Primacía del diálogo', d:'Principio según el cual el diálogo y la mediación son el medio principal y permanente en las protestas.'},
-      {t:'Principio de diferenciación', d:'La fuerza se focaliza solo sobre actos de violencia, no sobre la manifestación pacífica.'}
+      {t:'Ciclo operacional', d:'Las fases que cumple el personal de los GDMO en 30 días: servicio, capacitación, bienestar, salud mental, actividad física y franquicia.'},
+      {t:'Última ratio', d:'El DEI solo se emplea como último recurso, cuando las capacidades de las unidades han sido superadas o rebasadas.'},
+      {t:'Distribución 70/30', d:'70% del servicio en misionalidad antidisturbios y 30% en apoyo a planes de convivencia; hasta 40% los fines de semana con autorización.'},
+      {t:'Modelo 25x5', d:'Régimen de franquicia de los GDMO: 25 días laborados por 5 de descanso (Resolución 2256 de 2023).'},
+      {t:'DMA', d:'Dispositivo Mínimo de Atención. Conformado por los comandantes para atender el derecho de reunión y manifestación.'},
+      {t:'EDI / Equipos de Diálogo', d:'Personal que propicia escenarios de diálogo; mínimo 2 unidades (binomio); no se usa para funciones del DEI.'},
+      {t:'Estrategia 4D', d:'Estrategia institucional de bienestar y promoción de la salud del personal.'},
+      {t:'Principio de unidad de grupo y mando', d:'El DEI actúa siempre agrupado y bajo un mando único, conforme a la Resolución 1091/2023.'}
     ],
     preguntas: [
-      {q:'¿Por orden de qué sentencia nace el Decreto 003 de 2021?', op:['STC-7641 de 2020 de la Corte Suprema','C-225 de 1995','SU-047 de 1999','T-406 de 1992'], correcta:0},
-      {q:'¿Tras qué evento se ordenó crear el Decreto 003 de 2021?', op:['El Paro Nacional de 2019','El Mundial 2014','La pandemia','El Bogotazo'], correcta:0},
-      {q:'¿Qué nombre recibe el protocolo del Decreto 003 de 2021?', op:['Manual de Convivencia','Estatuto de Reacción, Uso y Verificación de la Fuerza Legítima','Código de Policía','Reglamento del DEI'], correcta:1},
-      {q:'Según el Decreto 003, el diálogo y la mediación son:', op:['Opcionales','El elemento determinante y principal, de carácter permanente','Solo para el final','Responsabilidad de la Alcaldía'], correcta:1},
-      {q:'¿En qué tres momentos estructura las acciones policiales el Decreto 003?', op:['Mañana, tarde y noche','Preventivas, concomitantes y posteriores','Antes y después','Patrullaje y reacción'], correcta:1}
+      {q:'¿De cuántos días es el periodo del ciclo operacional de los GDMO?', op:['15 días','30 días','45 días','60 días'], correcta:1},
+      {q:'¿Cuántos días del ciclo dedica el DEI a la misionalidad antidisturbios y de apoyo?', op:['10 días','19 días','25 días','30 días'], correcta:1},
+      {q:'La distribución operacional ordinaria del DEI es:', op:['50% antidisturbios / 50% apoyo','70% antidisturbios / 30% apoyo','100% antidisturbios','30% antidisturbios / 70% apoyo'], correcta:1},
+      {q:'Los fines de semana, ¿hasta qué porcentaje puede subir el apoyo, con autorización?', op:['Hasta 35%','Hasta 40%','Hasta 50%','No puede subir'], correcta:1},
+      {q:'¿Cuál es el modelo de franquicia para el personal de los GDMO?', op:['20 días laborados x 4 descanso','25 días laborados x 5 descanso','15 x 3','30 x 6'], correcta:1},
+      {q:'Según el Instructivo 003, el DEI debe usarse como:', op:['Primera opción siempre','Última ratio, cuando las capacidades son rebasadas','Apoyo a patrullas','Custodio de instalaciones'], correcta:1},
+      {q:'¿Puede usarse el personal de la UNDMO para subsanar vacaciones o excusas del MSPOPT?', op:['Sí, sin restricción','No, está prohibido','Solo los fines de semana','Solo con orden verbal'], correcta:1},
+      {q:'¿Por cuántas unidades mínimo deben estar conformados los Equipos de Diálogo (EDI)?', op:['1 unidad','2 unidades (binomio)','4 unidades','6 unidades'], correcta:1},
+      {q:'¿Qué instructivo deroga el Instructivo 003 de 2026?', op:['El Instructivo 006 de 2023','El Instructivo 007 JESEP-UNDMO del 14 de noviembre de 2023','La Resolución 1091','Ninguno'], correcta:1},
+      {q:'El periodo de permanencia de los DEI desplegados como apoyo es de:', op:['30 días','45 días','60 días','90 días'], correcta:1}
+    ]
+  },
+  {
+    id: 'inst004',
+    nivel: 4,
+    rango: 'Instructivo',
+    tipo: 'Instructivo',
+    numero: '004 / JESEP-UNDMO-14.7',
+    fecha: '1 de mayo de 2026',
+    color: '#c026d3',
+    icono: '🪖',
+    titulo: 'Criterios para la identificación del equipo antimotines utilizado por la Policía Nacional',
+    emisor: 'JESEP — Jefatura Nacional del Servicio de Policía (Brig. Gen. Wharlinton Iván Gualdrón Gualdrón)',
+    deroga: 'Deroga el Instructivo 006 JESEP-UNDMO del 7 de agosto de 2023',
+    vigencia: 'Vigente',
+    resumen: 'Es el instructivo que define cómo debe marcarse e identificarse el equipo antimotines: cascos, protectores corporales y chalecos. El objetivo es la transparencia: que cualquier ciudadano pueda identificar al uniformado. Distingue el equipo NEGRO (DMA, dispositivos mínimos), el equipo VERDE (UNDMO/DEI con overol ignífugo) y el equipo de los Equipos de Diálogo (cascos y chalecos blancos/azules).',
+    puntosClave: [
+      'El objeto es la marcación del equipo antimotines para permitir la plena identificación del uniformado al desempeñar el servicio (principio de transparencia).',
+      'Equipo NEGRO: lo usan los Dispositivos Mínimos de Atención (DMA), personal de metropolitanas y departamentos, con uniforme N° 4 o 5.',
+      'Equipo VERDE: lo usa el personal de la UNDMO/DEI, con overoles ignífugos antimotín, para el control de disturbios.',
+      'Casco — Identificación frontal: lleva el Número de Identificación Único Policial (NIUP). Medidas de números: alto 3 cm, ancho 2,5 cm, en cinta reflectiva blanca.',
+      'Casco — Identificación posterior: grado del uniformado + punto + primer apellido + NIUP + acrónimo del Grupo y número del dispositivo (ej: G3-D1).',
+      'Casco — Identificación lateral: grupo sanguíneo y factor RH en cinta reflectiva roja (alto 3 cm); más una cinta reflectiva que identifica los procedimientos de cada año (alto 1 cm, ancho 9 cm).',
+      'ACRÓNIMOS de mando: el comandante de la UNDMO usa "UNDMO 1"; el subcomandante "UNDMO 2"; el coordinador operativo "UNDMO 3"; las Regionales usan "REDMO" + número; los Grupos usan "GUDMO" + número; el personal administrativo de plana mayor "UNDMO PMA".',
+      'Protector corporal negro Tipo A: NIUP pectoral y dorsal, alto 3 cm ancho 2,5 cm, cinta reflectiva blanca.',
+      'Protector corporal negro Tipo B: NIUP pectoral (alto 3, ancho 2,5 cm) y dorsal (alto 2,5, ancho 1,5 cm).',
+      'Personal de Diálogo (EDI) — casco blanco: lleva escudo de la Policía, grado + primer apellido, NIUP y acrónimo UNDMO. En los laterales las palabras DIÁLOGO y SPEAKER, logotipo de Derechos Humanos y grupo sanguíneo.',
+      'Chaleco de Diálogo: color "azul ONU", con TARJETERO (grado, nombre y apellido) al lado derecho, escudo Policía Nacional al izquierdo, palabras DIÁLOGO y SPEAKER, acrónimo UNDMO y logotipo de Derechos Humanos en la espalda.',
+      'Tipografía oficial de números y letras: HELVÉTICA BOLD en mayúscula sostenida (Resolución 06676 de 2018). El chaleco de diálogo usa fuente ARIAL.',
+      'Protectores VERDES (UNDMO/DEI): el casco lleva el acrónimo de la unidad + número consecutivo desde 0001, que se deja plasmado en la MINUTA de servicios.',
+      'Cuando el personal de la UNDMO usa protectores verdes, debe dejar el registro en los libros del servicio para identificar a qué funcionario se asignó cada elemento.',
+      'Los comandos de Metropolitana y Departamentos son responsables de la transición de cascos antimotines de color negro a blanco para los DMA.'
+    ],
+    terminos: [
+      {t:'NIUP', d:'Número de Identificación Único Policial. Marca de identificación que va en casco y protectores.'},
+      {t:'Equipo negro', d:'Equipo antimotines de los Dispositivos Mínimos de Atención (DMA) — metropolitanas y departamentos.'},
+      {t:'Equipo verde', d:'Equipo antimotines del personal UNDMO/DEI, usado con overol ignífugo antimotín.'},
+      {t:'GUDMO', d:'Acrónimo de los Grupos Diálogo y Mantenimiento del Orden, seguido de su número (ej: GUDMO 9).'},
+      {t:'REDMO', d:'Acrónimo de las Regionales Diálogo y Mantenimiento del Orden, seguido de su número.'},
+      {t:'SPEAKER', d:'Palabra que, junto con "DIÁLOGO", identifica al personal de los Equipos de Diálogo en casco y chaleco.'},
+      {t:'Azul ONU', d:'Color oficial (escala Pantone) del chaleco de identificación del personal de diálogo.'},
+      {t:'Helvética Bold', d:'Tipografía oficial para números y letras de identificación del equipo (Resolución 06676 de 2018).'}
+    ],
+    preguntas: [
+      {q:'¿Cuál es el objetivo principal del Instructivo 004?', op:['Asignar armamento','La marcación del equipo antimotines para identificar al uniformado (transparencia)','Definir ascensos','Repartir turnos'], correcta:1},
+      {q:'¿Qué color de equipo antimotines usa el personal de la UNDMO/DEI?', op:['Negro','Verde (con overol ignífugo)','Azul','Blanco'], correcta:1},
+      {q:'¿Qué color de equipo usan los Dispositivos Mínimos de Atención (DMA)?', op:['Verde','Negro','Azul','Rojo'], correcta:1},
+      {q:'¿Qué acrónimo y número usa en el casco un Grupo Diálogo y Mantenimiento del Orden?', op:['REDMO + número','GUDMO + número','UNDMO 1','PMA'], correcta:1},
+      {q:'¿Qué información va en la identificación lateral del casco, en cinta reflectiva roja?', op:['El nombre completo','El grupo sanguíneo y factor RH','La fecha','El cargo'], correcta:1},
+      {q:'¿De qué color es el chaleco de identificación del personal de diálogo?', op:['Verde militar','Azul ONU','Negro','Blanco'], correcta:1},
+      {q:'¿Qué tipografía oficial se usa para los números y letras de identificación del equipo?', op:['Times New Roman','Helvética Bold (mayúscula sostenida)','Comic Sans','Calibri'], correcta:1},
+      {q:'Cuando el personal de la UNDMO usa protectores verdes, ¿dónde debe quedar el registro?', op:['En ningún lado','En los libros del servicio / minuta','Solo en la memoria del comandante','En la página web'], correcta:1},
+      {q:'¿Qué acrónimo usa en el casco el comandante de la UNDMO?', op:['UNDMO 1','GUDMO 1','REDMO 1','PMA 1'], correcta:0},
+      {q:'¿Qué instructivo deroga el Instructivo 004 de 2026?', op:['El Instructivo 003','El Instructivo 006 JESEP-UNDMO del 7 de agosto de 2023','La Resolución 1091','Ninguno'], correcta:1}
+    ]
+  },
+  // ───────────── NIVEL 5 — LIBRETOS / GUÍAS DE CAMPO ─────────────
+  {
+    id: 'libretoMT',
+    nivel: 5,
+    rango: 'Libreto operativo',
+    tipo: 'Libreto',
+    numero: 'Medios Técnicos',
+    fecha: 'Guía de campo',
+    color: '#10b981',
+    icono: '🎥',
+    titulo: 'Libreto Orden Cronológico — Funcionario de Medios Técnicos (Registro Fílmico y Apoyo)',
+    emisor: 'Grupo Diálogo y Mantenimiento del Orden / DEI',
+    deroga: 'No aplica — es guía operativa de campo',
+    vigencia: 'Guía de uso interno',
+    resumen: 'Es el guion que el funcionario de Medios Técnicos (R-F-A: Registro Fílmico y Apoyo) debe seguir al narrar y grabar una intervención del DEI. Estructura la grabación en orden cronológico: presentación, desarrollo y cierre. Es la aplicación práctica de los decretos 003/2021 y 1231/2024 y del Art. 166 de la Ley 1801.',
+    puntosClave: [
+      'PRESENTACIÓN: el funcionario se identifica (patrullero, DEI N°, GDMO), indica fecha, hora, dirección exacta y el fin del servicio: garantizar seguridad y convivencia.',
+      'Se deja constancia de que, en virtud del Decreto 003/2021, el Ministerio Público hizo revista de los elementos del servicio.',
+      'Se narra que los gestores de convivencia / equipo de diálogo (EDA) hacen acercamiento con las personas: el diálogo prima siempre que tiempo, modo y lugar lo permitan.',
+      'Cuando inician acciones violentas: se cita el Art. 166 de la Ley 1801 de 2016 y el Decreto 1231/24, y se anuncia el uso de la fuerza proporcional y necesaria.',
+      'DURANTE: se narra que se hace uso de las AML de manera legal, proporcional, necesaria y racional; que continúan las agresiones; y que se capturan infractores respetando sus derechos.',
+      'Contexto 1: grabar la etapa de diálogo de los gestores/EDI y el anuncio del uso de la fuerza con megáfono.',
+      'Contexto 2: si no se puede anunciar, manifestar en la grabación: "Ante las agresiones inminentes contra nuestra integridad, procedemos a hacer uso inmediato de la fuerza".',
+      'Contexto 3: ante escena delictiva (incendio, saqueo, hurto), narrar brevemente los hechos antes de justificar el uso de la fuerza.',
+      'Contexto 4: si hay lesionados (fuerza pública o infractores), brindar primeros auxilios de inmediato, registrar y respetar la intimidad.',
+      'Contexto 5: manifestar en la grabación que, apenas la situación lo permita, se retomará el diálogo conforme al Decreto 003/2021.',
+      'CIERRE: dejar constancia de que, gracias a la intervención oportuna, se restableció el orden público y la convivencia.'
+    ],
+    terminos: [
+      {t:'Medios Técnicos (R-F-A)', d:'Registro Fílmico y Apoyo. El funcionario que graba y narra la intervención del DEI siguiendo este libreto.'},
+      {t:'EDA / EDI', d:'Equipo de Diálogo y Atención. Personal que hace el acercamiento con las personas para prevenir hechos violentos.'},
+      {t:'Gestores de convivencia', d:'Personal civil/policial que promueve la resolución pacífica del conflicto antes de cualquier intervención.'},
+      {t:'Anuncio del uso de la fuerza', d:'Advertencia con megáfono, que debe quedar grabada, antes de emplear la fuerza.'},
+      {t:'Orden cronológico', d:'Estructura del libreto: la narración sigue la secuencia presentación → desarrollo → cierre.'}
+    ],
+    preguntas: [
+      {q:'¿Qué cargo del DEI usa el Libreto Orden Cronológico para narrar la intervención?', op:['El Comandante DEI','Medios Técnicos (R-F-A)','El enfermero','El escudero'], correcta:1},
+      {q:'Según el libreto, ¿en virtud de qué decreto hace el Ministerio Público la revista de elementos?', op:['Decreto 1231/24','Decreto 003/2021','Decreto 1070/2015','Ninguno'], correcta:1},
+      {q:'Si no es posible anunciar el uso de la fuerza, ¿qué debe manifestar el funcionario en la grabación?', op:['Nada, solo grabar','Que ante agresiones inminentes contra su integridad procede al uso inmediato de la fuerza','Que se retira','El nombre de los infractores'], correcta:1},
+      {q:'¿Qué artículos/normas se citan al anunciar el uso de la fuerza en el libreto?', op:['Art. 37 de la Constitución','Art. 166 de la Ley 1801 de 2016 y el Decreto 1231/24','La Resolución 1091','Solo el Decreto 003'], correcta:1},
+      {q:'Según el Contexto 5, ¿qué debe manifestar el funcionario de medios técnicos durante la intervención?', op:['Que la intervención será permanente','Que apenas la situación lo permita se retomará el diálogo (Decreto 003/2021)','Que no habrá más diálogo','Que se capturará a todos'], correcta:1},
+      {q:'Si hay personas lesionadas durante la intervención, según el libreto se debe:', op:['Continuar la intervención','Brindar primeros auxilios de inmediato, registrar y respetar la intimidad','Esperar a la ambulancia sin actuar','Retirar las cámaras'], correcta:1}
+    ]
+  },
+  // ───────────── NIVEL 6 — DOCTRINA COMPLEMENTARIA ─────────────
+  {
+    id: 'res2049',
+    nivel: 6,
+    rango: 'Resolución (complementaria)',
+    tipo: 'Resolución',
+    numero: '02049 de 2025',
+    fecha: '14 de julio de 2025',
+    color: '#14b8a6',
+    icono: '🌟',
+    titulo: 'Lineamientos para expedir el Tomo de Liderazgo Policial con Enfoque Transformacional',
+    emisor: 'Dirección de Talento Humano — Director General Policía Nacional (May. Gen. Carlos Fernando Triana Beltrán)',
+    deroga: 'No deroga normativa',
+    vigencia: 'Vigente — rige desde su expedición',
+    resumen: 'No es una norma propia de la doctrina UNDMO/DEI, pero el comando de la unidad la pregunta en cada visita, así que conviene tenerla en cuenta. Establece los lineamientos del modelo de Liderazgo Policial con Enfoque Transformacional: un estilo de liderazgo que inspira y motiva al personal para lograr cambios positivos. Aplica a todos los integrantes de la institución sin distinción de rango.',
+    puntosClave: [
+      'Objeto: establecer lineamientos para implementar el Liderazgo Policial con Enfoque Transformacional en todos los niveles jerárquicos (Art. 2).',
+      'Alcance: aplica al personal uniformado, no uniformado y estudiantes (Art. 3).',
+      'Definición: es un conjunto de habilidades que inspiran y motivan a los integrantes a través de la autoridad para influir cambios en actitudes y comportamientos (Art. 4).',
+      'Está integrado por: marco legal, elementos de control y supervisión, 4 PILARES, 4 COMPONENTES y 7 PRINCIPIOS.',
+      'Los 4 PILARES (Art. 5): 1) Personas, 2) Propósito, 3) Estrategia, 4) Cultura.',
+      'Los 4 COMPONENTES o "4 IES" (Art. 6): 1) Influencia idealizada (Carisma), 2) Estimulación Intelectual, 3) Consideración Individualizada, 4) Motivación Inspiracional.',
+      'Los 7 PRINCIPIOS (Art. 7): 1) Identificar las competencias, 2) Confianza mutua, 3) Intención del comandante, 4) Identificar y aceptar riesgos, 5) Entendimiento compartido, 6) Pautas misionales, 7) Iniciativa disciplinada.',
+      'Art. 8 — Operación: se desarrolla mediante los procesos del Marco de Gerencia Policial.',
+      'Art. 11 — Responsabilidad: la Dirección de Talento Humano es la única instancia que define los roles de actuación del Liderazgo Transformacional.',
+      'Art. 12 — Marco Teórico: el Tomo de Liderazgo es un documento dogmático integral de la resolución, desarrollado conforme al Reglamento de Doctrina de la Policía.'
+    ],
+    terminos: [
+      {t:'Liderazgo Transformacional', d:'Estilo de liderazgo que inspira y motiva a través de la autoridad para influir cambios positivos en actitudes y comportamientos.'},
+      {t:'Los 4 Pilares', d:'Personas, Propósito, Estrategia y Cultura. Las bases que sustentan el comportamiento y las decisiones del líder.'},
+      {t:'Las 4 IES (componentes)', d:'Influencia idealizada, Estimulación Intelectual, Consideración Individualizada y Motivación Inspiracional.'},
+      {t:'Intención del comandante', d:'Principio: descripción sucinta que constituye el éxito de la misión, dando acceso a diferentes puntos de vista.'},
+      {t:'Iniciativa disciplinada', d:'Principio: deber de cada colaborador de tomar la iniciativa dentro de los límites de la intención del comandante.'},
+      {t:'Pautas misionales', d:'Instrucciones esenciales y breves del líder que permiten al equipo usar su propia iniciativa.'},
+      {t:'Influencia idealizada (Carisma)', d:'Componente que moviliza la voluntad del personal hacia un objetivo, generando confianza y compromiso.'}
+    ],
+    preguntas: [
+      {q:'¿Cuántos pilares tiene el Liderazgo Policial con Enfoque Transformacional?', op:['3 pilares','4 pilares (Personas, Propósito, Estrategia, Cultura)','5 pilares','7 pilares'], correcta:1},
+      {q:'¿Cuántos componentes o "IES" integran el modelo?', op:['4 (Influencia idealizada, Estimulación Intelectual, Consideración Individualizada, Motivación Inspiracional)','3','5','7'], correcta:0},
+      {q:'¿Cuántos principios establece la Resolución 02049 para el liderazgo transformacional?', op:['4 principios','5 principios','7 principios','10 principios'], correcta:2},
+      {q:'El componente "Influencia idealizada" también se conoce como:', op:['Disciplina','Carisma','Autoridad','Jerarquía'], correcta:1},
+      {q:'¿A quién aplica el alcance de la Resolución 02049?', op:['Solo a oficiales','Personal uniformado, no uniformado y estudiantes','Solo al DEI','Solo a comandantes'], correcta:1},
+      {q:'¿Cuál NO es uno de los 4 pilares del liderazgo transformacional?', op:['Personas','Propósito','Munición','Cultura'], correcta:2},
+      {q:'¿Qué dependencia es la responsable de definir los roles del Liderazgo Transformacional?', op:['La UNDMO','La Dirección de Talento Humano','La JESEP','El DEI'], correcta:1}
     ]
   }
 ];
@@ -11506,33 +11797,55 @@ function showDocSub(sub, btn){
   if(sub==='examen') renderDocExamenInicio();
 }
 
-// ─── Vista lista de documentos ───
+// ─── Nombres de los niveles jerárquicos ───
+var DOC_NIVELES = {
+  1: {nombre:'⚖️ LEYES', desc:'Marco legal superior — Congreso de la República'},
+  2: {nombre:'📋 DECRETOS', desc:'Reglamentan las leyes — Presidencia / Mindefensa'},
+  3: {nombre:'📄 RESOLUCIONES', desc:'Desarrollan los decretos — Dirección General Policía'},
+  4: {nombre:'📝 INSTRUCTIVOS', desc:'Lineamientos operativos internos — JESEP / UNDMO'},
+  5: {nombre:'🎥 LIBRETOS Y GUÍAS', desc:'Herramientas prácticas de campo'},
+  6: {nombre:'🌟 DOCTRINA COMPLEMENTARIA', desc:'No es propia de la UNDMO, pero el comando la solicita'}
+};
+
+// ─── Vista lista de documentos (organizada por jerarquía) ───
 function renderDocLista(){
   var cont = document.getElementById('docListaContainer');
   if(!cont) return;
   var html = '';
-  // Mapa de relaciones
+  // Pirámide jerárquica explicativa
   html += '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">';
-  html += '<div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🔗 Cómo se conectan</div>';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🔺 Jerarquía normativa</div>';
   html += '<div style="font-size:11px;color:var(--muted);line-height:1.7">';
-  html += '<b style="color:#22c55e">Decreto 003/2021</b> → primer protocolo de protesta (orden de la Corte Suprema).<br>';
-  html += '<b style="color:#8b5cf6">Decreto 1231/2024</b> → norma marco del uso de la fuerza (rango superior).<br>';
-  html += '↳ <b style="color:#f59e0b">Resolución 04240/2025</b> desarrolla el <i>cómo</i> (modelo de uso de la fuerza).<br>';
-  html += '↳ <b style="color:#ef4444">Resolución 01840/2025</b> desarrolla el <i>con qué</i> (manual de AML).<br>';
-  html += '<b style="color:#3b82f6">Resolución 1091/2023</b> → crea la UNDMO y regula tu unidad (DEI).';
+  html += 'Los documentos se ordenan de mayor a menor rango. Una norma inferior <b>desarrolla</b> y no puede contradecir a una superior:<br>';
+  html += '<b style="color:#0ea5e9">LEY</b> → <b style="color:#8b5cf6">DECRETO</b> → <b style="color:#3b82f6">RESOLUCIÓN</b> → <b style="color:#a855f7">INSTRUCTIVO</b> → <b style="color:#10b981">LIBRETO</b>';
   html += '</div></div>';
 
-  DOCTRINA.forEach(function(d){
-    html += '<div onclick="abrirDocModal(\''+d.id+'\')" style="background:var(--card);border:1px solid var(--border);border-left:4px solid '+d.color+';border-radius:10px;padding:12px;margin-bottom:10px;cursor:pointer">';
-    html += '<div style="display:flex;align-items:flex-start;gap:10px">';
-    html += '<div style="font-size:24px">'+d.icono+'</div>';
-    html += '<div style="flex:1;min-width:0">';
-    html += '<div style="font-size:13px;font-weight:800;color:'+d.color+'">'+d.tipo+' '+d.numero+'</div>';
-    html += '<div style="font-size:11px;color:var(--text);font-weight:600;margin:3px 0;line-height:1.3">'+d.titulo+'</div>';
-    html += '<div style="font-size:10px;color:var(--muted)">📅 '+d.fecha+' · '+d.puntosClave.length+' puntos clave · '+d.preguntas.length+' preguntas</div>';
+  // Agrupar por nivel
+  [1,2,3,4,5,6].forEach(function(nivel){
+    var docsNivel = DOCTRINA.filter(function(d){ return d.nivel===nivel; });
+    if(!docsNivel.length) return;
+    var info = DOC_NIVELES[nivel];
+    html += '<div style="margin-bottom:6px;margin-top:14px">';
+    html += '<div style="font-size:12px;font-weight:800;color:var(--text)">'+info.nombre+'</div>';
+    html += '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">'+info.desc+'</div>';
     html += '</div>';
-    html += '<div style="color:var(--muted);font-size:16px">›</div>';
-    html += '</div></div>';
+    docsNivel.forEach(function(d){
+      var pend = d.pendiente ? 'opacity:.65;' : '';
+      html += '<div onclick="abrirDocModal(\''+d.id+'\')" style="background:var(--card);border:1px solid var(--border);border-left:4px solid '+d.color+';border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;'+pend+'">';
+      html += '<div style="display:flex;align-items:flex-start;gap:10px">';
+      html += '<div style="font-size:22px">'+d.icono+'</div>';
+      html += '<div style="flex:1;min-width:0">';
+      html += '<div style="font-size:12px;font-weight:800;color:'+d.color+'">'+d.tipo+' '+d.numero;
+      if(d.pendiente) html += ' <span style="background:#f59e0b;color:#000;border-radius:4px;padding:0 5px;font-size:8px;vertical-align:middle">PENDIENTE PDF</span>';
+      html += '</div>';
+      html += '<div style="font-size:11px;color:var(--text);font-weight:600;margin:3px 0;line-height:1.3">'+d.titulo+'</div>';
+      html += '<div style="font-size:10px;color:var(--muted)">📅 '+d.fecha;
+      if(!d.pendiente) html += ' · '+d.puntosClave.length+' puntos · '+d.preguntas.length+' preguntas';
+      html += '</div>';
+      html += '</div>';
+      html += '<div style="color:var(--muted);font-size:16px">›</div>';
+      html += '</div></div>';
+    });
   });
   cont.innerHTML = html;
 }
@@ -11543,8 +11856,19 @@ function abrirDocModal(docId){
   if(!d) return;
   document.getElementById('docModalTitulo').innerHTML = d.icono+' '+d.tipo+' '+d.numero;
   var html = '';
+  // Aviso si está pendiente
+  if(d.pendiente){
+    html += '<div style="background:rgba(245,158,11,.12);border:1px solid #f59e0b;border-radius:10px;padding:12px;margin-bottom:12px">';
+    html += '<div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:4px">⏳ Documento pendiente</div>';
+    html += '<div style="font-size:11px;color:var(--text);line-height:1.5">'+d.resumen+'</div>';
+    html += '</div>';
+    document.getElementById('docModalBody').innerHTML = html;
+    document.getElementById('docModal').style.display = 'flex';
+    return;
+  }
   // Ficha
   html += '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">';
+  html += '<div style="display:inline-block;background:'+d.color+';color:#fff;border-radius:5px;padding:1px 7px;font-size:9px;font-weight:700;margin-bottom:6px">'+d.rango.toUpperCase()+'</div>';
   html += '<div style="font-size:13px;font-weight:700;color:'+d.color+';margin-bottom:8px;line-height:1.3">'+d.titulo+'</div>';
   html += '<table style="width:100%;font-size:11px;color:var(--text)">';
   html += '<tr><td style="color:var(--muted);padding:2px 8px 2px 0;white-space:nowrap;vertical-align:top">Fecha</td><td>'+d.fecha+'</td></tr>';
@@ -11567,18 +11891,21 @@ function abrirDocModal(docId){
   });
   html += '</div>';
   // Términos
-  html += '<div style="margin-bottom:12px">';
-  html += '<div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">📖 Términos clave</div>';
-  d.terminos.forEach(function(t){
-    html += '<div style="background:var(--card);border-radius:8px;padding:8px 10px;margin-bottom:5px">';
-    html += '<div style="font-size:12px;font-weight:700;color:'+d.color+'">'+t.t+'</div>';
-    html += '<div style="font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px">'+t.d+'</div>';
+  if(d.terminos && d.terminos.length){
+    html += '<div style="margin-bottom:12px">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">📖 Términos clave</div>';
+    d.terminos.forEach(function(t){
+      html += '<div style="background:var(--card);border-radius:8px;padding:8px 10px;margin-bottom:5px">';
+      html += '<div style="font-size:12px;font-weight:700;color:'+d.color+'">'+t.t+'</div>';
+      html += '<div style="font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px">'+t.d+'</div>';
+      html += '</div>';
+    });
     html += '</div>';
-  });
-  html += '</div>';
+  }
   // Botón de mini-quiz
-  html += '<button onclick="iniciarExamen([\''+d.id+'\'])" style="width:100%;background:'+d.color+';color:#fff;border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">📝 Practicar '+d.preguntas.length+' preguntas de este documento</button>';
-
+  if(d.preguntas && d.preguntas.length){
+    html += '<button onclick="iniciarExamen([\''+d.id+'\'])" style="width:100%;background:'+d.color+';color:#fff;border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">📝 Practicar '+d.preguntas.length+' preguntas de este documento</button>';
+  }
   document.getElementById('docModalBody').innerHTML = html;
   document.getElementById('docModal').style.display = 'flex';
 }
@@ -11590,40 +11917,38 @@ function cerrarDocModal(){
 function renderDocExamenInicio(){
   var cont = document.getElementById('docExamenContainer');
   if(!cont) return;
-  var totalP = DOCTRINA.reduce(function(s,d){ return s+d.preguntas.length; }, 0);
+  var totalP = DOCTRINA.reduce(function(s,d){ return s+(d.preguntas?d.preguntas.length:0); }, 0);
   var html = '';
   html += '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;text-align:center">';
   html += '<div style="font-size:32px;margin-bottom:6px">📝</div>';
   html += '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Modo Examen</div>';
   html += '<div style="font-size:11px;color:var(--muted);line-height:1.5">Pon a prueba tu conocimiento. Elige qué practicar.</div>';
   html += '</div>';
-  // Examen completo
   html += '<button onclick="iniciarExamen(\'all\')" style="width:100%;background:var(--gold);color:#000;border:none;border-radius:9px;padding:12px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px">🎓 Examen completo ('+totalP+' preguntas)</button>';
-  // Por documento
   html += '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">O practica por documento:</div>';
   DOCTRINA.forEach(function(d){
+    if(!d.preguntas || !d.preguntas.length) return;
     html += '<button onclick="iniciarExamen([\''+d.id+'\'])" style="width:100%;background:var(--card);color:var(--text);border:1px solid var(--border);border-left:4px solid '+d.color+';border-radius:8px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px;text-align:left">'+d.icono+' '+d.tipo+' '+d.numero+' <span style="color:var(--muted);font-size:10px">('+d.preguntas.length+' preguntas)</span></button>';
   });
   cont.innerHTML = html;
 }
 
 function iniciarExamen(scope){
-  // Reunir preguntas
   var pool = [];
   DOCTRINA.forEach(function(d){
+    if(!d.preguntas) return;
     if(scope==='all' || (Array.isArray(scope) && scope.indexOf(d.id)>=0)){
       d.preguntas.forEach(function(p){
         pool.push({q:p.q, op:p.op, correcta:p.correcta, doc:d.tipo+' '+d.numero, color:d.color});
       });
     }
   });
-  // Mezclar
   for(var i=pool.length-1;i>0;i--){
     var j=Math.floor(Math.random()*(i+1));
     var tmp=pool[i]; pool[i]=pool[j]; pool[j]=tmp;
   }
+  if(!pool.length){ alert('Este documento aún no tiene preguntas.'); return; }
   docExamenActual = { preguntas:pool, idx:0, respuestas:[], correctas:0 };
-  // Cambiar a vista examen si no está
   showDocSub('examen', document.querySelectorAll('.doc-subtab')[1]);
   renderExamenPregunta();
 }
@@ -11635,19 +11960,16 @@ function renderExamenPregunta(){
   if(ex.idx >= ex.preguntas.length){ renderExamenResultado(); return; }
   var p = ex.preguntas[ex.idx];
   var html = '';
-  // Progreso
   var pct = Math.round((ex.idx/ex.preguntas.length)*100);
   html += '<div style="margin-bottom:12px">';
   html += '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">';
   html += '<span>Pregunta '+(ex.idx+1)+' de '+ex.preguntas.length+'</span><span>'+ex.correctas+' correctas</span></div>';
   html += '<div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden"><div style="background:var(--gold);height:100%;width:'+pct+'%"></div></div>';
   html += '</div>';
-  // Tarjeta de pregunta
   html += '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">';
   html += '<div style="font-size:9px;color:'+p.color+';font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">'+p.doc+'</div>';
   html += '<div style="font-size:14px;font-weight:600;color:var(--text);line-height:1.4">'+p.q+'</div>';
   html += '</div>';
-  // Opciones
   p.op.forEach(function(opcion, i){
     html += '<button onclick="responderExamen('+i+')" id="opcExam'+i+'" style="width:100%;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:12px;font-size:13px;cursor:pointer;margin-bottom:8px;text-align:left;line-height:1.3">'+opcion+'</button>';
   });
@@ -11661,7 +11983,6 @@ function responderExamen(elegida){
   var esCorrecta = (elegida===p.correcta);
   if(esCorrecta) ex.correctas++;
   ex.respuestas.push({elegida:elegida, correcta:p.correcta});
-  // Marcar visualmente
   p.op.forEach(function(o, i){
     var btn = document.getElementById('opcExam'+i);
     if(!btn) return;
@@ -11680,7 +12001,6 @@ function responderExamen(elegida){
       btn.style.opacity = '.5';
     }
   });
-  // Botón siguiente
   var cont = document.getElementById('docExamenContainer');
   var nextBtn = document.createElement('button');
   nextBtn.style.cssText = 'width:100%;background:var(--gold);color:#000;border:none;border-radius:9px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px';
@@ -11715,14 +12035,13 @@ function docBuscar(){
   if(q.length < 2){ cont.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px">Escribe al menos 2 letras...</div>'; return; }
   var hits = [];
   DOCTRINA.forEach(function(d){
-    // Buscar en título, resumen, puntos, términos
     if(d.titulo.toLowerCase().indexOf(q)>=0 || d.resumen.toLowerCase().indexOf(q)>=0 || d.numero.toLowerCase().indexOf(q)>=0){
       hits.push({doc:d, tipo:'General', texto:d.titulo});
     }
-    d.puntosClave.forEach(function(p){
+    (d.puntosClave||[]).forEach(function(p){
       if(p.toLowerCase().indexOf(q)>=0) hits.push({doc:d, tipo:'Punto clave', texto:p});
     });
-    d.terminos.forEach(function(t){
+    (d.terminos||[]).forEach(function(t){
       if(t.t.toLowerCase().indexOf(q)>=0 || t.d.toLowerCase().indexOf(q)>=0) hits.push({doc:d, tipo:'Término: '+t.t, texto:t.d});
     });
   });
@@ -11736,6 +12055,7 @@ function docBuscar(){
   });
   cont.innerHTML = html;
 }
+
 
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded', initApp);
