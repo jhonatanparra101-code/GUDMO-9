@@ -372,6 +372,7 @@ header{background:linear-gradient(135deg,#07101f,#0c1828);border-bottom:2px soli
   <button class="tab-btn" onclick="showTab('planilla',this)">📋 Planilla</button>
   <button class="tab-btn" onclick="showTab('guardia',this)">🔒 Guardia</button>
   <button class="tab-btn" onclick="showTab('novedades-admin',this)">📅 Novedades</button>
+  <button class="tab-btn" onclick="showTab('doctrina',this)">📚 Doctrina</button>
   <button class="tab-btn" onclick="showTab('add',this)">⚙️ Config</button>
 </div>
 
@@ -1321,6 +1322,51 @@ body.modo-lectura .filter-bar select{
 
   <!-- Matriz -->
   <div id="navTabla"></div>
+</div>
+
+<!-- ═══════════════ MÓDULO DOCTRINA ═══════════════ -->
+<div class="section" id="tab-doctrina">
+  <div class="sh">📚 Doctrina Policial — UNDMO / DEI</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+    Material de estudio de los documentos doctrinales clave. Toca cada documento para ver su ficha, esquema y preguntas de repaso.
+  </div>
+
+  <!-- Sub-navegación interna -->
+  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="doc-subtab active" onclick="showDocSub('lista',this)" style="flex:1;min-width:90px;background:var(--gold);color:#000;border:none;border-radius:7px;padding:8px;font-size:11px;font-weight:700;cursor:pointer">📄 Documentos</button>
+    <button class="doc-subtab" onclick="showDocSub('examen',this)" style="flex:1;min-width:90px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px;font-weight:700;cursor:pointer">📝 Modo Examen</button>
+    <button class="doc-subtab" onclick="showDocSub('buscar',this)" style="flex:1;min-width:90px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:8px;font-size:11px;font-weight:700;cursor:pointer">🔍 Buscar</button>
+  </div>
+
+  <!-- VISTA: Lista de documentos -->
+  <div id="docSub-lista">
+    <div id="docListaContainer"></div>
+  </div>
+
+  <!-- VISTA: Modo examen -->
+  <div id="docSub-examen" style="display:none">
+    <div id="docExamenContainer"></div>
+  </div>
+
+  <!-- VISTA: Buscar -->
+  <div id="docSub-buscar" style="display:none">
+    <input type="text" id="docBuscarInput" placeholder="Escribe un término: AML, taser, diálogo, proporcionalidad..." 
+      oninput="docBuscar()" 
+      style="width:100%;background:var(--navy);border:1px solid var(--border);border-radius:8px;padding:11px;color:var(--text);font-size:13px;margin-bottom:12px">
+    <div id="docBuscarResultados"></div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE DOCUMENTO -->
+<div class="modal-overlay" id="docModal" style="display:none" onclick="if(event.target===this)cerrarDocModal()">
+  <div class="modal" style="max-height:88vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="modal-title" id="docModalTitulo" style="margin:0;font-size:15px">Documento</div>
+      <button onclick="cerrarDocModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px">✕</button>
+    </div>
+    <div id="docModalBody"></div>
+  </div>
 </div>
 
 <!-- MODAL DETALLE/EDICION NOVEDADES -->
@@ -2426,6 +2472,7 @@ function showTab(id,btn){
   if(id==='planilla') renderPlanilla();
   if(id==='guardia') renderGuardia();
   if(id==='novedades-admin') renderNavMatriz();
+  if(id==='doctrina') renderDocLista();
   if(id==='add'){ loadConfig(); updateStorageInfo(); }
 }
 
@@ -11239,6 +11286,457 @@ function initData(){
     console.error('Init error:', e);
   }
 }
+
+// ═══════════════════════════════════════════════════════════
+//  MÓDULO DOCTRINA — Base de datos de documentos doctrinales
+// ═══════════════════════════════════════════════════════════
+var DOCTRINA = [
+  {
+    id: 'res1091',
+    tipo: 'Resolución',
+    numero: '1091 de 2023',
+    fecha: '31 de marzo de 2023',
+    color: '#3b82f6',
+    icono: '🛡️',
+    titulo: 'Manual para la Atención a la Reunión y Manifestación Pública y Pacífica y Control de Disturbios',
+    emisor: 'Dirección General de la Policía Nacional',
+    deroga: 'Normativa anterior del ESMAD',
+    vigencia: 'Vigente',
+    resumen: 'Es el documento que da vida operativa a la UNDMO (Unidad de Diálogo y Mantenimiento del Orden), que reemplazó al ESMAD. Establece cómo debe actuar la Policía para proteger el derecho a la reunión y manifestación, priorizando el diálogo y dejando la intervención como último recurso.',
+    puntosClave: [
+      'Crea el procedimiento de actuación de la UNDMO, que reemplaza al ESMAD.',
+      'Prioriza el diálogo entre la Policía y la población manifestante. La intervención es el último recurso.',
+      'Establece las etapas de actuación policial: anticipación, preparación, acciones previas, concomitantes y posteriores.',
+      'El Dispositivo Especializado de Intervención (DEI) puede apoyar la custodia de salas temporales de privación de libertad, ubicándose estratégicamente para disuadir amotinamientos.',
+      'Prohíbe que el personal del grupo especializado (DEI) realice registro a personas privadas de libertad ni a los lugares donde están.',
+      'Si las capacidades de la unidad son rebasadas, el comandante de región/metropolitana/departamento coordina apoyo a través de la Jefatura Nacional del Servicio de Policía.',
+      'Autoriza el uso de dispositivos tecnológicos (drones, body cams) en el marco de las manifestaciones.'
+    ],
+    terminos: [
+      {t:'UNDMO', d:'Unidad de Diálogo y Mantenimiento del Orden. Reemplaza al ESMAD. Su énfasis es el diálogo antes que la fuerza.'},
+      {t:'DEI', d:'Dispositivo Especializado de Intervención. Grupo táctico que interviene cuando se agota el diálogo y hay disturbios.'},
+      {t:'Etapa de anticipación', d:'Fase previa donde se hacen acciones de inteligencia para prevenir la comisión de delitos en la manifestación.'},
+      {t:'Acciones concomitantes', d:'Las que se ejecutan durante el desarrollo de la manifestación.'},
+      {t:'Última ratio', d:'Principio según el cual la intervención de la fuerza es el último recurso, agotado el diálogo.'}
+    ],
+    preguntas: [
+      {q:'¿Qué unidad reemplazó al ESMAD según la Resolución 1091 de 2023?', op:['La UNDMO','El GAULA','El DEI','La SIJIN'], correcta:0},
+      {q:'¿Cuál es el principio que prioriza la Resolución 1091 frente a las manifestaciones?', op:['El uso inmediato de la fuerza','El diálogo entre Policía y manifestantes','La captura masiva','El cierre de vías'], correcta:1},
+      {q:'¿Puede el personal del DEI hacer registro a personas privadas de la libertad en salas temporales?', op:['Sí, siempre','No, está expresamente prohibido','Solo con orden judicial','Solo de noche'], correcta:1},
+      {q:'¿Qué etapas de actuación policial introduce la Resolución 1091?', op:['Solo acciones previas y posteriores','Anticipación, preparación, previas, concomitantes y posteriores','Únicamente intervención','Patrullaje y vigilancia'], correcta:1},
+      {q:'Si las capacidades de la unidad son rebasadas, ¿a través de quién se coordina el apoyo?', op:['La Alcaldía','La Jefatura Nacional del Servicio de Policía','El Ejército','La Fiscalía'], correcta:1}
+    ]
+  },
+  {
+    id: 'dec1231',
+    tipo: 'Decreto',
+    numero: '1231 de 2024',
+    fecha: '3 de octubre de 2024',
+    color: '#8b5cf6',
+    icono: '⚖️',
+    titulo: 'Reglamenta el uso diferenciado y proporcional de la fuerza por parte de la Policía Nacional',
+    emisor: 'Presidencia de la República / Ministerio de Defensa Nacional',
+    deroga: 'No deroga; adiciona el Título 14 a la Parte 5 del Libro 2 del Decreto 1070 de 2015',
+    vigencia: 'Vigente',
+    resumen: 'Es la norma marco (de rango superior) que regula cuándo y cómo la Policía puede usar la fuerza. Fue producto del diálogo entre Mindefensa, la Policía, organizaciones sociales y la ONU. Es la primera vez que el Gobierno interviene la autonomía reglamentaria de la Policía en este tema.',
+    puntosClave: [
+      'El uso de la fuerza es una facultad EXCEPCIONAL: solo se invoca para proteger los Derechos Humanos y mantener la convivencia pacífica.',
+      'Pone el diálogo como medio principal para soluciones pacíficas; el uso de la fuerza es gradual y de último recurso.',
+      'Cuando se use la fuerza, se debe informar al superior jerárquico y a quien dio la orden, una vez superados los hechos, precisando tiempo, modo, lugar y justificación.',
+      'Si hay personas lesionadas, se remite informe al superior jerárquico Y al Ministerio Público.',
+      'El personal solo puede usar armas, dispositivos y municiones menos letales que causen el menor daño posible a la integridad.',
+      'El uso de armas de fuego es una MEDIDA EXTREMA: solo ante peligro inminente de muerte o lesiones graves.',
+      'Incorpora el concepto de Armas Menos Letales (AML), alineado con las orientaciones de la ONU de junio de 2020.',
+      'La Policía tenía un plazo de 18 meses para actualizar los actos administrativos internos que contradijeran este decreto.'
+    ],
+    terminos: [
+      {t:'AML', d:'Armas Menos Letales. Categoría aceptada por ONU, CICR y CIDH para los dispositivos diseñados para reducir el daño letal.'},
+      {t:'Uso diferenciado de la fuerza', d:'Aplicar la fuerza de forma gradual y proporcional según la gravedad de la situación y el nivel de resistencia o agresión.'},
+      {t:'Facultad excepcional', d:'El uso de la fuerza no es la regla; solo se invoca cuando es estrictamente necesario para proteger derechos.'},
+      {t:'Medida extrema', d:'Calificación del uso de armas de fuego: reservado para peligro inminente de muerte o lesiones graves.'},
+      {t:'Decreto 1070 de 2015', d:'Decreto Único Reglamentario del Sector Defensa, al cual el Decreto 1231 le adiciona el Título 14.'}
+    ],
+    preguntas: [
+      {q:'¿De qué año es realmente el Decreto 1231 sobre uso de la fuerza?', op:['2021','2023','2024','2025'], correcta:2},
+      {q:'Según el Decreto 1231, el uso de armas de fuego se considera:', op:['Una práctica rutinaria','Una medida extrema','Prohibido en todo caso','Decisión del patrullero'], correcta:1},
+      {q:'Cuando se usa la fuerza y hay personas lesionadas, ¿a quién se remite informe?', op:['Solo al superior jerárquico','Al superior jerárquico y al Ministerio Público','A la Alcaldía','A nadie'], correcta:1},
+      {q:'El Decreto 1231 incorpora el concepto AML alineado con orientaciones de:', op:['La OTAN','La ONU (junio de 2020)','La Interpol','El FBI'], correcta:1},
+      {q:'¿Qué le hace el Decreto 1231 al Decreto 1070 de 2015?', op:['Lo deroga totalmente','Le adiciona el Título 14 a la Parte 5 del Libro 2','No tiene relación','Lo suspende'], correcta:1}
+    ]
+  },
+  {
+    id: 'res1840',
+    tipo: 'Resolución',
+    numero: '01840 de 2025',
+    fecha: '20 de junio de 2025',
+    color: '#ef4444',
+    icono: '🎯',
+    titulo: 'Manual para el Empleo de Armas, Municiones, Elementos y Dispositivos Menos Letales (AML) y su clasificación técnica',
+    emisor: 'Dirección General de la Policía Nacional / Ministerio de Defensa',
+    deroga: 'Deroga en su totalidad la Resolución 01716 del 31 de mayo de 2021',
+    vigencia: 'Vigente — aplicación inmediata y obligatoria',
+    resumen: 'Es el manual técnico que desarrolla, en detalle, qué armas menos letales existen, cómo se clasifican y cómo se emplean: tasers, venom, gases lacrimógenos, tonfas, armas cinéticas, neumáticas y agentes químicos. Es la norma más directamente ligada al manejo de munición del DEI.',
+    puntosClave: [
+      'Determina los parámetros institucionales para el empleo de las AML y su clasificación técnica.',
+      'Deroga totalmente la Resolución 01716 de 2021 (el manual anterior de AML).',
+      'Aplica los principios: necesidad, legalidad, proporcionalidad, constitucionalidad y diferenciación.',
+      'Antes de emplear AML, agotados los medios preventivos y disuasivos, se debe dar una clara ADVERTENCIA del uso de la fuerza, con tiempo suficiente para que la orden sea entendida y acatada.',
+      'Las AML de dotación oficial NO pueden ser alteradas ni modificadas en sus características de fabricación, origen, diseño o propósito.',
+      'Se prohíbe usar las AML con municiones de características técnicas letales.',
+      'Se prohíbe el uso de elementos o dispositivos que no sean dotación oficial (salvo medios de apoyo del Código de Convivencia, Ley 1801 de 2016).',
+      'Solo personal capacitado y formado en uso progresivo de la fuerza puede emplear las AML.',
+      'Limita el uso de gases lacrimógenos en lugares cerrados o con presencia de niños y adultos mayores.',
+      'Restringe el uso del taser en zonas sensibles del cuerpo.'
+    ],
+    terminos: [
+      {t:'AML', d:'Armas, Municiones, Elementos y Dispositivos Menos Letales.'},
+      {t:'Anuncio del uso de la fuerza', d:'Advertencia clara y previa que se da antes de emplear AML, dando tiempo a que la orden sea entendida y acatada.'},
+      {t:'Principio de diferenciación', d:'Distinguir entre quienes participan pacíficamente y quienes cometen actos violentos, dirigiendo la fuerza solo a estos últimos.'},
+      {t:'Tiempo, modo y lugar', d:'Condiciones que el uniformado debe observar siempre que emplee la fuerza con AML (artículo 2.5.14.1 num. 16 del Decreto 1231).'},
+      {t:'Dotación oficial', d:'Armamento y elementos entregados oficialmente por la Policía. Solo estos pueden usarse; no pueden ser alterados.'},
+      {t:'Medios de apoyo', d:'Concepto de la Ley 1801 de 2016 que permite, excepcionalmente, el uso de ciertos elementos fuera de la dotación.'}
+    ],
+    preguntas: [
+      {q:'¿Qué resolución deroga totalmente la Resolución 01840 de 2025?', op:['La 1091 de 2023','La 01716 de 2021','El Decreto 003 de 2021','La 04240 de 2025'], correcta:1},
+      {q:'¿Qué se debe hacer ANTES de emplear AML, agotados los medios disuasivos?', op:['Disparar de inmediato','Dar una clara advertencia del uso de la fuerza','Retirarse','Pedir permiso a la Alcaldía'], correcta:1},
+      {q:'¿Pueden modificarse las características de fabricación de las AML de dotación?', op:['Sí, si mejora el rendimiento','No, está prohibido alterarlas','Solo el comandante puede','Solo en entrenamiento'], correcta:1},
+      {q:'¿Dónde se limita el uso de gases lacrimógenos?', op:['En vías amplias','En lugares cerrados o con niños y adultos mayores','En el día','No tiene límite'], correcta:1},
+      {q:'¿Cuántos principios rigen el empleo de AML según la 01840?', op:['Dos','Tres','Cinco (necesidad, legalidad, proporcionalidad, constitucionalidad, diferenciación)','Diez'], correcta:2},
+      {q:'El uso del taser según la 01840 está restringido en:', op:['Zonas sensibles del cuerpo','Las piernas','Espacios abiertos','Horario diurno'], correcta:0}
+    ]
+  },
+  {
+    id: 'res4240',
+    tipo: 'Resolución',
+    numero: '04240 de 2025',
+    fecha: '1 de diciembre de 2025',
+    color: '#f59e0b',
+    icono: '📋',
+    titulo: 'Modelo para el uso diferenciado y proporcional de la fuerza en la Policía Nacional',
+    emisor: 'Dirección General de la Policía Nacional',
+    deroga: 'Desarrolla el Decreto 1231 de 2024',
+    vigencia: 'Vigente',
+    resumen: 'Desarrolla operativamente el Decreto 1231: establece el "modelo" concreto de cómo los uniformados aplican el uso diferenciado y proporcional de la fuerza en distintas situaciones. Incluye una política de cero tolerancia al abuso de la fuerza y transparencia en las cifras.',
+    puntosClave: [
+      'Desarrolla el modelo para el uso diferenciado y proporcional de la fuerza, aterrizando el Decreto 1231 de 2024.',
+      'Establece parámetros institucionales de actuación para los uniformados en distintas situaciones.',
+      'Política de CERO TOLERANCIA frente a los casos de abuso de la fuerza.',
+      'Transparencia: la Policía debe publicar las cifras de los casos de uso de la fuerza que se presenten.',
+      'La implementación queda a cargo de la Dirección de Educación Policial (o la unidad que haga sus veces): instruir, capacitar y entrenar al personal.',
+      'Se debe presentar un informe anual, publicado en las páginas web del Ministerio de Defensa y de la Policía Nacional.',
+      'Reafirma los principios de legalidad, necesidad y proporcionalidad como ejes del uso de la fuerza.'
+    ],
+    terminos: [
+      {t:'Modelo de uso de la fuerza', d:'Esquema operativo concreto que indica cómo aplicar gradualmente la fuerza según la situación.'},
+      {t:'Cero tolerancia', d:'Política institucional que no admite ningún caso de abuso de la fuerza.'},
+      {t:'Principio de legalidad', d:'El uso de la fuerza debe estar siempre amparado en la ley.'},
+      {t:'Principio de necesidad', d:'La fuerza solo se aplica cuando es indispensable para cumplir un objetivo legítimo, evitando lo arbitrario o excesivo.'},
+      {t:'Principio de proporcionalidad', d:'La intensidad de la fuerza debe corresponder al nivel de resistencia o agresión enfrentado.'},
+      {t:'Informe anual', d:'Reporte público de los casos de uso de la fuerza, publicado en las webs de Mindefensa y la Policía.'}
+    ],
+    preguntas: [
+      {q:'La Resolución 04240 de 2025 desarrolla principalmente:', op:['El Decreto 003 de 2021','El Decreto 1231 de 2024','La Ley 1801 de 2016','La Constitución'], correcta:1},
+      {q:'¿Qué política frente al abuso de la fuerza establece la 04240?', op:['Tolerancia parcial','Cero tolerancia','Sanción opcional','Advertencia verbal'], correcta:1},
+      {q:'¿Quién está a cargo de instruir y entrenar al personal en este modelo?', op:['La Fiscalía','La Dirección de Educación Policial','La Alcaldía','El Ejército'], correcta:1},
+      {q:'¿Cada cuánto se presenta el informe sobre el uso de la fuerza?', op:['Mensual','Semestral','Anual','Nunca'], correcta:2},
+      {q:'El principio de necesidad establece que la fuerza se usa cuando:', op:['Lo decide el patrullero','Es indispensable para un objetivo legítimo','Hay muchas personas','Es de noche'], correcta:1}
+    ]
+  },
+  {
+    id: 'dec003',
+    tipo: 'Decreto',
+    numero: '003 de 2021',
+    fecha: '5 de enero de 2021',
+    color: '#22c55e',
+    icono: '📜',
+    titulo: 'Estatuto de Reacción, Uso y Verificación de la Fuerza Legítima del Estado y Protección del Derecho a la Protesta Pacífica Ciudadana',
+    emisor: 'Gobierno Nacional',
+    deroga: 'No deroga; es respuesta a la Sentencia STC-7641 de 2020 de la Corte Suprema de Justicia',
+    vigencia: 'Vigente',
+    resumen: 'Es el primer protocolo nacional de acciones preventivas, concomitantes y posteriores en materia de protesta. Nació por orden de la Corte Suprema de Justicia (sentencia STC-7641 de 2020) tras el Paro Nacional de 2019. Establece directrices de actuación de las autoridades de policía durante manifestaciones.',
+    puntosClave: [
+      'Es el "Estatuto de Reacción, Uso y Verificación de la Fuerza Legítima del Estado y Protección del Derecho a la Protesta Pacífica".',
+      'Nace por orden de la Corte Suprema de Justicia: sentencia STC-7641 de 2020, tras tutela de víctimas del Paro Nacional de 2019.',
+      'Establece la PRIMACÍA DEL DIÁLOGO y la mediación en las protestas como elemento determinante y principal.',
+      'La promoción del diálogo y mediación es permanente, aun cuando se considere agotados los medios pacíficos y se proceda al uso de la fuerza.',
+      'Aplica el principio de diferenciación: la Policía focaliza la fuerza solo sobre los actos de violencia concomitantes, absteniéndose de actuar contra la manifestación pacífica.',
+      'Estructura las acciones policiales en tres momentos: preventivas, concomitantes y posteriores.',
+      'Dirigido a las autoridades de policía en sus funciones de garantía de derechos, convivencia y orden público.'
+    ],
+    terminos: [
+      {t:'STC-7641 de 2020', d:'Sentencia de tutela de la Corte Suprema de Justicia (22 de septiembre de 2020) que ordenó crear este estatuto.'},
+      {t:'Acciones preventivas', d:'Las que se realizan ANTES de la manifestación para prevenir alteraciones.'},
+      {t:'Acciones concomitantes', d:'Las que se realizan DURANTE la manifestación.'},
+      {t:'Acciones posteriores', d:'Las que se realizan DESPUÉS de la manifestación (verificación, informes).'},
+      {t:'Primacía del diálogo', d:'Principio según el cual el diálogo y la mediación son el medio principal y permanente en las protestas.'},
+      {t:'Principio de diferenciación', d:'La fuerza se focaliza solo sobre actos de violencia, no sobre la manifestación pacífica.'}
+    ],
+    preguntas: [
+      {q:'¿Por orden de qué sentencia nace el Decreto 003 de 2021?', op:['STC-7641 de 2020 de la Corte Suprema','C-225 de 1995','SU-047 de 1999','T-406 de 1992'], correcta:0},
+      {q:'¿Tras qué evento se ordenó crear el Decreto 003 de 2021?', op:['El Paro Nacional de 2019','El Mundial 2014','La pandemia','El Bogotazo'], correcta:0},
+      {q:'¿Qué nombre recibe el protocolo del Decreto 003 de 2021?', op:['Manual de Convivencia','Estatuto de Reacción, Uso y Verificación de la Fuerza Legítima','Código de Policía','Reglamento del DEI'], correcta:1},
+      {q:'Según el Decreto 003, el diálogo y la mediación son:', op:['Opcionales','El elemento determinante y principal, de carácter permanente','Solo para el final','Responsabilidad de la Alcaldía'], correcta:1},
+      {q:'¿En qué tres momentos estructura las acciones policiales el Decreto 003?', op:['Mañana, tarde y noche','Preventivas, concomitantes y posteriores','Antes y después','Patrullaje y reacción'], correcta:1}
+    ]
+  }
+];
+
+// ─── Estado del módulo doctrina ───
+var docExamenActual = null;
+
+// ─── Navegación interna del módulo ───
+function showDocSub(sub, btn){
+  ['lista','examen','buscar'].forEach(function(s){
+    var el = document.getElementById('docSub-'+s);
+    if(el) el.style.display = (s===sub)?'block':'none';
+  });
+  document.querySelectorAll('.doc-subtab').forEach(function(b){
+    b.classList.remove('active');
+    b.style.background = 'var(--card)';
+    b.style.color = 'var(--text)';
+    b.style.border = '1px solid var(--border)';
+  });
+  if(btn){
+    btn.classList.add('active');
+    btn.style.background = 'var(--gold)';
+    btn.style.color = '#000';
+    btn.style.border = 'none';
+  }
+  if(sub==='lista') renderDocLista();
+  if(sub==='examen') renderDocExamenInicio();
+}
+
+// ─── Vista lista de documentos ───
+function renderDocLista(){
+  var cont = document.getElementById('docListaContainer');
+  if(!cont) return;
+  var html = '';
+  // Mapa de relaciones
+  html += '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🔗 Cómo se conectan</div>';
+  html += '<div style="font-size:11px;color:var(--muted);line-height:1.7">';
+  html += '<b style="color:#22c55e">Decreto 003/2021</b> → primer protocolo de protesta (orden de la Corte Suprema).<br>';
+  html += '<b style="color:#8b5cf6">Decreto 1231/2024</b> → norma marco del uso de la fuerza (rango superior).<br>';
+  html += '↳ <b style="color:#f59e0b">Resolución 04240/2025</b> desarrolla el <i>cómo</i> (modelo de uso de la fuerza).<br>';
+  html += '↳ <b style="color:#ef4444">Resolución 01840/2025</b> desarrolla el <i>con qué</i> (manual de AML).<br>';
+  html += '<b style="color:#3b82f6">Resolución 1091/2023</b> → crea la UNDMO y regula tu unidad (DEI).';
+  html += '</div></div>';
+
+  DOCTRINA.forEach(function(d){
+    html += '<div onclick="abrirDocModal(\''+d.id+'\')" style="background:var(--card);border:1px solid var(--border);border-left:4px solid '+d.color+';border-radius:10px;padding:12px;margin-bottom:10px;cursor:pointer">';
+    html += '<div style="display:flex;align-items:flex-start;gap:10px">';
+    html += '<div style="font-size:24px">'+d.icono+'</div>';
+    html += '<div style="flex:1;min-width:0">';
+    html += '<div style="font-size:13px;font-weight:800;color:'+d.color+'">'+d.tipo+' '+d.numero+'</div>';
+    html += '<div style="font-size:11px;color:var(--text);font-weight:600;margin:3px 0;line-height:1.3">'+d.titulo+'</div>';
+    html += '<div style="font-size:10px;color:var(--muted)">📅 '+d.fecha+' · '+d.puntosClave.length+' puntos clave · '+d.preguntas.length+' preguntas</div>';
+    html += '</div>';
+    html += '<div style="color:var(--muted);font-size:16px">›</div>';
+    html += '</div></div>';
+  });
+  cont.innerHTML = html;
+}
+
+// ─── Modal de detalle de documento ───
+function abrirDocModal(docId){
+  var d = DOCTRINA.find(function(x){ return x.id===docId; });
+  if(!d) return;
+  document.getElementById('docModalTitulo').innerHTML = d.icono+' '+d.tipo+' '+d.numero;
+  var html = '';
+  // Ficha
+  html += '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px">';
+  html += '<div style="font-size:13px;font-weight:700;color:'+d.color+';margin-bottom:8px;line-height:1.3">'+d.titulo+'</div>';
+  html += '<table style="width:100%;font-size:11px;color:var(--text)">';
+  html += '<tr><td style="color:var(--muted);padding:2px 8px 2px 0;white-space:nowrap;vertical-align:top">Fecha</td><td>'+d.fecha+'</td></tr>';
+  html += '<tr><td style="color:var(--muted);padding:2px 8px 2px 0;vertical-align:top">Emisor</td><td>'+d.emisor+'</td></tr>';
+  html += '<tr><td style="color:var(--muted);padding:2px 8px 2px 0;vertical-align:top">Deroga</td><td>'+d.deroga+'</td></tr>';
+  html += '<tr><td style="color:var(--muted);padding:2px 8px 2px 0;vertical-align:top">Vigencia</td><td style="color:#22c55e;font-weight:600">'+d.vigencia+'</td></tr>';
+  html += '</table></div>';
+  // Resumen
+  html += '<div style="margin-bottom:12px">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">📌 En qué consiste</div>';
+  html += '<div style="font-size:12px;color:var(--text);line-height:1.5;background:var(--card);border-radius:8px;padding:10px">'+d.resumen+'</div>';
+  html += '</div>';
+  // Puntos clave
+  html += '<div style="margin-bottom:12px">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">🎯 Puntos clave</div>';
+  d.puntosClave.forEach(function(p, i){
+    html += '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:12px;color:var(--text);line-height:1.4">';
+    html += '<div style="background:'+d.color+';color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">'+(i+1)+'</div>';
+    html += '<div>'+p+'</div></div>';
+  });
+  html += '</div>';
+  // Términos
+  html += '<div style="margin-bottom:12px">';
+  html += '<div style="font-size:11px;font-weight:700;color:var(--gold2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">📖 Términos clave</div>';
+  d.terminos.forEach(function(t){
+    html += '<div style="background:var(--card);border-radius:8px;padding:8px 10px;margin-bottom:5px">';
+    html += '<div style="font-size:12px;font-weight:700;color:'+d.color+'">'+t.t+'</div>';
+    html += '<div style="font-size:11px;color:var(--muted);line-height:1.4;margin-top:2px">'+t.d+'</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  // Botón de mini-quiz
+  html += '<button onclick="iniciarExamen([\''+d.id+'\'])" style="width:100%;background:'+d.color+';color:#fff;border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">📝 Practicar '+d.preguntas.length+' preguntas de este documento</button>';
+
+  document.getElementById('docModalBody').innerHTML = html;
+  document.getElementById('docModal').style.display = 'flex';
+}
+function cerrarDocModal(){
+  document.getElementById('docModal').style.display = 'none';
+}
+
+// ─── Modo examen ───
+function renderDocExamenInicio(){
+  var cont = document.getElementById('docExamenContainer');
+  if(!cont) return;
+  var totalP = DOCTRINA.reduce(function(s,d){ return s+d.preguntas.length; }, 0);
+  var html = '';
+  html += '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;text-align:center">';
+  html += '<div style="font-size:32px;margin-bottom:6px">📝</div>';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Modo Examen</div>';
+  html += '<div style="font-size:11px;color:var(--muted);line-height:1.5">Pon a prueba tu conocimiento. Elige qué practicar.</div>';
+  html += '</div>';
+  // Examen completo
+  html += '<button onclick="iniciarExamen(\'all\')" style="width:100%;background:var(--gold);color:#000;border:none;border-radius:9px;padding:12px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px">🎓 Examen completo ('+totalP+' preguntas)</button>';
+  // Por documento
+  html += '<div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px">O practica por documento:</div>';
+  DOCTRINA.forEach(function(d){
+    html += '<button onclick="iniciarExamen([\''+d.id+'\'])" style="width:100%;background:var(--card);color:var(--text);border:1px solid var(--border);border-left:4px solid '+d.color+';border-radius:8px;padding:10px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:6px;text-align:left">'+d.icono+' '+d.tipo+' '+d.numero+' <span style="color:var(--muted);font-size:10px">('+d.preguntas.length+' preguntas)</span></button>';
+  });
+  cont.innerHTML = html;
+}
+
+function iniciarExamen(scope){
+  // Reunir preguntas
+  var pool = [];
+  DOCTRINA.forEach(function(d){
+    if(scope==='all' || (Array.isArray(scope) && scope.indexOf(d.id)>=0)){
+      d.preguntas.forEach(function(p){
+        pool.push({q:p.q, op:p.op, correcta:p.correcta, doc:d.tipo+' '+d.numero, color:d.color});
+      });
+    }
+  });
+  // Mezclar
+  for(var i=pool.length-1;i>0;i--){
+    var j=Math.floor(Math.random()*(i+1));
+    var tmp=pool[i]; pool[i]=pool[j]; pool[j]=tmp;
+  }
+  docExamenActual = { preguntas:pool, idx:0, respuestas:[], correctas:0 };
+  // Cambiar a vista examen si no está
+  showDocSub('examen', document.querySelectorAll('.doc-subtab')[1]);
+  renderExamenPregunta();
+}
+
+function renderExamenPregunta(){
+  var cont = document.getElementById('docExamenContainer');
+  var ex = docExamenActual;
+  if(!ex) return;
+  if(ex.idx >= ex.preguntas.length){ renderExamenResultado(); return; }
+  var p = ex.preguntas[ex.idx];
+  var html = '';
+  // Progreso
+  var pct = Math.round((ex.idx/ex.preguntas.length)*100);
+  html += '<div style="margin-bottom:12px">';
+  html += '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">';
+  html += '<span>Pregunta '+(ex.idx+1)+' de '+ex.preguntas.length+'</span><span>'+ex.correctas+' correctas</span></div>';
+  html += '<div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden"><div style="background:var(--gold);height:100%;width:'+pct+'%"></div></div>';
+  html += '</div>';
+  // Tarjeta de pregunta
+  html += '<div style="background:var(--navy);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">';
+  html += '<div style="font-size:9px;color:'+p.color+';font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">'+p.doc+'</div>';
+  html += '<div style="font-size:14px;font-weight:600;color:var(--text);line-height:1.4">'+p.q+'</div>';
+  html += '</div>';
+  // Opciones
+  p.op.forEach(function(opcion, i){
+    html += '<button onclick="responderExamen('+i+')" id="opcExam'+i+'" style="width:100%;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:12px;font-size:13px;cursor:pointer;margin-bottom:8px;text-align:left;line-height:1.3">'+opcion+'</button>';
+  });
+  cont.innerHTML = html;
+}
+
+function responderExamen(elegida){
+  var ex = docExamenActual;
+  if(!ex) return;
+  var p = ex.preguntas[ex.idx];
+  var esCorrecta = (elegida===p.correcta);
+  if(esCorrecta) ex.correctas++;
+  ex.respuestas.push({elegida:elegida, correcta:p.correcta});
+  // Marcar visualmente
+  p.op.forEach(function(o, i){
+    var btn = document.getElementById('opcExam'+i);
+    if(!btn) return;
+    btn.onclick = null;
+    if(i===p.correcta){
+      btn.style.background = 'rgba(34,197,94,.2)';
+      btn.style.border = '1px solid #22c55e';
+      btn.style.color = '#22c55e';
+      btn.innerHTML = '✓ '+btn.innerHTML;
+    } else if(i===elegida){
+      btn.style.background = 'rgba(239,68,68,.2)';
+      btn.style.border = '1px solid #ef4444';
+      btn.style.color = '#ef4444';
+      btn.innerHTML = '✗ '+btn.innerHTML;
+    } else {
+      btn.style.opacity = '.5';
+    }
+  });
+  // Botón siguiente
+  var cont = document.getElementById('docExamenContainer');
+  var nextBtn = document.createElement('button');
+  nextBtn.style.cssText = 'width:100%;background:var(--gold);color:#000;border:none;border-radius:9px;padding:12px;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px';
+  nextBtn.textContent = (ex.idx+1 >= ex.preguntas.length) ? '🏁 Ver resultado' : '→ Siguiente pregunta';
+  nextBtn.onclick = function(){ ex.idx++; renderExamenPregunta(); };
+  cont.appendChild(nextBtn);
+}
+
+function renderExamenResultado(){
+  var cont = document.getElementById('docExamenContainer');
+  var ex = docExamenActual;
+  var total = ex.preguntas.length;
+  var pct = Math.round((ex.correctas/total)*100);
+  var color = pct>=80 ? '#22c55e' : (pct>=60 ? '#f59e0b' : '#ef4444');
+  var msg = pct>=80 ? '¡Excelente! Dominas el tema.' : (pct>=60 ? 'Bien, pero repasa los puntos fallados.' : 'Necesitas repasar más. ¡Ánimo!');
+  var html = '';
+  html += '<div style="background:var(--navy);border:1px solid '+color+';border-radius:12px;padding:20px;text-align:center;margin-bottom:12px">';
+  html += '<div style="font-size:42px;font-weight:900;color:'+color+'">'+pct+'%</div>';
+  html += '<div style="font-size:14px;color:var(--text);font-weight:700;margin:4px 0">'+ex.correctas+' de '+total+' correctas</div>';
+  html += '<div style="font-size:12px;color:var(--muted)">'+msg+'</div>';
+  html += '</div>';
+  html += '<button onclick="renderDocExamenInicio()" style="width:100%;background:var(--gold);color:#000;border:none;border-radius:9px;padding:12px;font-size:13px;font-weight:700;cursor:pointer">🔄 Hacer otro examen</button>';
+  cont.innerHTML = html;
+  docExamenActual = null;
+}
+
+// ─── Buscador ───
+function docBuscar(){
+  var q = (document.getElementById('docBuscarInput').value||'').toLowerCase().trim();
+  var cont = document.getElementById('docBuscarResultados');
+  if(!cont) return;
+  if(q.length < 2){ cont.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px">Escribe al menos 2 letras...</div>'; return; }
+  var hits = [];
+  DOCTRINA.forEach(function(d){
+    // Buscar en título, resumen, puntos, términos
+    if(d.titulo.toLowerCase().indexOf(q)>=0 || d.resumen.toLowerCase().indexOf(q)>=0 || d.numero.toLowerCase().indexOf(q)>=0){
+      hits.push({doc:d, tipo:'General', texto:d.titulo});
+    }
+    d.puntosClave.forEach(function(p){
+      if(p.toLowerCase().indexOf(q)>=0) hits.push({doc:d, tipo:'Punto clave', texto:p});
+    });
+    d.terminos.forEach(function(t){
+      if(t.t.toLowerCase().indexOf(q)>=0 || t.d.toLowerCase().indexOf(q)>=0) hits.push({doc:d, tipo:'Término: '+t.t, texto:t.d});
+    });
+  });
+  if(!hits.length){ cont.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px">Sin resultados para "'+q+'"</div>'; return; }
+  var html = '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+hits.length+' resultado(s)</div>';
+  hits.forEach(function(h){
+    html += '<div onclick="abrirDocModal(\''+h.doc.id+'\')" style="background:var(--card);border:1px solid var(--border);border-left:4px solid '+h.doc.color+';border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer">';
+    html += '<div style="font-size:10px;font-weight:700;color:'+h.doc.color+'">'+h.doc.tipo+' '+h.doc.numero+' · '+h.tipo+'</div>';
+    html += '<div style="font-size:11px;color:var(--text);line-height:1.4;margin-top:3px">'+h.texto+'</div>';
+    html += '</div>';
+  });
+  cont.innerHTML = html;
+}
+
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded', initApp);
 } else {
