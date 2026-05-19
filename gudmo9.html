@@ -1652,9 +1652,11 @@ body.modo-lectura .filter-bar select{
   var KEY  = "sb_publishable_qKMworw6YVacmgAh8E98wg_zDfr7W6E";
   var API  = URL + "/rest/v1/gudmo9";
   window.__FB_SET__ = async function(path, data){
-    // Modo solo lectura: bloquear cualquier escritura a la nube
+    // Modo solo lectura: SOLO permitir escritura de exam_results a la nube
     if(window._readOnly===true || (typeof _readOnly!=='undefined' && _readOnly)){
-      return false;
+      if(path !== 'gudmo9/exam_results'){
+        return false;
+      }
     }
     try {
       var key = path.replace('/','_');
@@ -1807,10 +1809,12 @@ const ld = (k,d) => {
 };
 
 const sv = (k,v) => { 
-  // Modo solo lectura: ignorar todas las escrituras
+  // Modo solo lectura: SOLO permitir escritura de resultados de examen
   if(typeof _readOnly!=='undefined' && _readOnly){
-    console.warn('[modo lectura] Escritura bloqueada para clave:', k);
-    return;
+    if(k !== 'g9_exam_results'){
+      console.warn('[modo lectura] Escritura bloqueada para clave:', k);
+      return;
+    }
   }
   const str = JSON.stringify(v);
   // Always sync to IDB immediately for data safety
@@ -1906,6 +1910,9 @@ function sbX(s){
 // ── SUBIR todo a Supabase ──
 async function fbSaveAll(){
   if(!window.__FB_READY__) return;
+  // MODO LECTURA: NUNCA subir datos a la nube
+  if(typeof _readOnly!=='undefined' && _readOnly) return;
+  if(sessionStorage.getItem('gudmo9_readonly')==='1') return;
   // Guardar siempre local primero
   sv('g9_municion', municionData);
   if(typeof inventarioDEI!=='undefined') sv('g9_inventario', inventarioDEI);
@@ -2149,7 +2156,10 @@ async function initFirebase(){
     showCloudStatus('⟳ Sincronizando...','#3b82f6');
     var loaded = await fbLoadAll();
     if(loaded) render();
-    setInterval(fbSaveAll, 120000);
+    // Solo auto-sync si NO es modo lectura
+    if(sessionStorage.getItem('gudmo9_readonly')!=='1'){
+      setInterval(fbSaveAll, 120000);
+    }
   };
   if(window.__FB_READY__){
     window.__FB_CONNECTED_CB__();
@@ -2252,8 +2262,12 @@ var _appliedVer = parseInt(localStorage.getItem('g9_base_ver')||'0');
 
 // Only apply base data on first ever load (version not yet applied)
 if((!_storedM || !_storedM.length) && _appliedVer < (window.__G9_BASE_VERSION__||1)){
-  _storedM = window.__G9_BASE_MEMBERS__ || [];
-  _storedH = window.__G9_BASE_HIST__ || [];
+  // SOLO cargar datos base si NO es modo lectura
+  // En modo lectura, los datos vienen de la nube con fbLoadAll
+  if(sessionStorage.getItem('gudmo9_readonly')!=='1'){
+    _storedM = window.__G9_BASE_MEMBERS__ || [];
+    _storedH = window.__G9_BASE_HIST__ || [];
+  }
   try{ localStorage.setItem('g9_members', JSON.stringify(_storedM)); }catch(e){}
   try{ localStorage.setItem('g9_hist', JSON.stringify(_storedH)); }catch(e){}
   try{ localStorage.setItem('g9_base_ver', String(window.__G9_BASE_VERSION__||1)); }catch(e){}
