@@ -12146,10 +12146,19 @@ function iniciarExamen(scope){
     if(!d.preguntas) return;
     if(scope==='all' || (Array.isArray(scope) && scope.indexOf(d.id)>=0)){
       d.preguntas.forEach(function(p){
-        pool.push({q:p.q, op:p.op, correcta:p.correcta, doc:d.tipo+' '+d.numero, color:d.color});
+        // Mezclar opciones para que no siempre estén en el mismo orden
+        var indices = p.op.map(function(_,i){ return i; });
+        for(var k=indices.length-1;k>0;k--){
+          var j2=Math.floor(Math.random()*(k+1));
+          var t2=indices[k]; indices[k]=indices[j2]; indices[j2]=t2;
+        }
+        var newOp = indices.map(function(idx){ return p.op[idx]; });
+        var newCorrecta = indices.indexOf(p.correcta);
+        pool.push({q:p.q, op:newOp, correcta:newCorrecta, doc:d.tipo+' '+d.numero, color:d.color});
       });
     }
   });
+  // Mezclar orden de preguntas
   for(var i=pool.length-1;i>0;i--){
     var j=Math.floor(Math.random()*(i+1));
     var tmp=pool[i]; pool[i]=pool[j]; pool[j]=tmp;
@@ -12269,6 +12278,26 @@ function renderExamenResultado(){
     });
     html += '</div>';
   }
+  // Detalle de las preguntas acertadas
+  var acertadas = [];
+  ex.preguntas.forEach(function(p, i){
+    var r = ex.respuestas[i];
+    if(r && r.elegida === r.correcta){
+      acertadas.push({q:p.q, doc:p.doc, color:p.color, correcta:p.op[r.correcta]});
+    }
+  });
+  if(acertadas.length){
+    html += '<div style="margin-bottom:12px">';
+    html += '<div style="font-size:11px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">✅ Preguntas acertadas ('+acertadas.length+')</div>';
+    acertadas.forEach(function(a){
+      html += '<div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-left:3px solid '+a.color+';border-radius:8px;padding:8px 10px;margin-bottom:4px">';
+      html += '<div style="font-size:9px;color:'+a.color+';font-weight:700">'+a.doc+'</div>';
+      html += '<div style="font-size:11px;color:var(--text);line-height:1.3;margin-top:2px">'+a.q+'</div>';
+      html += '<div style="font-size:10px;color:#22c55e;margin-top:2px">✓ '+a.correcta+'</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
   // Guardar resultado
   var resultado = {
     nombre: ex.nombre||'Anónimo',
@@ -12278,7 +12307,8 @@ function renderExamenResultado(){
     correctas: ex.correctas,
     pct: pct,
     duracion: duracion,
-    falladas: falladas.map(function(f){ return {q:f.q, doc:f.doc, elegida:f.elegida, correcta:f.correcta}; })
+    falladas: falladas.map(function(f){ return {q:f.q, doc:f.doc, elegida:f.elegida, correcta:f.correcta}; }),
+    acertadasList: acertadas.map(function(a){ return {q:a.q, doc:a.doc}; })
   };
   var resultados = [];
   try { resultados = JSON.parse(localStorage.getItem('g9_exam_results')||'[]'); } catch(e){}
